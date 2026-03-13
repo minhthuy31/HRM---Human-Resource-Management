@@ -3,7 +3,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-RUN npm run build
+# Dòng lệnh ma thuật: Ép Nodejs dùng 2GB RAM để build
+RUN NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
 FROM nginx:alpine
 COPY --from=build /app/build /usr/share/nginx/html

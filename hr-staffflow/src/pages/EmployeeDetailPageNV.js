@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
-import { FaUserCircle, FaEye, FaFileContract } from "react-icons/fa"; // Thêm icon
-import { api } from "../api"; // Import api để lấy thông tin Giám đốc
+import { FaUserCircle, FaEye, FaFileContract } from "react-icons/fa";
+ư;
+import { api } from "../api";
 import "react-datepicker/dist/react-datepicker.css";
 import "../styles/EmployeeDetailPage.css";
 
-// IMPORT TEMPLATE HỢP ĐỒNG (Đảm bảo đường dẫn đúng với project của bạn)
 import ContractTemplate from "../components/templates/ContractTemplate";
 
 const getImageUrl = (path) => {
