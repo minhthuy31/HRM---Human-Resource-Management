@@ -1,0 +1,211 @@
+/* --- LAYOUT CHÍNH CHO TRANG CÁ NHÂN (NV) --- */
+.emp-detail-page {
+  background-color: #f0f2f5;
+  padding: 20px;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Container chính */
+.emp-layout-container {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  border: 1px solid #e1e4e8;
+  height: 100%;
+}
+
+/* Header (Tên & Trạng thái) */
+.emp-layout-header {
+  padding: 15px 30px;
+  background-color: #fff;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.emp-layout-header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  text-transform: uppercase;
+}
+
+.emp-layout-status {
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.status-active { background-color: #e6f4ea; color: #28a745; }
+.status-inactive { background-color: #fbeaea; color: #dc3545; }
+
+/* Body Layout - DỌC (Menu trên, Nội dung dưới) */
+.emp-layout-body {
+  display: flex;
+  flex-direction: column; /* Thay đổi thành column */
+  flex: 1;
+  overflow: hidden;
+}
+
+/* --- MENU NGANG (Thay thế Sidebar dọc) --- */
+.emp-horizontal-menu {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto; /* Cho phép cuộn ngang nếu màn hình nhỏ */
+  width: 100%;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dce0e4;
+  flex-shrink: 0;
+  /* Ẩn scrollbar nhưng vẫn cuộn được */
+  scrollbar-width: none; 
+  -ms-overflow-style: none;
+}
+
+.emp-horizontal-menu::-webkit-scrollbar {
+  display: none;
+}
+
+.emp-menu-item {
+  padding: 15px 25px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  color: #55606d;
+  border-bottom: 3px solid transparent; /* Border dưới cho active state */
+  transition: all 0.2s;
+  white-space: nowrap; /* Giữ text trên 1 dòng */
+}
+
+.emp-menu-item:hover {
+  background-color: #e9ecef;
+  color: #0e7c7b;
+}
+
+.emp-menu-item.active {
+  background-color: #fff;
+  color: #0e7c7b;
+  font-weight: 700;
+  border-bottom-color: #0e7c7b; /* Highlight màu xanh ở dưới */
+}
+
+/* --- MAIN CONTENT AREA --- */
+.emp-main {
+  flex: 1;
+  padding: 30px 40px;
+  overflow-y: auto;
+  background-color: #fff;
+}
+
+/* --- FORM STYLES (Giống trang quản lý) --- */
+.form-section-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0e7c7b;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+  margin-top: 10px;
+}
+.form-section-title:first-child { margin-top: 0; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px 25px;
+  margin-bottom: 25px;
+}
+.form-grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.form-grid.grid-4 { grid-template-columns: repeat(4, 1fr); }
+.form-grid.grid-1 { grid-template-columns: 1fr; }
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* View-only Field */
+.form-group span.view-field {
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  font-size: 14.5px;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #f8f9fa; /* Nền xám nhẹ */
+  color: #495057;
+  display: flex;
+  align-items: center;
+}
+
+/* AVATAR SECTION */
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px;
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  width: 150px;
+  background-color: #fdfdfd;
+  margin-bottom: 0;
+  height: fit-content;
+}
+
+.avatar-preview img {
+  width: 110px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin-bottom: 10px;
+  border: 3px solid #fff;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .form-grid.grid-3, .form-grid.grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .emp-layout-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .emp-main {
+    padding: 20px;
+  }
+  div[style*="display: flex"] { /* Fix layout avatar row on mobile */
+    flex-direction: column;
+  }
+  .avatar-section {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}

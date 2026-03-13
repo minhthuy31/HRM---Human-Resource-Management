@@ -1,0 +1,300 @@
+/* ===================================== */
+/* == CSS DÀNH RIÊNG CHO EMPLOYEE PAGE == */
+/* ===================================== */
+
+/* 1. BỐ CỤC TRANG CHÍNH */
+.employee-page {
+  background-color: var(--card-bg, #ffffff);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow-color, rgba(0, 0, 0, 0.1));
+  color: var(--main-text);
+  display: flex;
+  flex-direction: column;
+  height: 100%; 
+  box-sizing: border-box;
+}
+
+/* 2. PAGE HEADER - CHIA 2 HÀNG */
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* Khoảng cách giữa 2 hàng */
+  margin-bottom: 20px;
+  flex-shrink: 0;
+  width: 100%; /* Đảm bảo chiếm hết chiều ngang */
+}
+
+/* --- HÀNG 1: Tiêu đề - Search - Buttons --- */
+.header-top-row {
+  display: flex;
+  justify-content: space-between; /* Đẩy 2 đầu */
+  align-items: center;
+  flex-wrap: wrap; 
+  gap: 20px;
+  width: 100%;
+}
+
+.header-top-row h1 {
+  margin: 0;
+  font-size: 24px; /* Tăng size cho giống Dept */
+  font-weight: 700;
+  color: #333;
+  white-space: nowrap;
+}
+
+/* Nhóm hành động (Search + Button) nằm bên phải */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-left: auto; /* Đẩy sát lề phải */
+}
+
+/* Fix lỗi lệch do thẻ form */
+.search-form {
+    display: flex;
+    align-items: center;
+    margin: 0;
+}
+
+/* Search Box */
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  color: #999;
+  font-size: 14px;
+  z-index: 2; 
+  pointer-events: none;
+}
+
+.search-container input {
+  height: 40px !important; /* Chiều cao cố định */
+  padding: 0 12px 0 36px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  color: #333;
+  font-size: 14px;
+  width: 260px; /* Độ rộng search box */
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.search-container input:focus {
+  border-color: #0d6efd;
+  outline: none;
+}
+
+/* Button Group */
+.action-buttons-group {
+  display: flex;
+  gap: 10px;
+}
+
+.add-btn { 
+  height: 40px !important;
+  border: none; 
+  padding: 0 18px; 
+  border-radius: 6px; 
+  font-size: 14px; 
+  font-weight: 600;
+  cursor: pointer; 
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center;
+  gap: 8px; 
+  transition: opacity 0.2s;
+  color: white;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.add-btn:hover { 
+  opacity: 0.9;
+}
+
+.btn-import { background-color: #0E7C7B; } 
+.btn-export { background-color: #1D6F42; } 
+.btn-add { background-color: #0d6efd; }    
+
+
+/* --- HÀNG 2: Filters --- */
+.header-bottom-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap; 
+  width: 100%;
+  justify-content: flex-end; /* Đẩy bộ lọc sang phải cho thẳng hàng với nút trên */
+  /* Hoặc để flex-start nếu bạn muốn lọc nằm bên trái */
+}
+
+.filter-item {
+  min-width: 160px;
+}
+
+.filter-item select {
+  height: 40px !important; /* Đồng bộ chiều cao 40px */
+  width: 100%;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  color: #444;
+  font-size: 14px;
+  cursor: pointer;
+  box-sizing: border-box;
+
+  /* Reset appearance giống trang Phòng ban */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  padding-right: 30px;
+}
+
+.filter-item select:focus {
+  border-color: #0d6efd;
+  outline: none;
+}
+
+
+/* 3. BẢNG DỮ LIỆU */
+.table-container {
+  flex-grow: 1;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+}
+
+.employee-table { 
+  width: 100%; 
+  border-collapse: collapse; 
+  text-align: left; 
+}
+
+.employee-table thead { 
+  background-color: #f8f9fa; 
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.employee-table th, .employee-table td { 
+  padding: 14px 16px; 
+  border-bottom: 1px solid #e0e0e0; 
+  vertical-align: middle;
+  font-size: 14px;
+}
+.employee-table th { 
+  font-weight: 600; 
+  color: #555;
+  white-space: nowrap;
+}
+
+.employee-table .table-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #eee;
+}
+
+/* --- TÊN NHÂN VIÊN (ĐÃ SỬA MÀU) --- */
+.employee-name-cell { 
+  cursor: pointer; 
+  font-weight: 500; 
+  color: #333; /* Mặc định màu đen */
+  transition: color 0.2s;
+}
+.employee-name-cell:hover { 
+  color: #0d6efd; /* Hover mới chuyển xanh */
+  text-decoration: underline;
+}
+
+
+/* 4. MENU CHUỘT PHẢI */
+.context-menu { 
+  position: fixed;
+  z-index: 1010; 
+  background-color: #fff; 
+  border-radius: 6px; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+  padding: 6px 0; 
+  min-width: 180px; 
+  border: 1px solid #ddd; 
+}
+
+.context-menu ul { 
+  list-style: none; 
+  padding: 0; 
+  margin: 0; 
+}
+
+.context-menu li { 
+  padding: 10px 16px; 
+  cursor: pointer; 
+  display: flex; 
+  align-items: center; 
+  gap: 10px; 
+  font-size: 14px;
+  color: #333;
+}
+.context-menu li:hover { 
+  background-color: #f1f3f5; 
+  color: #0d6efd; 
+}
+
+/* 5. ACTION BUTTONS IN TABLE */
+.actions-cell {
+  text-align: right;
+  width: 50px; 
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  transition: background 0.2s;
+}
+
+.action-btn:hover {
+  background-color: #e9ecef;
+  color: #000;
+}
+
+/* RESPONSIVE: Màn hình nhỏ */
+@media (max-width: 1100px) {
+  .header-top-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
+  }
+  .search-container input {
+    width: 100%;
+  }
+  .header-bottom-row {
+    justify-content: flex-start; /* Trên mobile thì để filter bên trái */
+  }
+}

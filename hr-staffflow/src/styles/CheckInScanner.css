@@ -1,0 +1,13 @@
+.scanner-container {
+    width: 100%;
+    max-width: 400px; /* Giới hạn chiều rộng */
+    margin: 0 auto;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden; /* Cắt bỏ phần thừa */
+}
+
+.qr-video-preview {
+    width: 100%;
+    height: auto;
+}

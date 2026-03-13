@@ -1,0 +1,616 @@
+/* ===================================== */
+/* == CSS CHUNG CHO LAYOUT NHÂN VIÊN   == */
+/* ===================================== */
+
+:root {
+  /* Biến màu (giả định) */
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #333333;
+  --sidebar-border: #e0e0e0;
+  --main-bg: #f9fafb;
+  --main-text: #111827;
+  --card-bg: #ffffff;
+  --hover-bg: #f0f5fa;
+  --hover-text: #0d6efd;
+  --separator-color: #e5e5e5;
+  --toggle-icon-color: #4b5563;
+  --logo-text-color: #1975b1;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+  --avatar-bg: #e0f2fe;
+  --avatar-text: #0c4a6e;
+  --sidebar-width: 280px;
+}
+
+/* 1. Bố cục trang gốc */
+.employee-home-page {
+  /* --- THAY ĐỔI ĐỂ FULL MÀN HÌNH --- */
+  position: fixed; /* Buộc nó chiếm viewport, bỏ qua thẻ cha */
+  top: 0;
+  left: 0;
+  width: 100%; /* Chiếm 100% chiều rộng */
+  height: 100%; /* Chiếm 100% chiều cao */
+  box-sizing: border-box; /* Đảm bảo padding/border không làm tràn */
+  /* ---------------------------------- */
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Ngăn chính nó cuộn */
+  background-color: var(--main-bg, #f9fafb);
+  color: var(--main-text);
+}
+
+/* 2. Navbar (Thanh điều hướng trên cùng) */
+.employee-navbar {
+  flex-shrink: 0; /* Ngăn co lại */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background-color: var(--card-bg, #ffffff);
+  border-bottom: 1px solid var(--sidebar-border, #e0e0e0);
+  box-shadow: 0 2px 4px var(--shadow-color, rgba(0, 0, 0, 0.05));
+  z-index: 10; /* Đảm bảo navbar ở trên */
+}
+
+.datetime { text-align: left; }
+.datetime .time { font-size: 1.2rem; font-weight: 500; }
+.datetime .date { font-size: 0.85rem; color: var(--toggle-icon-color, #6b7280); }
+
+.navbar-center .search-container {
+  position: relative;
+}
+.navbar-center .search-container input {
+  padding: 8px 12px 8px 36px;
+  border-radius: 6px;
+  border: 1px solid var(--sidebar-border, #e0e0e0);
+  background-color: var(--main-bg, #f9fafb);
+  width: 300px;
+}
+.navbar-center .search-container svg { /* Dành cho icon FaSearch */
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.navbar-right { display: flex; align-items: center; gap: 20px; }
+.dark-mode-toggle { cursor: pointer; }
+.avatar-container { position: relative; cursor: pointer; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+
+.avatar-container .dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 42px;
+  right: 0;
+  background-color: var(--card-bg);
+  border: 1px solid var(--sidebar-border);
+  box-shadow: 0 2px 8px var(--shadow-color);
+  border-radius: 6px;
+  padding: 8px;
+  min-width: 160px;
+  z-index: 1001;
+}
+.avatar-container:hover .dropdown-menu { display: block; }
+.dropdown-menu a, .dropdown-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 10px;
+  color: var(--main-text);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+.dropdown-menu a:hover, .dropdown-menu button:hover {
+  background-color: var(--hover-bg);
+}
+
+/* 3. Bố cục nội dung chính (Gồm 2 cột) */
+.employee-main-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background-color: #f3f4f6;
+}
+
+/* 4. Sidebar Trái (Thông tin user) */
+.left-sidebar {
+  width: var(--sidebar-width, 280px); /* Dùng biến hoặc set cứng 280px */
+  flex-shrink: 0;
+  padding: 24px; /* Tăng padding chút cho thoáng */
+  background-color: var(--card-bg, #ffffff);
+  border-right: 1px solid var(--sidebar-border, #e0e0e0);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px; /* Khoảng cách giữa các khối trong sidebar */
+}
+
+/* Tinh chỉnh Profile Summary */
+.profile-summary {
+  text-align: center;
+  margin-bottom: 10px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--sidebar-border); /* Thêm gạch ngăn cách nhẹ */
+}
+.profile-avatar {
+  width: 90px;  
+  height: 90px; 
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 12px;   
+  border: 3px solid white;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.profile-summary h3 {
+  margin: 5px 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--main-text);
+}
+.profile-summary p {
+  margin: 0;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+/* === SỬA LỖI GHI ĐÈ MÀU (Lần 3 - Chính xác) === */
+/* 1. Đổi selector thành .left-sidebar .action-buttons .action-btn */
+/* Điều này CHỈ áp dụng cho các nút trong sidebar trái */
+/* Nút bấm sidebar (Đã chỉnh căn giữa text) */
+.left-sidebar .action-buttons .sidebar-action-btn {
+  width: 100%;
+  padding: 10px 14px; /* Giảm padding một chút (cũ là 12px 16px) */
+  font-size: 14px !important;
+  font-weight: 600;
+  border-radius: 10px; /* Bo tròn mềm mại hơn */
+  border: none;
+  color: white;
+  
+  display: flex;            
+  align-items: center;      
+  justify-content: center;  
+  
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Bóng nhẹ */
+}
+/* 3. Đổi selector :hover tương ứng */
+.left-sidebar .action-buttons .action-btn:hover {
+  /* 4. Đổi hover sang màu XANH ĐẬM */
+  background-color: #0b5ed7; /* Lấy màu từ .add-btn:hover */
+  border-color: #0b5ed7;
+  color: white;
+  /* ------------------------------------ */
+}
+
+/* 5. Giữ nguyên các class ghi đè này */
+.action-btn-checkin { /* Nút chấm công đặc biệt (ghi đè màu xanh) */
+  color: white;
+  border-color: #10b981;
+}
+.action-btn-checkin:hover {
+  background-color: #059669;
+  color: white;
+  border-color: #059669;
+}
+/* === KẾT THÚC SỬA LỖI === */
+
+
+.info-links ul { list-style: none; padding: 0; margin: 0; }
+.info-links li a {
+  display: block;
+  padding: 10px 12px;
+  text-decoration: none;
+  color: var(--main-text);
+  border-radius: 6px;
+  font-weight: 500;
+}
+.info-links li a:hover {
+  background-color: var(--hover-bg, #f0f5fa);
+  color: var(--hover-text, #0d6efd);
+}
+
+/* 5. Cột Nội dung chính (Outlet) */
+.main-feed {
+  flex: 1; /* Chiếm toàn bộ không gian còn lại */
+  overflow: auto;
+  min-height: 0;
+  padding: 30px 40px;
+}
+
+/* 6. Sidebar Phải (Trống) */
+.right-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  padding: 20px;
+  background-color: var(--card-bg, #ffffff);
+  border-left: 1px solid var(--sidebar-border, #e0e0e0);
+  overflow-y: auto; 
+}
+
+
+/* ===================================== */
+/* == CSS CHO NỘI DUNG (TRONG OUTLET)  == */
+/* (Đây là CSS bạn đã cung cấp)        == */
+/* ===================================== */
+
+/* 1. BỐ CỤC TRANG CON (ví dụ: Bảng công) */
+.employee-page {
+  background-color: var(--card-bg, #ffffff);
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow-color, rgba(0, 0, 0, 0.1));
+  color: var(--main-text);
+  
+  /* Quan trọng: Để .table-container cuộn được */
+  display: flex;
+  flex-direction: column;
+  height: 100%; 
+  box-sizing: border-box;
+  min-height: 0; /* Đảm bảo nó không bị ép bởi nội dung */
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.header-right-panel {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.add-btn { 
+  background-color: #0d6efd; 
+  color: white; 
+  border: none; 
+  padding: 10px 16px; 
+  border-radius: 6px; 
+  font-size: 16px; 
+  cursor: pointer; 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+}
+.add-btn:hover { 
+  background-color: #0b5ed7; 
+}
+
+
+/* 2. BỘ LỌC VÀ TÌM KIẾM */
+.filter-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px; /* Thêm khoảng cách */
+  flex-shrink: 0;
+}
+
+.filter-container select {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--sidebar-border);
+  background-color: var(--sidebar-bg);
+  color: var(--main-text);
+  font-size: 14px;
+}
+
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  z-index: 2; 
+}
+
+.search-container input {
+  padding: 8px 12px 8px 42px;
+  border-radius: 6px;
+  border: 1px solid var(--sidebar-border);
+  background-color: var(--sidebar-bg);
+  color: var(--main-text);
+  font-size: 14px;
+  width: 250px;
+  transition: all 0.2s ease-in-out;
+}
+
+.search-container input:focus {
+  border-color: #0d6efd;
+}
+
+
+/* 3. BẢNG DỮ LIỆU (VÙNG CUỘN BÊN TRONG) */
+.table-container {
+  flex-grow: 1; /* Quan trọng: Chiếm hết không gian */
+  min-height: 0; /* Quan trọng: Để overflow-y hoạt động */
+  overflow-y: auto;
+  border: 1px solid var(--sidebar-border);
+  border-radius: 6px;
+}
+
+.employee-table { 
+  width: 100%; 
+  border-collapse: collapse; 
+  text-align: left; 
+}
+
+.employee-table thead { 
+  background-color: var(--hover-bg, #f8f9fa); 
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.employee-table th, .employee-table td { 
+  padding: 12px 15px; 
+  border-bottom: 1px solid var(--sidebar-border, #e0e0e0); 
+  vertical-align: middle;
+}
+.employee-table th { 
+  font-weight: 600; 
+}
+
+.employee-table .table-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+
+.employee-name-cell { 
+  cursor: pointer; 
+  font-weight: 500; 
+}
+.employee-name-cell:hover { 
+  color: var(--hover-text); 
+}
+
+
+/* 4. MENU CHUỘT PHẢI */
+.context-menu { 
+  position: fixed;
+  z-index: 1010; 
+  background-color: var(--card-bg); 
+  border-radius: 6px; 
+  box-shadow: 0 4px 12px var(--shadow-color); 
+  padding: 8px 0; 
+  min-width: 180px; 
+  border: 1px solid var(--sidebar-border); 
+}
+
+.context-menu ul { 
+  list-style: none; 
+  padding: 0; 
+  margin: 0; 
+}
+
+.context-menu li { 
+  padding: 8px 16px; 
+  cursor: pointer; 
+  display: flex; 
+  align-items: center; 
+  gap: 10px; 
+}
+.context-menu li:hover { 
+  background-color: var(--hover-bg); 
+  color: var(--hover-text); 
+}
+
+/* 5. CÁC NÚT HÀNH ĐỘNG TRONG BẢNG */
+/* Selector này ( .action-btn ) giờ sẽ không bị
+  ghi đè nữa và hoạt động chính xác cho
+  các nút trong bảng (nút icon).
+*/
+
+.table-action-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  ;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.table-action-icon:hover {
+  background-color: #f3f4f6;
+  color: #111;
+}
+
+/* NÚT LỚN TRONG SIDEBAR – KHÔNG BAO GIỜ BỊ GHI ĐÈ */
+.sidebar-action-btn {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 18px !important;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  color: white;
+  
+  display: flex;             /* Bật Flexbox */
+  align-items: center;       /* Canh giữa theo chiều dọc */
+  justify-content: center;   /* Canh giữa theo chiều ngang (text sẽ vào giữa) */
+  /* ------------------------------------------- */
+
+  cursor: pointer;           /* Sửa "center" thành "pointer" (lỗi nhỏ trong code cũ) */
+  transition: all 0.2s ease;
+  text-align: center;        /* Fallback cho trường hợp không có flex */
+}
+
+/* Nút xanh dương mặc định */
+.sidebar-action-btn {
+  background-color: #0d6efd;
+}
+
+.sidebar-action-btn:hover {
+  background-color: #0b5ed7;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(13, 110, 253, 0.25);
+}
+
+/* Nút chấm công – màu xanh lá đặc biệt */
+.sidebar-action-btn-checkin {
+  background-color: #10b981 !important;
+  margin-top: 8px;
+}
+
+.sidebar-action-btn-checkin:hover {
+  background-color: #059669 !important;
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+/* ===================================== */
+/* == CSS CHO MODAL VÀ SCANNER         == */
+/* ===================================== */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: var(--card-bg, #fff);
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 500px;
+  position: relative;
+  z-index: 1001; /* Đảm bảo modal ở trên */
+}
+
+.scanner-modal {
+  max-width: 600px;
+  text-align: center;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #888;
+}
+
+.scan-error {
+  color: #dc3545;
+  font-weight: bold;
+  margin-top: 15px;
+}
+
+.scan-success-popup {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #28a745;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1050;
+}
+
+/* CSS cơ bản cho máy quét (giả định) */
+#qr-reader video {
+  width: 100% !important;
+  height: auto !important;
+  border-radius: 8px;
+}
+
+/* ===================================== */
+/* == BỔ SUNG: LÀM MỎNG THANH CUỘN     == */
+/* ===================================== */
+
+/* Áp dụng cho các vùng cuộn: 
+  .left-sidebar, .right-sidebar (sidebar)
+  .main-feed (vùng nội dung chính)
+  .table-container (bảng bên trong)
+*/
+
+/* 1. Cho Chrome, Safari, Edge (và các trình duyệt WebKit) */
+.main-feed::-webkit-scrollbar,
+.table-container::-webkit-scrollbar,
+.left-sidebar::-webkit-scrollbar,
+.right-sidebar::-webkit-scrollbar {
+  width: 4px;  /* Sửa 6px -> 4px: Chiều rộng cho cuộn dọc */
+  height: 4px; /* Sửa 6px -> 4px: Chiều cao cho cuộn ngang */
+}
+
+.main-feed::-webkit-scrollbar-track,
+.table-container::-webkit-scrollbar-track,
+.left-sidebar::-webkit-scrollbar-track,
+.right-sidebar::-webkit-scrollbar-track {
+  background: transparent; /* Nền của thanh cuộn */
+  border-radius: 3px;
+}
+
+.main-feed::-webkit-scrollbar-thumb,
+.table-container::-webkit-scrollbar-thumb,
+.left-sidebar::-webkit-scrollbar-thumb,
+.right-sidebar::-webkit-scrollbar-thumb {
+  background: #ccc; /* Màu của con trượt */
+  border-radius: 3px;
+}
+
+.main-feed::-webkit-scrollbar-thumb:hover,
+.table-container::-webkit-scrollbar-thumb:hover,
+.left-sidebar::-webkit-scrollbar-thumb:hover,
+.right-sidebar::-webkit-scrollbar-thumb:hover {
+  background: #999; /* Màu con trượt khi hover */
+}
+
+/* 2. Cho Firefox (hỗ trợ cuộn mỏng) */
+.main-feed,
+.table-container,
+.left-sidebar,
+.right-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: #ccc transparent; /* [màu con trượt] [màu nền] */
+}

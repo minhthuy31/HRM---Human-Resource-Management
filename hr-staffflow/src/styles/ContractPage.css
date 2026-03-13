@@ -1,0 +1,160 @@
+.contract-page {
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.page-header h1 {
+    font-size: 24px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.toolbar {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.search-box {
+    flex: 1;
+    position: relative;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 8px 10px 8px 35px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    height: 38px;
+    box-sizing: border-box;
+}
+
+.search-box svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #888;
+}
+
+.filter-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    height: 38px;
+    min-width: 180px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.table-container {
+    flex: 1;
+    overflow: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background-color: #f1f3f5;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #495057;
+    position: sticky;
+    top: 0;
+}
+
+.data-table td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+
+.data-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Badges */
+.badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+.badge-green { background-color: #d1fae5; color: #065f46; }
+.badge-red { background-color: #fee2e2; color: #991b1b; }
+.badge-gray { background-color: #f3f4f6; color: #4b5563; }
+.badge-warning { background-color: #fff7ed; color: #9a3412; border: 1px solid #ffedd5; }
+
+/* Buttons */
+.btn-add {
+    background-color: #0e7c7b;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+}
+.btn-add:hover { background-color: #0b6362; }
+
+.action-group {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+
+.icon-btn {
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.icon-btn.print { background-color: #3b82f6; color: white; }
+.icon-btn.edit { background-color: #f59e0b; color: white; }
+
+.icon-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.loading-state, .no-data {
+    text-align: center;
+    padding: 40px;
+    color: #888;
+    font-style: italic;
+}

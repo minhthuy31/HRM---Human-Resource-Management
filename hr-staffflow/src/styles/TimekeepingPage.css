@@ -1,0 +1,187 @@
+/*
+ 1. BỐ CỤC TRANG CHÍNH & THANH CUỘN
+ */
+.timekeeping-page {
+background-color: var(--card-bg, #ffffff);
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow-color, rgba(0, 0, 0, 0.1));
+  color: var(--main-text);
+  
+  /* Bố cục flex để tạo thanh cuộn nội bộ */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+    /* ***** THÊM DÒNG NÀY ĐỂ SỬA LỖI SCROLL NGOÀI ***** */
+    box-sizing: border-box;
+    min-height: 0;
+}
+
+.timekeeping-header {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 20px;
+ flex-shrink: 0; /* Ngăn header bị co lại */
+}
+
+.month-navigator {
+ display: flex;
+ align-items: center;
+ gap: 15px;
+}
+
+.month-navigator button {
+ background: none;
+ border: 1px solid var(--sidebar-border);
+ border-radius: 50%;
+ width: 32px;
+ height: 32px;
+ cursor: pointer;
+ color: var(--main-text);
+ display: flex;
+ align-items: center;
+ justify-content: center;
+}
+
+.month-navigator h2 {
+ margin: 0;
+ color: var(--main-text);
+}
+
+/*
+ 2. BẢNG DỮ LIỆU (DATA TABLE)
+ */
+.timekeeping-table-container {
+  flex-grow: 1; /* Lấp đầy không gian còn lại */
+  overflow: auto; /* Tự động hiển thị cả 2 thanh cuộn khi cần */
+  border: 1px solid var(--sidebar-border);
+  border-radius: 6px;
+ min-height: 0;
+}
+
+.timekeeping-table {
+ /* width: 100%; */
+ border-collapse: collapse;
+ min-width: 2000px; 
+}
+
+.timekeeping-table thead {
+ position: sticky; /* Giữ header của bảng cố định khi cuộn DỌC */
+ top: 0;
+ z-index: 10;
+ background-color: var(--card-bg);
+}
+
+.timekeeping-table th{
+ border: 1px solid var(--sidebar-border);
+ text-align: center;
+ min-width: 200px;   /* mỗi ngày rộng hơn -> dễ nhìn */
+ padding: 20px 25px;
+ background: var(--card-bg);
+}
+.timekeeping-table td {
+ min-width: 100px; /* Chiều rộng tối thiểu cho các cột ngày */
+ border: 1px solid var(--sidebar-border);
+ text-align: center;
+ min-width: 140px;
+ padding: 30px 30px;
+}
+
+.timekeeping-table th {
+ font-weight: 600;
+ background-color: var(--hover-bg);
+}
+
+/* Cột tên nhân viên (cố định khi cuộn NGANG) */
+.employee-name-col {
+ position: sticky;
+ left: 0;
+ background-color: var(--card-bg);
+ width: 220px;
+ z-index: 5;
+ text-align: left;
+ font-weight: 500;
+ border-right: 2px solid var(--sidebar-border); /* Thêm đường kẻ để phân biệt */
+}
+
+/* Header của cột tên nhân viên */
+.timekeeping-table thead .employee-name-col {
+  z-index: 15; /* Phải cao hơn header thường */
+}
+
+/*
+ 3. CÁC Ô CHẤM CÔNG VÀ MODAL
+ */
+.attendance-cell {
+ cursor: pointer;
+ position: relative;
+ font-size: 13px;
+ font-weight: 700;
+}
+.attendance-cell:hover { background-color: var(--hover-bg); }
+.status-present { color: #16a34a; } /* Đi làm - Xanh lá */
+.status-absent { color: #dc2626; } /* Vắng - Đỏ */
+.status-leave  { color: #d97706; } /* Nghỉ phép - Cam */
+
+/* === BỔ SUNG CLASS MỚI === */
+.status-half-day { color: #2563eb; }
+
+.time-range {
+ font-size: 11px;
+ color: var(--toggle-icon-color);
+ margin-top: 2px;
+ display: block;
+}
+
+/* Tooltip */
+.cell-tooltip {
+ visibility: hidden; opacity: 0;
+ position: absolute; bottom: 100%; left: 50%;
+ transform: translateX(-50%);
+ background-color: #333; color: white;
+ padding: 5px 10px; border-radius: 4px;
+ font-size: 12px; white-space: nowrap;
+ z-index: 20; transition: opacity 0.2s;
+ margin-bottom: 5px;
+}
+.attendance-cell:hover .cell-tooltip { visibility: visible; opacity: 1; }
+
+/* Modal */
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1001; }
+.modal-content.attendance-modal { max-width: 400px; background: var(--card-bg); color: var(--main-text); padding: 30px; border-radius: 8px; }
+.attendance-form .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
+.attendance-form label { margin-bottom: 5px; font-weight: 500; }
+.attendance-form input, .attendance-form select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--sidebar-border); background-color: var(--sidebar-bg); color: var(--main-text); font-size: 16px; box-sizing: border-box; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.modal-actions button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; color: #fff; }
+.modal-actions .save-btn { background-color: #0d6efd; }
+.modal-actions .cancel-btn { background-color: #6c757d; }
+
+/* Tô màu cho các ô trong vùng được chọn */
+.attendance-cell.selected,
+.attendance-cell.in-range {
+ background-color: #dbeafe !important; /* Màu xanh nhạt */
+ border: 1px solid #93c5fd;
+ box-shadow: inset 0 0 0 1px #93c5fd;
+}
+
+/* Kiểu cho header của hàng/cột được chọn */
+.employee-name-col.selected,
+.day-header.selected {
+ background-color: #bfdbfe; /* Đậm hơn một chút */
+ font-weight: bold;
+}
+
+/* Thêm con trỏ chuột cho các header */
+.employee-name-col,
+.day-header {
+ cursor: pointer;
+ transition: background-color 0.2s;
+}
+
+.employee-name-col:hover,
+.day-header:hover {
+ background-color: #eef2ff;
+}

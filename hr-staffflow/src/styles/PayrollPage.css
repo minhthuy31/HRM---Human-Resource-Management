@@ -1,0 +1,299 @@
+/* =========================================
+   1. LAYOUT CHÍNH
+   ========================================= */
+.payroll-page-container {
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Ngăn scroll ở body, chỉ scroll trong bảng */
+  box-sizing: border-box;
+}
+
+.payroll-page-container h1 {
+  font-size: 1.5rem;
+  color: #111827;
+  margin: 0 0 20px 0;
+  font-weight: 700;
+}
+
+/* =========================================
+   2. HEADER & ĐIỀU HƯỚNG
+   ========================================= */
+.payroll-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.month-navigator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #f3f4f6;
+  padding: 6px 16px;
+  border-radius: 30px;
+}
+
+.month-navigator h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.month-navigator button {
+  border: 1px solid #e5e7eb;
+  background: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.month-navigator button:hover:not(:disabled) {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.header-actions button {
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  transition: opacity 0.2s;
+}
+
+.save-payroll-btn {
+  background-color: #10b981; /* Xanh lá */
+  color: white;
+}
+
+.export-excel-btn {
+  background-color: #3b82f6; /* Xanh dương */
+  color: white;
+}
+
+.template-btn, .import-btn {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb !important;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   3. KHUNG BẢNG & SCROLL (QUAN TRỌNG)
+   ========================================= */
+.payroll-table-wrapper {
+  flex: 1; /* Chiếm hết chiều cao còn lại */
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+.payroll-table-scroll {
+  width: 100%;
+  height: 100%;
+  
+  /* Kích hoạt thanh cuộn */
+  overflow: auto; 
+  
+  /* Giúp cuộn mượt trên iOS/Mac */
+  -webkit-overflow-scrolling: touch; 
+
+  /* Ngăn cuộn lan ra ngoài trang web */
+  overscroll-behavior: contain;
+
+  /* --- CẤU HÌNH KHÓA TRỤC (Axis Locking) --- */
+  /* Giúp trình duyệt hiểu rằng người dùng muốn pan ngang HOẶC dọc, hạn chế chéo */
+  touch-action: pan-x pan-y;
+}
+
+.payroll-table {
+  width: max-content; /* Bảng tự mở rộng theo nội dung cột */
+  min-width: 100%;
+  border-collapse: separate; /* Bắt buộc để Sticky hoạt động */
+  border-spacing: 0;
+}
+
+/* =========================================
+   4. STICKY HEADERS & COLUMNS (GHIM CỐ ĐỊNH)
+   ========================================= */
+
+/* A. Ghim Header (Khi kéo xuống) */
+.payroll-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20; /* Layer cao hơn nội dung */
+  background-color: #f9fafb;
+  border-bottom: 1px solid #d1d5db;
+  border-right: 1px solid #f3f4f6;
+  padding: 10px 8px;
+  font-size: 13px;
+  color: #374151;
+  text-align: center;
+}
+
+/* B. Ghim Cột Đầu Tiên (Nhân viên - Khi kéo ngang) */
+.sticky-col.first-col {
+  position: sticky;
+  left: 0;
+  z-index: 25; /* Cao hơn nội dung thường nhưng thấp hơn góc giao nhau */
+  background-color: #ffffff;
+  border-right: 2px solid #e5e7eb;
+  min-width: 200px;
+  max-width: 250px;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.02);
+}
+
+/* C. Ghim Cột Cuối Cùng (Thực Lĩnh - Khi kéo ngang) - Tùy chọn */
+.sticky-col.last-col {
+  position: sticky;
+  right: 0;
+  z-index: 25;
+  background-color: #eff6ff; /* Màu nền xanh nhạt nổi bật */
+  border-left: 2px solid #e5e7eb;
+  min-width: 120px;
+  box-shadow: -2px 0 5px rgba(0,0,0,0.02);
+}
+
+/* D. Xử lý GÓC CHẾT (Giao điểm giữa Header và Cột Sticky) */
+/* Ô tiêu đề "Nhân viên" và "Thực lĩnh" phải đứng im tuyệt đối */
+thead tr th.sticky-col {
+  z-index: 30; /* Layer cao nhất */
+  background-color: #f3f4f6; /* Màu nền của header */
+}
+
+/* =========================================
+   5. STYLE CHO CÁC Ô & DỮ LIỆU
+   ========================================= */
+.payroll-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  border-right: 1px solid #f3f4f6;
+  vertical-align: middle;
+  font-size: 13px;
+  white-space: nowrap; /* Không xuống dòng */
+}
+
+.payroll-table tbody tr:hover td {
+  background-color: #f9fafb; /* Highlight dòng khi hover */
+}
+
+/* Giữ màu nền cho cột sticky khi hover dòng */
+.payroll-table tbody tr:hover td.sticky-col.first-col {
+  background-color: #fff;
+}
+.payroll-table tbody tr:hover td.sticky-col.last-col {
+  background-color: #e0e7ff;
+}
+
+/* Text Alignment */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+
+/* Colors & Highlights */
+.bg-gray { background-color: #f9fafb !important; }
+.bg-blue-light { background-color: #eff6ff !important; color: #1e40af; }
+.bg-green-light { background-color: #f0fdf4 !important; color: #15803d; }
+.bg-red-light { background-color: #fef2f2 !important; color: #b91c1c; }
+.bg-yellow-light { background-color: #fffbeb !important; color: #b45309; }
+
+.bg-blue-fade { background-color: #f0f9ff; }
+.bg-green-fade { background-color: #f0fdf4; }
+.bg-yellow-fade { background-color: #fffbeb; }
+
+/* Font Styles */
+.font-bold { font-weight: 700; }
+.font-500 { font-weight: 500; }
+.text-muted { color: #9ca3af; }
+.text-sm { font-size: 12px; }
+
+/* Data Colors */
+.text-blue { color: #2563eb; }
+.text-purple { color: #7c3aed; }
+.text-green { color: #059669; }
+.text-orange { color: #d97706; font-weight: 600; }
+.text-red { color: #dc2626; }
+.text-gray { color: #6b7280; }
+
+/* =========================================
+   6. COMPONENTS (INPUT, INFO, ETC.)
+   ========================================= */
+.employee-info {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+.employee-info strong {
+  color: #1f2937;
+  font-size: 13px;
+}
+.employee-info span {
+  font-size: 11px;
+  color: #afa69c;
+}
+
+/* Input Khấu Trừ */
+.salary-input {
+  width: 100%;
+  min-width: 80px;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  text-align: right;
+  font-size: 13px;
+  color: #dc2626;
+  font-weight: 600;
+  background-color: #fff;
+  transition: border-color 0.2s;
+}
+
+.salary-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.final-salary {
+  font-weight: 700;
+  color: #1d4ed8;
+  font-size: 14px;
+  background-color: #eff6ff;
+}
+
+/* Tooltip cho Bảo hiểm (Nếu dùng) */
+.tooltip-container {
+  position: relative;
+  cursor: help;
+  border-bottom: 1px dashed #ccc;
+}

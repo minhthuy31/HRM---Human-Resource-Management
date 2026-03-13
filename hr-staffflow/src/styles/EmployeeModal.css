@@ -1,0 +1,344 @@
+.employee-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+/* --- 1. FULL MÀN HÌNH --- */
+.employee-modal__content {
+  background: #fff;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.employee-modal__header {
+  padding: 0 30px;
+  background-color: #0e7c7b;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  height: 55px; /* Tăng nhẹ chiều cao header */
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+.employee-modal__header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.employee-modal__close-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 1.6rem;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.employee-modal__close-btn:hover {
+  opacity: 1;
+}
+
+/* Body layout */
+.employee-modal__body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* --- 2. SIDEBAR MENU --- */
+.employee-modal__sidebar {
+  width: 270px;
+  background-color: #f8f9fa;
+  border-right: 1px solid #dce0e4;
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 15px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-item {
+  padding: 16px 25px; /* Tăng vùng bấm sidebar */
+  cursor: pointer;
+  font-size: 15.5px; /* Font menu to hơn chút */
+  font-weight: 600;
+  color: #55606d;
+  border-left: 5px solid transparent;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-item:hover {
+  background-color: #e9ecef;
+  color: #0e7c7b;
+}
+
+.sidebar-item.active {
+  background-color: #fff;
+  color: #0e7c7b;
+  border-left-color: #0e7c7b;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* --- 3. NỘI DUNG CHÍNH --- */
+.employee-modal__main {
+  flex: 1;
+  padding: 25px 40px; /* Padding rộng hơn để nội dung không bị sát mép */
+  overflow-y: auto;
+  background-color: #fff;
+}
+
+.form-section-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0e7c7b;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+  margin-top: 5px;
+}
+
+.form-section-title:first-child {
+  margin-top: 0;
+}
+
+/* Grid Layouts */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px 25px; /* Tăng gap ngang để các ô to không dính nhau */
+  margin-bottom: 25px;
+}
+
+.form-grid.grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.form-grid.grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.form-grid.grid-1 {
+  grid-template-columns: 1fr;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- LABEL VỪA VẶN --- */
+.form-group label {
+  font-size: 13.5px; /* Tăng từ 12px lên 13.5px cho dễ đọc */
+  font-weight: 600;
+  margin-bottom: 6px; /* Cách ô input một chút */
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.1px;
+}
+
+/* --- INPUT & SELECT TO HƠN 1 TÝ (44px) --- */
+.form-group input,
+.form-group select {
+  height: 44px; /* Tăng từ 36px lên 44px (To hơn 1 tý) */
+  padding: 0 12px;
+  border: 1px solid #ced4da;
+  border-radius: 5px; /* Bo góc mềm hơn chút */
+  font-size: 14.5px; /* Font chữ trong ô to hơn (14.5px) */
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #fff;
+  color: #333;
+  line-height: normal;
+  margin: 0;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+/* Custom Select Style */
+.form-group select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 11px;
+  padding-right: 30px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #0e7c7b;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(14, 124, 123, 0.1); /* Shadow focus dày hơn chút */
+}
+
+.form-group input:disabled,
+.form-group select:disabled {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+  border-color: #e9ecef;
+}
+
+/* --- FIX DATEPICKER ĐỒNG BỘ 44px --- */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker__input-container input {
+  height: 44px !important; /* Đồng bộ 44px */
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  font-size: 14.5px;
+}
+
+/* Avatar Section */
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px; /* Tăng padding */
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  width: 150px; /* To hơn chút */
+  background-color: #fdfdfd;
+}
+
+.avatar-section:hover {
+    border-color: #0e7c7b;
+    background-color: #f0fdfd;
+}
+
+.avatar-preview img {
+  width: 110px; /* Avatar to hơn */
+  height: 110px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin-bottom: 10px;
+  border: 3px solid #fff;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+
+.avatar-upload-label {
+  font-size: 13.5px;
+  color: #0e7c7b;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Footer Actions */
+.employee-modal__footer {
+  padding: 12px 40px;
+  border-top: 1px solid #e1e4e8;
+  display: flex;
+  justify-content: flex-end;
+  background-color: #f8f9fa;
+  gap: 15px;
+  flex-shrink: 0;
+  height: 65px; /* Footer cao hơn chút */
+  box-sizing: border-box;
+  align-items: center;
+}
+
+.btn-save {
+  background-color: #0e7c7b;
+  color: white;
+  padding: 0 30px;
+  height: 40px; /* Nút save to hơn */
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14.5px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(14, 124, 123, 0.2);
+}
+
+.btn-save:hover {
+  background-color: #0b6362;
+  transform: translateY(-1px);
+}
+
+.btn-cancel {
+  background-color: #e9ecef;
+  color: #495057;
+  padding: 0 30px;
+  height: 40px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14.5px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-cancel:hover {
+  background-color: #dee2e6;
+}
+
+/* Date input small in grid */
+.date-input-small {
+    width: 100%;
+}
+
+/* Responsive cho màn hình Laptop 13-14 inch */
+@media (max-width: 1400px) {
+    .employee-modal__main {
+        padding: 20px 30px;
+    }
+    .form-grid {
+        gap: 12px 20px;
+        margin-bottom: 20px;
+    }
+    .form-section-title {
+        font-size: 16px;
+        margin-bottom: 15px;
+    }
+    /* Trên màn nhỏ thì cho nhỏ lại xíu để không phải cuộn */
+    .form-group input, .form-group select, .react-datepicker__input-container input {
+        height: 40px !important; 
+        font-size: 14px;
+    }
+    .employee-modal__sidebar {
+        width: 250px;
+    }
+    .sidebar-item {
+        padding: 14px 20px;
+        font-size: 15px;
+    }
+}

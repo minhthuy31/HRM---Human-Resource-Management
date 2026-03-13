@@ -1,0 +1,99 @@
+/* Container để căn giữa toàn bộ trang */
+.profile-page-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px; /* Thêm padding ngang cho màn hình nhỏ */
+  width: 100%;
+}
+
+/* Thẻ thông tin cá nhân chính - đã được tinh chỉnh */
+.profile-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08); /* Giảm độ đậm của bóng đổ */
+  width: 100%;
+  max-width: 500px; /* <-- GIẢM TỪ 600px, giúp thẻ gọn hơn */
+  text-align: center;
+  overflow: hidden; /* Giúp bo góc cho header bên trong */
+}
+
+/* Phần header của thẻ - THÊM MÀU NỀN */
+.profile-card-header {
+  background-color: #f8f9fa; /* <-- THÊM MỚI: Màu nền xám rất nhạt */
+  padding: 30px 20px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.profile-avatar-icon {
+  font-size: 70px; /* <-- Giảm từ 80px */
+  color: #667eea;
+  margin-bottom: 15px;
+}
+
+.profile-card-header h2 {
+  font-size: 24px; /* <-- Giảm từ 28px */
+  font-weight: 600;
+  color: #343a40;
+  margin: 0;
+}
+
+/* Phần thân thẻ chứa thông tin chi tiết */
+.profile-card-body {
+  padding: 30px; /* Thêm padding cho phần thân */
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 18px; /* <-- Giảm khoảng cách giữa các dòng */
+}
+
+.profile-info-row {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  padding-bottom: 12px; /* <-- Giảm padding */
+  border-bottom: 1px solid #f1f3f5;
+}
+/* Bỏ đường kẻ ở dòng cuối cùng */
+.profile-info-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.info-icon {
+  font-size: 18px; /* <-- Tinh chỉnh kích thước icon */
+  color: #764ba2;
+  margin-right: 15px;
+  min-width: 20px;
+}
+
+.info-label {
+  font-weight: 500;
+  color: #6c757d; /* Cho màu chữ nhạt hơn một chút */
+  margin-right: 8px;
+}
+
+.info-value {
+  color: #212529; /* Cho màu chữ đậm hơn để dễ đọc */
+}
+
+/* Nút quay về */
+.profile-card-footer {
+  padding: 0 30px 30px 30px; /* Căn lề cho nút */
+  margin-top: 10px;
+}
+
+.back-button {
+  background-color: #0d6efd;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.back-button:hover {
+  background-color: #0b5ed7;
+}

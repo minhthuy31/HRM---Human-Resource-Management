@@ -1,0 +1,165 @@
+.my-timekeeping-view {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* --- Bố cục flex cho header --- */
+.timekeeping-header {
+  display: flex;
+  justify-content: space-between; /* Đẩy 2 khối về 2 phía */
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #eee; /* Thêm đường kẻ dưới cho đẹp */
+  padding-bottom: 1.5rem;
+}
+
+.month-navigator {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.month-navigator button {
+  background: #f0f2f5;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.month-navigator button:hover {
+  background-color: #e4e6eb;
+}
+
+.month-navigator h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+  width: 180px; 
+  text-align: center;
+}
+
+/* --- Định dạng lại khối giờ làm việc --- */
+.work-schedule-section {
+  text-align: right; /* Căn lề phải */
+  color: #666;
+}
+
+.work-schedule-section h4 {
+  font-size: 1rem; /* Giảm kích thước */
+  color: #333;
+  margin: 0 0 8px 0;
+  font-weight: 600;
+}
+
+.work-schedule-section p {
+  margin: 4px 0;
+  font-size: 0.9rem;
+}
+
+
+/* --- Các style còn lại giữ nguyên --- */
+.timekeeping-list {
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden; 
+  margin-bottom: 2rem;
+}
+
+.list-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background-color: #f0f2f5; 
+  font-weight: 700; 
+  color: #333;
+  text-transform: uppercase; 
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #ddd;
+}
+
+.header-date, .header-status, .date-col, .status-col {
+  padding: 14px 16px; 
+}
+.header-date {
+    flex-basis: 35%;
+    color: #dc2626;
+    font-size: large;
+    font-weight: bold;
+    text-align: center;
+}
+.header-status {
+    flex-basis: 65%;
+    text-align: center;
+    color: #dc2626;
+    font-size: large;
+    font-weight: bold;
+}
+
+.day-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border-top: 1px solid #e0e0e0;
+  text-align: center;
+}
+.day-row:nth-child(even) { 
+    background-color: #f9fafb; 
+    text-align: center;
+}
+
+.date-col { 
+    flex-basis: 35%; 
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+}
+.status-col { 
+    flex-basis: 65%; 
+    display: flex;
+    flex-direction: column; 
+    font-weight: bold; 
+    font-size: 1.1rem;
+    text-align: center;
+}
+.date-text { 
+    font-weight: 500; 
+    color: #333;
+    text-align: center;
+}
+.day-of-week-text { 
+    font-size: 0.85rem; 
+    color: #757575; 
+    text-align: center;
+}
+.status-note { 
+    font-size: 0.8rem; 
+    font-weight: normal; 
+    color: #6c757d; 
+    margin-top: 4px;
+    text-align: center;
+}
+
+.status-present { color: #16a34a; } 
+.status-leave   { color: #d97706; } 
+.status-absent  { color: #dc2626; } 
+
+.summary-section { padding-top: 1.5rem; }
+.summary-section h4 { text-align: center; margin-bottom: 1rem; font-size: 1.2rem; }
+.summary-grid { display: flex; justify-content: space-around; }
+.summary-item { text-align: center; }
+.summary-value { font-size: 2rem; font-weight: bold; display: block; }
+.summary-label { color: #666; }
+.green { color: #16a34a; }
+.orange { color: #d97706; }
+.red { color: #dc2626; }
+.loading-text { padding: 2rem; text-align: center; color: #666; }
+

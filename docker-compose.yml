@@ -1,0 +1,61 @@
+﻿version: "3.8"
+
+services:
+  # 1. DATABASE SERVICE
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: hr-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "MatKhauManh123!" # Mật khẩu SQL
+      MSSQL_PID: Express
+    ports:
+      - "1434:1433"
+    volumes:
+      # MOUNT DỮ LIỆU DB:
+      # Sử dụng Named Volume để hiệu năng tốt nhất và không mất dữ liệu khi restart
+      - sql_data:/var/opt/mssql
+      - ./HRApi.bak:/var/opt/mssql/HRApi.bak
+    restart: always
+
+  # 2. BACKEND API
+  backend:
+    build:
+      context: ./HRApi/HRApi # Đảm bảo đường dẫn này trỏ đúng vào thư mục chứa Dockerfile
+      dockerfile: Dockerfile
+    container_name: hr-backend
+    ports:
+      - "5260:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      
+      # QUAN TRỌNG: Ghi đè ConnectionString tại đây
+      # Server=sqlserver: Trỏ tới container bên trên
+      # Database=HRApi: Tên DB sẽ được tạo tự động bởi code Program.cs của bạn
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=HRApi;User Id=sa;Password=MatKhauManh123!;TrustServerCertificate=True;"
+      
+      # Ghi đè cấu hình Email (Optional - để bảo mật không lộ trong code)
+      # EmailSettings__Password: "mật_khẩu_thật_của_bạn"
+    volumes:
+      # MOUNT ẢNH/FILE UPLOAD:
+      # Map thư mục wwwroot ra máy thật để không mất ảnh khi update code
+      - ./HRApi/HRApi/wwwroot:/app/wwwroot
+      - ./HRApi/EmailTemplates:/app/EmailTemplates
+    depends_on:
+      - sqlserver
+    restart: on-failure # Tự khởi động lại nếu SQL Server chưa sẵn sàng
+
+  # 3. FRONTEND
+  frontend:
+    build:
+      context: ./hr-staffflow
+      dockerfile: Dockerfile
+    container_name: hr-staffflow
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+# Khai báo Volume cho SQL
+volumes:
+  sql_data:

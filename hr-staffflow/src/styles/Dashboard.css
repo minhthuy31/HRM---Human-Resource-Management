@@ -1,0 +1,204 @@
+/* ========================================================
+   FILE: Dashboard.css
+   Mô tả: Style DÀNH RIÊNG cho trang chủ (Dashboard).
+   Sử dụng biến màu (var) từ layout gốc để đồng bộ giao diện & Dark Mode.
+======================================================== */
+
+/* Container bọc riêng cho Dashboard (Nằm bên trong page-content-wrapper) */
+.dash-page-container {
+  /* Tận dụng biến màu nền từ layout gốc */
+  background-color: var(--main-bg); 
+  height: 100%;
+  overflow-y: auto; /* Cho phép cuộn nếu biểu đồ dài */
+  padding: 10px;
+}
+
+/* Tùy chỉnh thanh cuộn cho khu vực dashboard */
+.dash-page-container::-webkit-scrollbar {
+  width: 6px;
+}
+.dash-page-container::-webkit-scrollbar-thumb {
+  background-color: var(--sidebar-border);
+  border-radius: 4px;
+}
+
+/* ==========================================
+   HÀNG 1: 4 THẺ THỐNG KÊ TỔNG QUAN (CARDS)
+========================================== */
+.dash-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.dash-summary-card {
+  /* Dùng biến --card-bg để tự động đổi màu khi Dark Mode */
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 6px var(--shadow-color);
+  border: 1px solid var(--sidebar-border);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dash-summary-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px var(--shadow-color);
+}
+
+/* Icon tròn trong thẻ */
+.dash-icon-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+/* Các màu sắc đặc trưng cho icon (Giữ màu cố định không phụ thuộc DarkMode) */
+.dash-bg-blue   { background-color: #3b82f6; }
+.dash-bg-green  { background-color: #10b981; }
+.dash-bg-purple { background-color: #8b5cf6; }
+.dash-bg-orange { background-color: #f59e0b; }
+
+.dash-card-info { 
+  flex: 1; 
+}
+
+.dash-card-title {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--toggle-icon-color); /* Dùng màu xám nhạt từ layout */
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.dash-card-value {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--main-text); /* Dùng màu chữ chính để tự đổi đen/trắng */
+}
+
+.dash-text-orange { 
+  color: #f59e0b !important; 
+}
+
+/* ==========================================
+   CÁC HÀNG DƯỚI: KHUNG BIỂU ĐỒ & DANH SÁCH
+========================================== */
+.dash-charts-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Chia 2 cột đều nhau */
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+  .dash-charts-grid-2 { 
+    grid-template-columns: 1fr; /* Mobile tự xuống dòng */
+  }
+}
+
+.dash-chart-box {
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 6px var(--shadow-color);
+  border: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-box-title {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 1.1rem;
+  color: var(--main-text);
+  font-weight: 600;
+  border-bottom: 1px solid var(--separator-color);
+  padding-bottom: 12px;
+  line-height: 1.4;
+}
+
+.dash-sub-title {
+  font-size: 0.85rem;
+  color: var(--toggle-icon-color);
+  font-weight: normal;
+}
+
+.dash-chart-wrapper {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 300px;
+}
+
+/* ==========================================
+   DANH SÁCH (LIST OT THEO PHÒNG BAN)
+========================================== */
+.dash-list-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 300px;
+  padding-right: 5px;
+}
+
+.dash-list-wrapper::-webkit-scrollbar { width: 5px; }
+.dash-list-wrapper::-webkit-scrollbar-thumb { background-color: var(--sidebar-border); border-radius: 4px; }
+
+.dash-custom-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dash-custom-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 10px;
+  border-bottom: 1px dashed var(--separator-color);
+  transition: background-color 0.2s;
+}
+
+.dash-custom-list li:hover {
+  background-color: var(--hover-bg);
+  border-radius: 6px;
+}
+
+.dash-custom-list li:last-child { 
+  border-bottom: none; 
+}
+
+.dash-list-name {
+  font-size: 0.95rem;
+  color: var(--main-text);
+  font-weight: 500;
+}
+
+.dash-list-value {
+  font-weight: 600;
+  color: var(--hover-text); 
+  background-color: var(--avatar-bg); /* Tận dụng màu nền xanh nhạt/đậm */
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+}
+
+.dash-empty-state {
+  text-align: center;
+  color: var(--toggle-icon-color);
+  padding: 50px 0;
+  font-style: italic;
+}

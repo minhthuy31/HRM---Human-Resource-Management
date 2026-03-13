@@ -1,0 +1,6 @@
+.vs/
+.gradle/
+bin/
+obj/
+node_modules/
+*.bak

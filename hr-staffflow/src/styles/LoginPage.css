@@ -1,0 +1,354 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Reset cơ bản cho riêng trang login */
+.login-wrapper {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: #f1f5f9;
+  /* Màu xám siêu nhạt cho nền ngoài cùng */
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Khung chính chia 2 cột */
+.login-container {
+  display: flex;
+  width: 100%;
+  max-width: 1000px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  /* Cắt góc viền */
+  min-height: 600px;
+}
+
+/* ================================
+   CỘT TRÁI (BANNER CÔNG TY)
+   ================================ */
+.login-banner {
+  flex: 1;
+  background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+  /* Xanh doanh nghiệp */
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  position: relative;
+}
+
+/* Hiệu ứng mờ ảo phía sau nền xanh */
+.login-banner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(circle at top right, rgba(255, 255, 255, 0.1) 0%, transparent 40%),
+    radial-gradient(circle at bottom left, rgba(255, 255, 255, 0.1) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+.banner-content {
+  position: relative;
+  z-index: 1;
+  text-align: left;
+}
+
+.banner-content h1 {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  letter-spacing: -0.5px;
+}
+
+.banner-content p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #e0e7ff;
+  /* Xanh nhạt */
+}
+
+/* ================================
+   CỘT PHẢI (FORM ĐĂNG NHẬP)
+   ================================ */
+.login-form-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: #ffffff;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 380px;
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.brand-header {
+  text-align: center;
+  margin-bottom: 35px;
+}
+
+.login-logo {
+  width: auto;
+  height: 80px;
+  max-width: 100%;
+  margin-bottom: 20px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  object-fit: contain;
+}
+
+.brand-header h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+/* Input Styles */
+.auth-form .input-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.auth-form label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 15px;
+  color: #1e293b;
+  background-color: #f8fafc;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.auth-form input:focus {
+  outline: none;
+  background-color: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 25px;
+}
+
+.forgot-password-link a {
+  color: #3b82f6;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.forgot-password-link a:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+/* Nút Submit */
+.btn-submit {
+  width: 100%;
+  padding: 14px;
+  background-color: #2563eb;
+  /* Corporate Blue */
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s;
+}
+
+.btn-submit:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-submit:active {
+  transform: scale(0.98);
+}
+
+.btn-submit:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* Alerts */
+.alert {
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.alert-danger {
+  color: #b91c1c;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+/* ==========================================================
+   ROLE SELECTION 
+   ========================================================== */
+
+.role-selection-container {
+  text-align: center;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+.welcome-header {
+  margin-bottom: 15px;
+}
+
+.welcome-header h3 {
+  font-size: 20px;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.role-badge {
+  display: inline-block;
+  background-color: #e0e7ff;
+  color: #4338ca;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.instruction-text {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 25px;
+}
+
+.role-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-select-role {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  text-align: left;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-select-role:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Riêng nút Dashboard */
+.btn-dashboard:hover {
+  border-color: #3b82f6;
+  background-color: #f8fafc;
+}
+
+.dashboard-icon {
+  color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+/* Riêng nút Cá nhân */
+.btn-personal:hover {
+  border-color: #10b981;
+  background-color: #f8fafc;
+}
+
+.personal-icon {
+  color: #10b981;
+  background-color: #f0fdf4;
+}
+
+.icon-wrapper {
+  font-size: 24px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.btn-select-role .text {
+  display: flex;
+  flex-direction: column;
+}
+
+.btn-select-role .text strong {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.btn-select-role .text span {
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* Responsive: Ẩn cột banner trên màn hình nhỏ */
+@media (max-width: 768px) {
+  .login-banner {
+    display: none;
+  }
+
+  .login-container {
+    border-radius: 0;
+    box-shadow: none;
+    min-height: auto;
+  }
+
+  .login-wrapper {
+    background-color: #ffffff;
+  }
+}

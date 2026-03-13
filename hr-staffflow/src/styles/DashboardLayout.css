@@ -1,0 +1,266 @@
+/* ================== ROOT VARIABLES ================== */
+:root {
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #333333;
+  --sidebar-border: #e0e0e0;
+  --main-bg: #f9fafb;
+  --main-text: #111827;
+  --card-bg: #ffffff;
+  --hover-bg: #f0f5fa;
+  --hover-text: #0d6efd;
+  --separator-color: #e5e5e5;
+  --toggle-icon-color: #4b5563;
+  --logo-text-color: #1975b1;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+  --avatar-bg: #e0f2fe;
+  --avatar-text: #0c4a6e;
+}
+
+body.dark-mode {
+  --sidebar-bg: #1f2937;
+  --sidebar-text: #d1d5db;
+  --sidebar-border: #374151;
+  --main-bg: #111827;
+  --main-text: #f9fafb;
+  --card-bg: #1f2937;
+  --hover-bg: #374151;
+  --hover-text: #3b82f6;
+  --separator-color: #374151;
+  --toggle-icon-color: #9ca3af;
+  --logo-text-color: #60a5fa;
+  --shadow-color: rgba(0, 0, 0, 0.2);
+  --avatar-bg: #374151;
+  --avatar-text: #e5e7eb;
+}
+
+body {
+  background-color: var(--main-bg);
+  color: var(--main-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ================== DASHBOARD CONTAINER ================== */
+.dashboard-container {
+  height: 100vh;
+  display: flex;
+  /* XÓA DÒNG NÀY: overflow: hidden; */
+}
+
+/* ================== SIDEBAR ================== */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 240px;
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  padding: 16px 8px;
+  border-right: 1px solid var(--sidebar-border);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  overflow-y: auto;
+}
+.sidebar::-webkit-scrollbar { display: none; }
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0px;
+}
+.sidebar-header h2 {
+  color: var(--logo-text-color);
+}
+.system-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo {
+  width: 90px;
+  height: 70px;
+  transition: width 0.3s ease;
+}
+.sidebar h2 {
+  font-size: 23px;
+  margin: 0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.toggle-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--toggle-icon-color);
+}
+.toggle-icon {
+  transition: transform 0.3s ease;
+}
+.toggle-icon.rotated {
+  transform: rotate(180deg);
+}
+
+ul { list-style: none; padding: 0; margin: 0; }
+li { margin: 6px 0; }
+li a {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 17px;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  justify-content: flex-start;
+  color: var(--sidebar-text);
+}
+li a:hover {
+  background-color: var(--hover-bg);
+  color: var(--hover-text);
+  transform: translateX(4px);
+}
+.icon {
+  margin-right: 10px;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+}
+.text { white-space: nowrap; display: inline; }
+
+.menu-separator {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--separator-color);
+}
+
+/* Sidebar collapse */
+.dashboard-container.collapsed .sidebar {
+  width: 80px;
+  padding: 8px 4px;
+}
+.dashboard-container.collapsed:not(.hovered) .main-content {
+  margin-left: 80px;
+}
+.dashboard-container.collapsed.hovered .sidebar {
+  width: 240px;
+  padding: 16px 8px;
+}
+.dashboard-container.collapsed.hovered .main-content {
+  margin-left: 240px;
+}
+.dashboard-container.collapsed .sidebar .system-title h2 { display: none; }
+.dashboard-container.collapsed.hovered .sidebar .system-title h2 { display: block; }
+.dashboard-container.collapsed .sidebar ul li a .text { display: none; }
+.dashboard-container.collapsed.hovered .sidebar ul li a .text { display: inline; }
+
+/* ================== MAIN CONTENT (THAY ĐỔI LỚN) ================== */
+.main-content {
+  margin-left: 240px;
+  flex-grow: 1; /* Thay thế cho width */
+  transition: margin-left 0.3s ease;
+
+  /* BIẾN NÓ THÀNH FLEX CONTAINER DẠNG CỘT */
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Giới hạn chiều cao */
+  overflow: hidden !important;
+}
+
+/* VÙNG CHỨA NỘI DUNG CHÍNH CỦA TRANG */
+.page-content-wrapper {
+  flex-grow: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 20px 20px 20px; /* tùy bạn có muốn padding không */
+  min-height: 0;
+}
+
+/* ================== NAVBAR ================== */
+.navbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background-color: var(--card-bg);
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--sidebar-border);
+  flex-shrink: 0; /* Ngăn Navbar bị co lại */
+  margin: 20px 20px 0 20px; /* Thêm margin để tách khỏi sidebar và top */
+}
+.dark-mode-toggle {
+  cursor: pointer;
+  font-size: 20px;
+}
+
+/* ================== AVATAR & DROPDOWN ================== */
+.avatar-container {
+  position: relative;
+  cursor: pointer;
+}
+.avatar-hover-zone {
+  position: absolute;
+  top: 36px;
+  right: 0;
+  height: 20px;
+  width: 160px;
+  background: transparent;
+  z-index: 1000;
+}
+.avatar {
+  background: var(--avatar-bg);
+  color: var(--avatar-text);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 42px;
+  right: 0;
+  background-color: var(--card-bg);
+  border: 1px solid var(--sidebar-border);
+  box-shadow: 0 2px 8px var(--shadow-color);
+  border-radius: 6px;
+  padding: 8px;
+  min-width: 160px;
+  z-index: 1001;
+}
+.avatar-container:hover .dropdown-menu,
+.avatar-container:hover .avatar-hover-zone { display: block; }
+.dropdown-menu a {
+  display: block;
+  padding: 6px 10px;
+  color: var(--main-text);
+  text-decoration: none;
+}
+.dropdown-menu a:hover {
+  background-color: var(--hover-bg);
+}
+
+/* ================== DATETIME ================== */
+.datetime-container {
+  margin-right: auto;
+  text-align: left;
+  color: var(--main-text);
+}
+.datetime-container .time {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.datetime-container .date {
+  font-size: 13px;
+  color: var(--toggle-icon-color);
+}

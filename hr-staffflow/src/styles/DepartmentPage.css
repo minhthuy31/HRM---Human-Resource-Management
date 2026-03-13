@@ -1,0 +1,273 @@
+/* --- LAYOUT CHÍNH CHO TRANG PHÒNG BAN (Độc lập) --- */
+.dept-page {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* HEADER: CHIA 2 BÊN CÂN ĐỐI */
+.dept-header {
+  display: flex;
+  justify-content: space-between; /* Đẩy Tiêu đề sang trái, Actions sang phải */
+  align-items: center;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+  width: 100%; /* Bắt buộc chiếm hết chiều ngang */
+  gap: 20px; /* Khoảng cách an toàn giữa tiêu đề và cụm nút */
+}
+
+/* Tiêu đề nằm bên trái */
+.dept-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  white-space: nowrap;
+}
+
+/* Cụm hành động (Search + Filter + Button) nằm bên phải */
+.dept-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap; /* Cho phép xuống dòng nếu màn hình quá bé */
+  justify-content: flex-end; /* Căn phải nội dung bên trong */
+  margin-left: auto; /* Đẩy toàn bộ khối này về sát lề phải */
+}
+
+/* SEARCH BOX */
+.dept-search-form {
+    display: flex;
+    align-items: center;
+    margin: 0;
+}
+
+.dept-search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dept-search-icon {
+  position: absolute;
+  left: 12px;
+  color: #999;
+  font-size: 14px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.dept-search-wrapper input {
+  height: 40px !important; /* Chiều cao cố định */
+  padding: 0 12px 0 36px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 260px; /* Độ rộng vừa phải */
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.dept-search-wrapper input:focus {
+  border-color: #0e7c7b;
+  outline: none;
+}
+
+/* FILTER SELECT */
+.dept-filter-wrapper select {
+  height: 40px !important;
+  padding: 0 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+  min-width: 160px;
+  box-sizing: border-box;
+  color: #333;
+  
+  /* Reset appearance để fix lỗi select to hơn input */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  padding-right: 30px;
+}
+
+.dept-filter-wrapper select:focus {
+  border-color: #0e7c7b;
+  outline: none;
+}
+
+/* BUTTON THÊM MỚI */
+.dept-add-btn {
+  height: 40px !important;
+  padding: 0 20px;
+  background-color: #0d6efd; /* Xanh dương nổi bật */
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.2s;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.dept-add-btn:hover {
+  opacity: 0.9;
+}
+
+/* TABLE */
+.dept-table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  background: white;
+}
+
+.dept-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.dept-table th {
+  background-color: #f8f9fa;
+  padding: 14px 16px;
+  font-weight: 600;
+  color: #555;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.dept-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+  color: #333;
+  vertical-align: middle;
+  font-size: 14px;
+}
+
+/* Tên phòng ban */
+.dept-name-cell {
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.dept-name-cell:hover {
+  color:#0d6efd;
+  text-decoration: underline;
+}
+
+
+
+/* Cột hành động */
+.dept-actions-cell {
+  text-align: right;
+  width: 50px;
+}
+
+.dept-action-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.dept-action-btn:hover {
+  background-color: #f0f0f0;
+  color: #000;
+}
+
+/* CONTEXT MENU */
+.dept-context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1050;
+  padding: 6px 0;
+  min-width: 180px;
+}
+
+.dept-context-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dept-context-menu li {
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dept-context-menu li:hover {
+  background-color: #f5f5f5;
+  color: #0d6efd;
+}
+
+/* MÀN HÌNH CẤM QUYỀN */
+.dept-permission-denied {
+  text-align: center;
+  margin-top: 60px;
+  color: #666;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.dept-permission-denied h2 {
+    margin: 0;
+    color: #333;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .dept-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .dept-header-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+  }
+  .dept-search-wrapper input {
+    width: 100%; /* Full width trên mobile */
+  }
+}
