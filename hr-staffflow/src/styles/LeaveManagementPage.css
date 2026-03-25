@@ -2,24 +2,24 @@
 
 /* --- Cấu hình chung --- */
 .leave-management-container {
-    background-color: #fff;
+    background-color: var(--card-bg); /* ĐÃ SỬA */
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Giảm shadow cho nhẹ nhàng hơn */
+    box-shadow: 0 4px 12px var(--shadow-color); /* ĐÃ SỬA */
     height: 100%;
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
     overflow: hidden;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Thêm font chữ đồng bộ */
-    color: #333; /* Màu chữ chính */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    color: var(--main-text); /* ĐÃ SỬA */
 }
 
 .leave-management-container h1 {
     margin: 0 0 20px 0;
     font-size: 22px;
     font-weight: 700;
-    color: #2c3e50; /* Màu tiêu đề đậm hơn chút */
+    color: var(--main-text); /* ĐÃ SỬA */
     flex-shrink: 0;
 }
 
@@ -29,31 +29,32 @@
     gap: 15px;
     margin-bottom: 20px;
     flex-wrap: wrap;
-    align-items: center; /* Căn giữa theo chiều dọc */
+    align-items: center; 
 }
 
-/* Tinh chỉnh ô tìm kiếm */
 .search-box {
     position: relative;
-    flex: 0 1 300px; /* Chiều rộng linh hoạt nhưng tối đa khoảng 300px */
+    flex: 0 1 300px; 
     min-width: 200px;
 }
 
 .search-box input {
     width: 100%;
-    padding: 8px 12px 8px 32px; /* Padding trái lớn để chứa icon */
-    border-radius: 6px; /* Bo góc mềm mại hơn */
-    border: 1px solid #ced4da;
+    padding: 8px 12px 8px 32px; 
+    border-radius: 6px; 
+    border: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
+    background-color: var(--main-bg); /* ĐÃ SỬA */
+    color: var(--main-text); /* ĐÃ SỬA */
     font-size: 14px;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    height: 36px; /* Chiều cao cố định gọn gàng */
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.3s;
+    height: 36px; 
     box-sizing: border-box;
 }
 
 .search-box input:focus {
     border-color: #0e7c7b;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(14, 124, 123, 0.15); /* Hiệu ứng focus */
+    box-shadow: 0 0 0 3px rgba(14, 124, 123, 0.15); 
 }
 
 .search-box svg {
@@ -61,22 +62,23 @@
     left: 10px;
     top: 50%;
     transform: translateY(-50%);
-    color: #999;
-    font-size: 14px; /* Icon nhỏ lại chút */
-    pointer-events: none; /* Tránh click vào icon */
+    color: var(--toggle-icon-color); /* ĐÃ SỬA */
+    font-size: 14px; 
+    pointer-events: none; 
 }
 
-/* Dropdown phòng ban (nếu có) */
+/* Dropdown phòng ban */
 .filters-bar select {
     padding: 0 12px;
-    height: 36px; /* Chiều cao bằng ô search */
+    height: 36px; 
     border-radius: 6px;
-    border: 1px solid #ced4da;
+    border: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
     font-size: 14px;
-    color: #495057;
-    background-color: #fff;
+    color: var(--main-text); /* ĐÃ SỬA */
+    background-color: var(--main-bg); /* ĐÃ SỬA */
     cursor: pointer;
     min-width: 200px;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 .filters-bar select:focus {
@@ -84,24 +86,23 @@
     outline: none;
 }
 
-
 /* --- TAB CHÍNH (LOẠI ĐƠN) --- */
 .main-tabs {
     display: flex;
     gap: 0;
-    border-bottom: 1px solid #e9ecef; /* Border mảnh hơn */
+    border-bottom: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
     margin-bottom: 20px;
     flex-shrink: 0;
 }
 
 .main-tabs button {
-    padding: 10px 20px; /* Padding gọn hơn */
+    padding: 10px 20px; 
     background: transparent;
     border: none;
     border-bottom: 3px solid transparent;
-    font-size: 15px; /* Chữ nhỏ lại xíu cho tinh tế */
+    font-size: 15px; 
     font-weight: 600;
-    color: #6c757d;
+    color: var(--toggle-icon-color); /* ĐÃ SỬA */
     cursor: pointer;
     transition: all 0.2s;
     margin-bottom: -1px;
@@ -109,7 +110,7 @@
 
 .main-tabs button:hover {
     color: #0e7c7b;
-    background-color: rgba(14, 124, 123, 0.05); /* Nền hover nhẹ */
+    background-color: var(--hover-bg); /* ĐÃ SỬA */
 }
 
 .main-tabs button.active {
@@ -127,35 +128,33 @@
 
 .sub-filters button {
     padding: 6px 16px;
-    border: 1px solid #e9ecef;
-    background-color: #fff; /* Nền trắng */
+    border: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
+    background-color: var(--main-bg); /* ĐÃ SỬA */
     border-radius: 20px;
     font-size: 13px;
     font-weight: 500;
-    color: #495057;
+    color: var(--main-text); /* ĐÃ SỬA */
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .sub-filters button:hover {
-    background-color: #f1f3f5;
-    border-color: #dee2e6;
+    background-color: var(--hover-bg); /* ĐÃ SỬA */
 }
 
 .sub-filters button.active {
-    background-color: #343a40; /* Màu tối sang trọng */
+    background-color: #0e7c7b; /* Chuyển về xanh cho hợp hệ thống */
     color: white;
-    border-color: #343a40;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-color: #0e7c7b;
 }
 
 /* --- TABLE CONTAINER & TABLE --- */
 .requests-table-container {
     flex: 1;
     overflow: auto;
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
     border-radius: 8px;
-    background: white;
+    background-color: transparent; /* ĐÃ SỬA */
     position: relative;
 }
 
@@ -168,40 +167,39 @@
 
 .requests-table th,
 .requests-table td {
-    padding: 12px 16px; /* Tăng padding ngang cho thoáng */
-    border-bottom: 1px solid #f1f3f5;
+    padding: 12px 16px; 
+    border-bottom: 1px solid var(--separator-color); /* ĐÃ SỬA */
     vertical-align: middle;
     font-size: 14px;
+    color: var(--main-text); /* ĐÃ SỬA */
 }
 
 .requests-table th {
-    background-color: #f8f9fa;
+    background-color: var(--hover-bg); /* ĐÃ SỬA */
     position: sticky;
     top: 0;
     z-index: 5;
     font-weight: 600;
-    color: #495057;
-    border-bottom: 2px solid #e9ecef;
-    text-transform: uppercase; /* Chữ hoa tiêu đề cột */
-    font-size: 12px; /* Chữ tiêu đề nhỏ hơn chút */
+    color: var(--main-text); /* ĐÃ SỬA */
+    border-bottom: 2px solid var(--sidebar-border); /* ĐÃ SỬA */
+    text-transform: uppercase; 
+    font-size: 12px; 
     letter-spacing: 0.5px;
 }
 
 .requests-table tbody tr:hover {
-    background-color: #f8f9fa;
+    background-color: var(--hover-bg); /* ĐÃ SỬA */
 }
 
-/* Cột lý do */
 .reason-cell {
     min-width: 200px;
     max-width: 350px;
     white-space: normal;
     word-wrap: break-word;
-    color: #555;
+    color: var(--main-text); /* ĐÃ SỬA */
     line-height: 1.5;
 }
 
-/* Nút hành động */
 .action-buttons {
     display: flex;
     gap: 6px;
@@ -209,7 +207,7 @@
 
 .action-buttons button {
     border: none;
-    padding: 6px 10px; /* Nút nhỏ gọn hơn */
+    padding: 6px 10px; 
     border-radius: 4px;
     color: white;
     cursor: pointer;
@@ -217,17 +215,16 @@
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 4px; /* Khoảng cách icon và chữ */
+    gap: 4px; 
     transition: background 0.2s;
 }
 
-.approve-btn { background-color: #20c997; } /* Màu xanh mint hiện đại */
-.reject-btn   { background-color: #fa5252; } /* Màu đỏ tươi */
+.approve-btn { background-color: #20c997; } 
+.reject-btn   { background-color: #fa5252; } 
 
 .approve-btn:hover { background-color: #12b886; }
 .reject-btn:hover { background-color: #f03e3e; }
 
-/* Badge Status */
 .status-badge {
     padding: 4px 12px;
     border-radius: 12px;
@@ -236,14 +233,128 @@
     display: inline-block;
     text-transform: uppercase;
 }
-.status-badge.pending { background-color: #fff9db; color: #f08c00; }
-.status-badge.approved { background-color: #e6fcf5; color: #0ca678; }
-.status-badge.rejected { background-color: #fff5f5; color: #fa5252; }
+.status-badge.pending { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.status-badge.approved { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
+.status-badge.rejected { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
 .no-data {
     text-align: center;
-    color: #adb5bd;
+    color: var(--toggle-icon-color); /* ĐÃ SỬA */
     padding: 40px 0;
     font-size: 15px;
     font-style: italic;
+}
+/* ===================================== */
+/* == TOAST NOTIFICATION CSS ANIMATION ==*/
+/* ===================================== */
+.toast-notification {
+  position: fixed;
+  bottom: 30px; 
+  right: 20px;
+  min-width: 250px;
+  max-width: 350px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  z-index: 9999;
+  
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(120%); 
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+.toast-notification.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+}
+
+.toast-notification.success { background-color: #28a745; }
+.toast-notification.error { background-color: #dc3545; }
+.toast-notification.warning { background-color: #ffc107; color: #212529; }
+
+/* ===================================== */
+/* == CUSTOM CONFIRM MODAL CSS        == */
+/* ===================================== */
+
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5); 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(2px);
+}
+
+.custom-confirm-modal {
+  background-color: var(--card-bg, #ffffff);
+  color: var(--main-text, #333);
+  width: 400px;
+  max-width: 90%;
+  border-radius: 10px;
+  padding: 24px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.confirm-title {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #dc3545; 
+}
+
+.confirm-message {
+  font-size: 15px;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.confirm-actions button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s;
+}
+
+.btn-cancel {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.btn-cancel:hover {
+  background-color: #dee2e6;
+}
+
+.btn-accept {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-accept:hover {
+  background-color: #c82333;
 }

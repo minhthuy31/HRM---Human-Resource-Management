@@ -1,0 +1,330 @@
+/* src/styles/SystemSettingsPage.css */
+
+.settings-page-container {
+  padding: 20px;
+  height: 100%;
+  background-color: var(--main-bg);
+  overflow-y: auto;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 25px;
+  border-bottom: 1px solid var(--sidebar-border);
+  padding-bottom: 15px;
+}
+
+.settings-header h1 {
+  margin: 0 0 5px 0;
+  color: var(--main-text);
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.settings-header p {
+  margin: 0;
+  color: var(--toggle-icon-color);
+  font-size: 0.9rem;
+}
+
+.btn-save-settings {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: #10b981;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-save-settings:hover {
+  background-color: #059669;
+}
+
+.btn-save-settings:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* BỐ CỤC SPLIT LAYOUT */
+.settings-layout {
+  display: flex;
+  gap: 25px;
+  align-items: flex-start;
+}
+
+@media (max-width: 1024px) {
+  .settings-layout {
+    flex-direction: column;
+  }
+}
+
+/* Menu dọc bên trái */
+.settings-sidebar {
+  width: 280px;
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  border: 1px solid var(--sidebar-border);
+  box-shadow: 0 4px 6px -1px var(--shadow-color);
+  flex-shrink: 0;
+}
+
+@media (max-width: 1024px) {
+  .settings-sidebar {
+    width: 100%;
+  }
+}
+
+.settings-menu {
+  list-style: none;
+  padding: 10px;
+  margin: 0;
+}
+
+.settings-menu li {
+  padding: 15px 20px;
+  margin-bottom: 5px;
+  border-radius: 8px;
+  color: var(--main-text);
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s;
+}
+
+.settings-menu li:hover {
+  background-color: var(--hover-bg);
+}
+
+.settings-menu li.active {
+  background-color: #eff6ff;
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.tab-icon {
+  font-size: 18px;
+  color: var(--toggle-icon-color);
+}
+
+.settings-menu li.active .tab-icon {
+  color: #3b82f6;
+}
+
+/* Nội dung form bên phải */
+.settings-content {
+  flex: 1;
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  border: 1px solid var(--sidebar-border);
+  box-shadow: 0 4px 6px -1px var(--shadow-color);
+  padding: 30px;
+  min-height: 500px;
+}
+
+.settings-panel h2 {
+  margin-top: 0;
+  margin-bottom: 25px;
+  color: var(--main-text);
+  font-size: 1.3rem;
+  border-left: 4px solid #3b82f6;
+  padding-left: 10px;
+}
+
+/* Form Styles */
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--main-text);
+  font-size: 0.95rem;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="email"],
+.form-group input[type="time"] {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid var(--sidebar-border);
+  border-radius: 8px;
+  background-color: var(--main-bg);
+  color: var(--main-text);
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.form-group small {
+  display: block;
+  margin-top: 6px;
+  color: var(--toggle-icon-color);
+  font-size: 0.85rem;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #f8fafc;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid var(--sidebar-border);
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.checkbox-group label {
+  margin-bottom: 0;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* ===================================== */
+/* == TOAST NOTIFICATION CSS ANIMATION ==*/
+/* ===================================== */
+.toast-notification {
+  position: fixed;
+  bottom: 30px; 
+  right: 20px;
+  min-width: 250px;
+  max-width: 350px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  z-index: 9999;
+  
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(120%); 
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+.toast-notification.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+}
+
+.toast-notification.success { background-color: #28a745; }
+.toast-notification.error { background-color: #dc3545; }
+.toast-notification.warning { background-color: #ffc107; color: #212529; }
+
+/* ===================================== */
+/* == CUSTOM CONFIRM MODAL CSS        == */
+/* ===================================== */
+
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5); 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(2px);
+}
+
+.custom-confirm-modal {
+  background-color: var(--card-bg, #ffffff);
+  color: var(--main-text, #333);
+  width: 400px;
+  max-width: 90%;
+  border-radius: 10px;
+  padding: 24px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.confirm-title {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #dc3545; 
+}
+
+.confirm-message {
+  font-size: 15px;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.confirm-actions button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s;
+}
+
+.btn-cancel {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.btn-cancel:hover {
+  background-color: #dee2e6;
+}
+
+.btn-accept {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-accept:hover {
+  background-color: #c82333;
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../api";
 import { getUserFromToken } from "../utils/auth";
@@ -13,10 +13,31 @@ import "../styles/TimekeepingPage.css";
 import AttendanceModal from "../components/modals/AttendanceModal";
 import BulkEditModal from "../components/modals/BulkEditModal";
 
+// --- Custom Confirm Modal ---
+const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="custom-modal-overlay">
+      <div className="custom-confirm-modal">
+        <h3 className="confirm-title">Xác nhận</h3>
+        <p className="confirm-message">{message}</p>
+        <div className="confirm-actions">
+          <button className="btn-cancel" onClick={onCancel}>
+            Hủy
+          </button>
+          <button className="btn-accept" onClick={onConfirm}>
+            Đồng ý
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TimekeepingPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // Sử dụng state employees để render danh sách
   const [employees, setEmployees] = useState([]);
   const [attendance, setAttendance] = useState({});
   const [loading, setLoading] = useState(true);
@@ -34,67 +55,95 @@ const TimekeepingPage = () => {
   const user = getUserFromToken();
   const userRole = user?.role || user?.Role || "";
 
-  // Trưởng phòng, HR, Giám đốc được sửa (nếu chưa khóa)
   const canEdit =
     ["Nhân sự trưởng", "Giám đốc", "Tổng giám đốc", "Trưởng phòng"].includes(
       userRole,
     ) && !isLocked;
 
-  // Chỉ HR và Giám đốc được chốt khóa
   const canLock = ["Nhân sự trưởng", "Giám đốc", "Tổng giám đốc"].includes(
     userRole,
   );
 
-  const fetchData = useCallback(async (date) => {
-    setLoading(true);
-    setPermissionDenied(false);
-    try {
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1;
+  // --- TOAST STATE ---
+  const [toast, setToast] = useState({
+    message: "",
+    type: "success",
+    visible: false,
+  });
+  const toastTimerRef = useRef(null);
 
-      // 1. Gọi danh sách nhân viên (Backend tự động phân quyền Trưởng phòng chỉ lấy phòng mình)
-      const empRes = await api.get("/NhanVien?TrangThai=true");
-      setEmployees(empRes.data || []);
-
-      // 2. Gọi dữ liệu chấm công
-      const attendanceRes = await api.get(
-        `/ChamCong?year=${year}&month=${month}`,
-      );
-
-      const {
-        dailyRecords = [],
-        summaries: summaryData = {},
-        isLocked: lockedStatus = false,
-      } = attendanceRes.data;
-
-      setSummaries(summaryData);
-      setIsLocked(lockedStatus);
-
-      const attendanceMap = {};
-      if (dailyRecords.length > 0) {
-        dailyRecords.forEach((rec) => {
-          // Lấy ngày từ chuỗi an toàn
-          const dateString = rec.ngayChamCong.split("T")[0];
-          const dateParts = dateString.split("-");
-          if (dateParts.length === 3) {
-            const dateKey = parseInt(dateParts[2], 10);
-            if (!attendanceMap[rec.maNhanVien]) {
-              attendanceMap[rec.maNhanVien] = {};
-            }
-            attendanceMap[rec.maNhanVien][dateKey] = rec;
-          }
-        });
-      }
-      setAttendance(attendanceMap);
-    } catch (error) {
-      console.error("Lỗi:", error);
-      if (error.response?.status === 403 || error.response?.status === 401) {
-        setPermissionDenied(true);
-      }
-    } finally {
-      setLoading(false);
-    }
+  const showToast = useCallback((message, type = "success") => {
+    setToast({ message, type, visible: true });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      setToast((prev) => ({ ...prev, visible: false }));
+    }, 3000);
   }, []);
+
+  // --- CONFIRM MODAL STATE ---
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    message: "",
+    onConfirm: null,
+  });
+
+  const closeConfirm = () => {
+    setConfirmDialog({ isOpen: false, message: "", onConfirm: null });
+  };
+
+  const fetchData = useCallback(
+    async (date) => {
+      setLoading(true);
+      setPermissionDenied(false);
+      try {
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+
+        const empRes = await api.get("/NhanVien?TrangThai=true");
+        setEmployees(empRes.data || []);
+
+        const attendanceRes = await api.get(
+          `/ChamCong?year=${year}&month=${month}`,
+        );
+
+        const {
+          dailyRecords = [],
+          summaries: summaryData = {},
+          isLocked: lockedStatus = false,
+        } = attendanceRes.data;
+
+        setSummaries(summaryData);
+        setIsLocked(lockedStatus);
+
+        const attendanceMap = {};
+        if (dailyRecords.length > 0) {
+          dailyRecords.forEach((rec) => {
+            const dateString = rec.ngayChamCong.split("T")[0];
+            const dateParts = dateString.split("-");
+            if (dateParts.length === 3) {
+              const dateKey = parseInt(dateParts[2], 10);
+              if (!attendanceMap[rec.maNhanVien]) {
+                attendanceMap[rec.maNhanVien] = {};
+              }
+              attendanceMap[rec.maNhanVien][dateKey] = rec;
+            }
+          });
+        }
+        setAttendance(attendanceMap);
+      } catch (error) {
+        console.error("Lỗi:", error);
+        if (error.response?.status === 403 || error.response?.status === 401) {
+          setPermissionDenied(true);
+          showToast("Bạn không có quyền xem bảng công tổng hợp.", "error");
+        } else {
+          showToast("Lỗi khi tải dữ liệu chấm công.", "error");
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [showToast],
+  );
 
   useEffect(() => {
     fetchData(currentDate);
@@ -114,10 +163,8 @@ const TimekeepingPage = () => {
   );
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  // Lấy mảng ID nhân viên để tính toán chọn vùng (Drag)
   const employeeIds = employees.map((emp) => emp.maNhanVien);
 
-  // --- HÀM XỬ LÝ GIAO DIỆN HIỂN THỊ CHẤM CÔNG ---
   const getWorkDayStyle = (record) => {
     if (!record)
       return {
@@ -183,7 +230,6 @@ const TimekeepingPage = () => {
     };
   };
 
-  // --- SELECTION & DRAG LOGIC ---
   const clearSelections = () => {
     setSelection({ type: null, id: null });
     setIsDragging(false);
@@ -194,7 +240,7 @@ const TimekeepingPage = () => {
 
   const handleCellClick = (maNhanVien, day) => {
     if (!canEdit) {
-      if (isLocked) alert("Bảng công tháng này đã bị khóa.");
+      if (isLocked) showToast("Bảng công tháng này đã bị khóa.", "warning");
       return;
     }
     const record = attendance[maNhanVien]?.[day] || {};
@@ -287,12 +333,14 @@ const TimekeepingPage = () => {
         onlyIfEmpty: false,
       });
       setEditingCell(null);
+      showToast("Đã cập nhật công thành công!", "success");
       fetchData(currentDate);
     } catch (error) {
-      alert(
+      showToast(
         error.response?.data?.message ||
           error.response?.data ||
           "Lỗi lưu dữ liệu.",
+        "error",
       );
     }
   };
@@ -349,13 +397,19 @@ const TimekeepingPage = () => {
 
     try {
       if (promises.length === 0) {
-        alert("Không có ô trống nào cần điền trong vùng đã chọn.");
+        showToast(
+          "Không có ô trống nào cần điền trong vùng đã chọn.",
+          "warning",
+        );
       } else {
         await Promise.all(promises);
-        alert(`Đã điền thành công cho ${promises.length} ô trống.`);
+        showToast(
+          `Đã điền thành công cho ${promises.length} ô trống.`,
+          "success",
+        );
       }
     } catch (error) {
-      alert("Có lỗi xảy ra (Có thể do mạng hoặc quyền hạn).");
+      showToast("Có lỗi xảy ra (Có thể do mạng hoặc quyền hạn).", "error");
     } finally {
       setBulkEditData(null);
       clearSelections();
@@ -365,20 +419,31 @@ const TimekeepingPage = () => {
 
   const handleLockAction = async (lockStatus) => {
     const actionText = lockStatus ? "KHÓA" : "HỦY KHÓA";
-    if (!window.confirm(`Bạn có chắc muốn ${actionText} bảng công tháng này?`))
-      return;
 
-    try {
-      await api.post("/ChamCong/lock-action", {
-        year: currentDate.getFullYear(),
-        month: currentDate.getMonth() + 1,
-        isLocked: lockStatus,
-      });
-      alert(`Đã ${actionText.toLowerCase()} bảng công thành công!`);
-      fetchData(currentDate);
-    } catch (e) {
-      alert(e.response?.data || `Lỗi khi ${actionText.toLowerCase()} công.`);
-    }
+    setConfirmDialog({
+      isOpen: true,
+      message: `Bạn có chắc muốn ${actionText} bảng công tháng này?`,
+      onConfirm: async () => {
+        closeConfirm();
+        try {
+          await api.post("/ChamCong/lock-action", {
+            year: currentDate.getFullYear(),
+            month: currentDate.getMonth() + 1,
+            isLocked: lockStatus,
+          });
+          showToast(
+            `Đã ${actionText.toLowerCase()} bảng công thành công!`,
+            "success",
+          );
+          fetchData(currentDate);
+        } catch (e) {
+          showToast(
+            e.response?.data || `Lỗi khi ${actionText.toLowerCase()} công.`,
+            "error",
+          );
+        }
+      },
+    });
   };
 
   if (permissionDenied) {
@@ -391,6 +456,13 @@ const TimekeepingPage = () => {
           <FaBan size={50} color="#ef4444" style={{ marginBottom: "20px" }} />
           <h2 style={{ color: "#ef4444" }}>Truy cập bị từ chối</h2>
           <p>Bạn không có quyền xem bảng công tổng hợp.</p>
+        </div>
+
+        {/* TOAST COMPONENT FOR DENIED STATE */}
+        <div
+          className={`toast-notification ${toast.type} ${toast.visible ? "show" : ""}`}
+        >
+          {toast.message}
         </div>
       </DashboardLayout>
     );
@@ -504,7 +576,6 @@ const TimekeepingPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {/* LẶP QUA MẢNG employees THAY VÌ employeeIds (Lỗi nằm ở đây trước đó) */}
                 {employees.length > 0 ? (
                   employees.map((emp) => {
                     const empId = emp.maNhanVien;
@@ -674,6 +745,21 @@ const TimekeepingPage = () => {
           }}
         />
       )}
+
+      {/* --- CONFIRM MODAL --- */}
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
+      />
+
+      {/* --- TOAST COMPONENT --- */}
+      <div
+        className={`toast-notification ${toast.type} ${toast.visible ? "show" : ""}`}
+      >
+        {toast.message}
+      </div>
     </DashboardLayout>
   );
 };

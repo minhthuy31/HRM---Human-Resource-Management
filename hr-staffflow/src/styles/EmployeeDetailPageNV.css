@@ -1,6 +1,6 @@
 /* --- LAYOUT CHÍNH CHO TRANG CÁ NHÂN (NV) --- */
 .emp-detail-page {
-  background-color: #f0f2f5;
+  background-color: var(--main-bg); /* ĐÃ SỬA */
   padding: 20px;
   height: 100%;
   box-sizing: border-box;
@@ -10,22 +10,22 @@
 
 /* Container chính */
 .emp-layout-container {
-  background: #fff;
+  background-color: var(--card-bg); /* ĐÃ SỬA */
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px var(--shadow-color); /* ĐÃ SỬA */
   display: flex;
   flex-direction: column;
   flex: 1;
   overflow: hidden;
-  border: 1px solid #e1e4e8;
+  border: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
   height: 100%;
 }
 
 /* Header (Tên & Trạng thái) */
 .emp-layout-header {
   padding: 15px 30px;
-  background-color: #fff;
-  border-bottom: 1px solid #eee;
+  background-color: var(--card-bg); /* ĐÃ SỬA */
+  border-bottom: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -36,7 +36,7 @@
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  color: #333;
+  color: var(--main-text); /* ĐÃ SỬA */
   text-transform: uppercase;
 }
 
@@ -46,13 +46,13 @@
   border-radius: 12px;
   font-weight: 600;
 }
-.status-active { background-color: #e6f4ea; color: #28a745; }
-.status-inactive { background-color: #fbeaea; color: #dc3545; }
+.status-active { background-color: rgba(16, 185, 129, 0.1); color: #10b981; } /* ĐÃ SỬA: Dùng rgba để không bị chói ở nền đen */
+.status-inactive { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
 /* Body Layout - DỌC (Menu trên, Nội dung dưới) */
 .emp-layout-body {
   display: flex;
-  flex-direction: column; /* Thay đổi thành column */
+  flex-direction: column; 
   flex: 1;
   overflow: hidden;
 }
@@ -61,12 +61,11 @@
 .emp-horizontal-menu {
   display: flex;
   flex-direction: row;
-  overflow-x: auto; /* Cho phép cuộn ngang nếu màn hình nhỏ */
+  overflow-x: auto; 
   width: 100%;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #dce0e4;
+  background-color: var(--hover-bg); /* ĐÃ SỬA */
+  border-bottom: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
   flex-shrink: 0;
-  /* Ẩn scrollbar nhưng vẫn cuộn được */
   scrollbar-width: none; 
   -ms-overflow-style: none;
 }
@@ -80,22 +79,22 @@
   cursor: pointer;
   font-size: 15px;
   font-weight: 500;
-  color: #55606d;
-  border-bottom: 3px solid transparent; /* Border dưới cho active state */
+  color: var(--toggle-icon-color); /* ĐÃ SỬA */
+  border-bottom: 3px solid transparent; 
   transition: all 0.2s;
-  white-space: nowrap; /* Giữ text trên 1 dòng */
+  white-space: nowrap; 
 }
 
 .emp-menu-item:hover {
-  background-color: #e9ecef;
+  background-color: var(--sidebar-border); /* ĐÃ SỬA */
   color: #0e7c7b;
 }
 
 .emp-menu-item.active {
-  background-color: #fff;
+  background-color: var(--card-bg); /* ĐÃ SỬA */
   color: #0e7c7b;
   font-weight: 700;
-  border-bottom-color: #0e7c7b; /* Highlight màu xanh ở dưới */
+  border-bottom-color: #0e7c7b; 
 }
 
 /* --- MAIN CONTENT AREA --- */
@@ -103,16 +102,16 @@
   flex: 1;
   padding: 30px 40px;
   overflow-y: auto;
-  background-color: #fff;
+  background-color: transparent; /* ĐÃ SỬA: Kế thừa nền card-bg của container */
 }
 
-/* --- FORM STYLES (Giống trang quản lý) --- */
+/* --- FORM STYLES --- */
 .form-section-title {
   font-size: 17px;
   font-weight: 700;
   color: #0e7c7b;
   margin-bottom: 20px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
   padding-bottom: 8px;
   margin-top: 10px;
 }
@@ -137,7 +136,7 @@
   font-size: 13.5px;
   font-weight: 600;
   margin-bottom: 6px;
-  color: #555;
+  color: var(--main-text); /* ĐÃ SỬA */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -147,13 +146,13 @@
 .form-group span.view-field {
   height: 44px;
   padding: 0 12px;
-  border: 1px solid #ced4da;
+  border: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
   border-radius: 5px;
   font-size: 14.5px;
   width: 100%;
   box-sizing: border-box;
-  background-color: #f8f9fa; /* Nền xám nhẹ */
-  color: #495057;
+  background-color: var(--hover-bg); /* ĐÃ SỬA */
+  color: var(--main-text); /* ĐÃ SỬA */
   display: flex;
   align-items: center;
 }
@@ -164,10 +163,10 @@
   flex-direction: column;
   align-items: center;
   padding: 15px;
-  border: 2px dashed #dee2e6;
+  border: 2px dashed var(--sidebar-border); /* ĐÃ SỬA */
   border-radius: 8px;
   width: 150px;
-  background-color: #fdfdfd;
+  background-color: var(--card-bg); /* ĐÃ SỬA */
   margin-bottom: 0;
   height: fit-content;
 }
@@ -178,8 +177,8 @@
   object-fit: cover;
   border-radius: 50%;
   margin-bottom: 10px;
-  border: 3px solid #fff;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+  border: 3px solid var(--card-bg); /* ĐÃ SỬA */
+  box-shadow: 0 3px 8px var(--shadow-color); /* ĐÃ SỬA */
 }
 
 /* Responsive */
@@ -201,7 +200,7 @@
   .emp-main {
     padding: 20px;
   }
-  div[style*="display: flex"] { /* Fix layout avatar row on mobile */
+  div[style*="display: flex"] { 
     flex-direction: column;
   }
   .avatar-section {

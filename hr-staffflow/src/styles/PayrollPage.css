@@ -2,20 +2,20 @@
    1. LAYOUT CHÍNH
    ========================================= */
 .payroll-page-container {
-  background-color: #ffffff;
+  background-color: var(--card-bg); 
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px var(--shadow-color); 
   height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Ngăn scroll ở body, chỉ scroll trong bảng */
+  overflow: hidden; 
   box-sizing: border-box;
 }
 
 .payroll-page-container h1 {
   font-size: 1.5rem;
-  color: #111827;
+  color: var(--main-text); 
   margin: 0 0 20px 0;
   font-weight: 700;
 }
@@ -36,7 +36,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background-color: #f3f4f6;
+  background-color: var(--hover-bg); 
   padding: 6px 16px;
   border-radius: 30px;
 }
@@ -45,13 +45,13 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--main-text); 
   white-space: nowrap;
 }
 
 .month-navigator button {
-  border: 1px solid #e5e7eb;
-  background: white;
+  border: 1px solid var(--sidebar-border); 
+  background-color: var(--card-bg); 
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -59,13 +59,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6b7280;
+  color: var(--toggle-icon-color); 
   transition: all 0.2s;
 }
 
 .month-navigator button:hover:not(:disabled) {
-  background-color: #e5e7eb;
-  color: #111827;
+  background-color: var(--hover-bg); 
+  color: var(--main-text); 
 }
 
 .header-actions {
@@ -86,20 +86,16 @@
   transition: opacity 0.2s;
 }
 
-.save-payroll-btn {
-  background-color: #10b981; /* Xanh lá */
-  color: white;
-}
-
-.export-excel-btn {
-  background-color: #3b82f6; /* Xanh dương */
-  color: white;
-}
+.save-payroll-btn { background-color: #10b981; color: white; }
+.export-excel-btn { background-color: #3b82f6; color: white; }
+.calc-btn { background-color: #8b5cf6; color: white; }
+.lock-btn { background-color: #f59e0b; color: white; }
+.unlock-btn { background-color: #64748b; color: white; }
 
 .template-btn, .import-btn {
-  background-color: #f3f4f6;
-  color: #374151;
-  border: 1px solid #e5e7eb !important;
+  background-color: var(--hover-bg); 
+  color: var(--main-text); 
+  border: 1px solid var(--sidebar-border) !important; 
 }
 
 button:disabled {
@@ -107,89 +103,84 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.tag-published {
+  background-color: #fecdd3;
+  color: #e11d48;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-left: 10px;
+}
+
 /* =========================================
-   3. KHUNG BẢNG & SCROLL (QUAN TRỌNG)
+   3. KHUNG BẢNG & SCROLL
    ========================================= */
 .payroll-table-wrapper {
-  flex: 1; /* Chiếm hết chiều cao còn lại */
+  flex: 1; 
   position: relative;
   overflow: hidden;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--sidebar-border); 
   border-radius: 8px;
-  background-color: #fff;
+  background-color: transparent; 
 }
 
 .payroll-table-scroll {
   width: 100%;
   height: 100%;
-  
-  /* Kích hoạt thanh cuộn */
   overflow: auto; 
-  
-  /* Giúp cuộn mượt trên iOS/Mac */
   -webkit-overflow-scrolling: touch; 
-
-  /* Ngăn cuộn lan ra ngoài trang web */
   overscroll-behavior: contain;
-
-  /* --- CẤU HÌNH KHÓA TRỤC (Axis Locking) --- */
-  /* Giúp trình duyệt hiểu rằng người dùng muốn pan ngang HOẶC dọc, hạn chế chéo */
   touch-action: pan-x pan-y;
 }
 
 .payroll-table {
-  width: max-content; /* Bảng tự mở rộng theo nội dung cột */
+  width: max-content; 
   min-width: 100%;
-  border-collapse: separate; /* Bắt buộc để Sticky hoạt động */
+  border-collapse: separate; 
   border-spacing: 0;
 }
 
 /* =========================================
-   4. STICKY HEADERS & COLUMNS (GHIM CỐ ĐỊNH)
+   4. STICKY HEADERS & COLUMNS
    ========================================= */
-
-/* A. Ghim Header (Khi kéo xuống) */
 .payroll-table thead th {
   position: sticky;
   top: 0;
-  z-index: 20; /* Layer cao hơn nội dung */
-  background-color: #f9fafb;
-  border-bottom: 1px solid #d1d5db;
-  border-right: 1px solid #f3f4f6;
+  z-index: 20; 
+  background-color: var(--hover-bg); 
+  border-bottom: 1px solid var(--sidebar-border); 
+  border-right: 1px solid var(--sidebar-border); 
   padding: 10px 8px;
   font-size: 13px;
-  color: #374151;
+  color: var(--main-text); 
   text-align: center;
 }
 
-/* B. Ghim Cột Đầu Tiên (Nhân viên - Khi kéo ngang) */
 .sticky-col.first-col {
   position: sticky;
   left: 0;
-  z-index: 25; /* Cao hơn nội dung thường nhưng thấp hơn góc giao nhau */
-  background-color: #ffffff;
-  border-right: 2px solid #e5e7eb;
+  z-index: 25; 
+  background-color: var(--card-bg); 
+  border-right: 2px solid var(--sidebar-border); 
   min-width: 200px;
   max-width: 250px;
   box-shadow: 2px 0 5px rgba(0,0,0,0.02);
 }
 
-/* C. Ghim Cột Cuối Cùng (Thực Lĩnh - Khi kéo ngang) - Tùy chọn */
 .sticky-col.last-col {
   position: sticky;
   right: 0;
   z-index: 25;
-  background-color: #eff6ff; /* Màu nền xanh nhạt nổi bật */
-  border-left: 2px solid #e5e7eb;
+  background-color: var(--hover-bg); 
+  border-left: 2px solid var(--sidebar-border); 
   min-width: 120px;
   box-shadow: -2px 0 5px rgba(0,0,0,0.02);
 }
 
-/* D. Xử lý GÓC CHẾT (Giao điểm giữa Header và Cột Sticky) */
-/* Ô tiêu đề "Nhân viên" và "Thực lĩnh" phải đứng im tuyệt đối */
 thead tr th.sticky-col {
-  z-index: 30; /* Layer cao nhất */
-  background-color: #f3f4f6; /* Màu nền của header */
+  z-index: 30; 
+  background-color: var(--hover-bg); 
 }
 
 /* =========================================
@@ -197,23 +188,21 @@ thead tr th.sticky-col {
    ========================================= */
 .payroll-table td {
   padding: 8px 12px;
-  border-bottom: 1px solid #f3f4f6;
-  border-right: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--separator-color); 
+  border-right: 1px solid var(--separator-color); 
   vertical-align: middle;
   font-size: 13px;
-  white-space: nowrap; /* Không xuống dòng */
+  white-space: nowrap; 
+  color: var(--main-text); 
 }
 
 .payroll-table tbody tr:hover td {
-  background-color: #f9fafb; /* Highlight dòng khi hover */
+  background-color: var(--hover-bg); 
 }
 
-/* Giữ màu nền cho cột sticky khi hover dòng */
-.payroll-table tbody tr:hover td.sticky-col.first-col {
-  background-color: #fff;
-}
+.payroll-table tbody tr:hover td.sticky-col.first-col,
 .payroll-table tbody tr:hover td.sticky-col.last-col {
-  background-color: #e0e7ff;
+  background-color: var(--hover-bg); 
 }
 
 /* Text Alignment */
@@ -222,29 +211,21 @@ thead tr th.sticky-col {
 .text-left { text-align: left; }
 
 /* Colors & Highlights */
-.bg-gray { background-color: #f9fafb !important; }
-.bg-blue-light { background-color: #eff6ff !important; color: #1e40af; }
-.bg-green-light { background-color: #f0fdf4 !important; color: #15803d; }
-.bg-red-light { background-color: #fef2f2 !important; color: #b91c1c; }
-.bg-yellow-light { background-color: #fffbeb !important; color: #b45309; }
+.bg-gray { background-color: transparent !important; } 
+.bg-blue-light { background-color: rgba(59, 130, 246, 0.1) !important; color: #3b82f6; }
+.bg-green-light { background-color: rgba(16, 185, 129, 0.1) !important; color: #10b981; }
+.bg-red-light { background-color: rgba(239, 68, 68, 0.1) !important; color: #ef4444; }
+.bg-yellow-light { background-color: rgba(245, 158, 11, 0.1) !important; color: #f59e0b; }
 
-.bg-blue-fade { background-color: #f0f9ff; }
-.bg-green-fade { background-color: #f0fdf4; }
-.bg-yellow-fade { background-color: #fffbeb; }
+.text-blue { color: #3b82f6; }
+.text-red { color: #ef4444; }
+.text-green { color: #10b981; }
 
 /* Font Styles */
 .font-bold { font-weight: 700; }
 .font-500 { font-weight: 500; }
-.text-muted { color: #9ca3af; }
+.text-muted { color: var(--toggle-icon-color); } 
 .text-sm { font-size: 12px; }
-
-/* Data Colors */
-.text-blue { color: #2563eb; }
-.text-purple { color: #7c3aed; }
-.text-green { color: #059669; }
-.text-orange { color: #d97706; font-weight: 600; }
-.text-red { color: #dc2626; }
-.text-gray { color: #6b7280; }
 
 /* =========================================
    6. COMPONENTS (INPUT, INFO, ETC.)
@@ -255,12 +236,12 @@ thead tr th.sticky-col {
   padding: 4px 0;
 }
 .employee-info strong {
-  color: #1f2937;
+  color: var(--main-text); 
   font-size: 13px;
 }
 .employee-info span {
   font-size: 11px;
-  color: #afa69c;
+  color: var(--toggle-icon-color); 
 }
 
 /* Input Khấu Trừ */
@@ -268,13 +249,13 @@ thead tr th.sticky-col {
   width: 100%;
   min-width: 80px;
   padding: 6px 8px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--sidebar-border); 
+  background-color: var(--main-bg); 
+  color: #dc2626; 
   border-radius: 4px;
   text-align: right;
   font-size: 13px;
-  color: #dc2626;
   font-weight: 600;
-  background-color: #fff;
   transition: border-color 0.2s;
 }
 
@@ -288,12 +269,127 @@ thead tr th.sticky-col {
   font-weight: 700;
   color: #1d4ed8;
   font-size: 14px;
-  background-color: #eff6ff;
+  background-color: transparent; 
 }
 
-/* Tooltip cho Bảo hiểm (Nếu dùng) */
 .tooltip-container {
   position: relative;
   cursor: help;
-  border-bottom: 1px dashed #ccc;
+  border-bottom: 1px dashed var(--toggle-icon-color); 
+}
+
+
+/* ===================================== */
+/* == TOAST NOTIFICATION CSS ANIMATION ==*/
+/* ===================================== */
+.toast-notification {
+  position: fixed;
+  bottom: 30px; 
+  right: 20px;
+  min-width: 250px;
+  max-width: 350px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  z-index: 9999;
+  
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(120%); 
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+.toast-notification.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+}
+
+.toast-notification.success { background-color: #28a745; }
+.toast-notification.error { background-color: #dc3545; }
+.toast-notification.warning { background-color: #ffc107; color: #212529; }
+
+/* ===================================== */
+/* == CUSTOM CONFIRM MODAL CSS        == */
+/* ===================================== */
+
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5); 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(2px);
+}
+
+.custom-confirm-modal {
+  background-color: var(--card-bg, #ffffff);
+  color: var(--main-text, #333);
+  width: 400px;
+  max-width: 90%;
+  border-radius: 10px;
+  padding: 24px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.confirm-title {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #dc3545; 
+}
+
+.confirm-message {
+  font-size: 15px;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.confirm-actions button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s;
+}
+
+.btn-cancel {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.btn-cancel:hover {
+  background-color: #dee2e6;
+}
+
+.btn-accept {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-accept:hover {
+  background-color: #c82333;
 }

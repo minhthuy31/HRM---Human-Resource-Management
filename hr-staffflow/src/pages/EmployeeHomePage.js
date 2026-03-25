@@ -3,10 +3,8 @@ import { api } from "../api";
 import { FiSun, FiMoon, FiLogOut } from "react-icons/fi";
 import { Link, useNavigate, useParams, Outlet } from "react-router-dom";
 import "../styles/EmployeeHome.css";
-// 1. Import icon đã gộp (để tránh lỗi FaSearch declared)
-import { FaSearch, FaUserAstronaut } from "react-icons/fa";
 
-// 2. QUAN TRỌNG: Import component FaceRecognition (Sửa lỗi not defined)
+import { FaSearch, FaUserAstronaut } from "react-icons/fa";
 import FaceRecognition from "../components/FaceRecognition";
 
 // Import các Modal
@@ -45,11 +43,25 @@ const EmployeeHomePage = () => {
 
   const [timekeepingSummary, setTimekeepingSummary] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const handleToggleDarkMode = () => setIsDarkMode(!isDarkMode);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Kiểm tra trạng thái Dark Mode lúc mới load trang
+  useEffect(() => {
+    if (document.body.classList.contains("dark-mode")) {
+      setIsDarkMode(true);
+    }
+  }, []);
+
+  // Hàm Toggle Dark Mode đã được sửa để tương tác với thẻ Body
+  const handleToggleDarkMode = () => {
+    setIsDarkMode((prevMode) => !prevMode);
+    document.body.classList.toggle("dark-mode");
+  };
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem("token");
+    // Tuỳ chọn: Có thể xóa class dark-mode khi logout để màn hình login luôn sáng
+    document.body.classList.remove("dark-mode");
     navigate("/login");
   }, [navigate]);
 
@@ -125,25 +137,30 @@ const EmployeeHomePage = () => {
     }
   };
 
-  // --- MỚI: XỬ LÝ ĐĂNG KÝ OT ---
+  // --- XỬ LÝ ĐĂNG KÝ OT ---
   const handleSaveOTRequest = async (data) => {
     try {
       const payload = {
         ...data,
-        gioBatDau: data.gioBatDau.length === 5 ? `${data.gioBatDau}:00` : data.gioBatDau,
-        gioKetThuc: data.gioKetThuc.length === 5 ? `${data.gioKetThuc}:00` : data.gioKetThuc,
+        gioBatDau:
+          data.gioBatDau.length === 5 ? `${data.gioBatDau}:00` : data.gioBatDau,
+        gioKetThuc:
+          data.gioKetThuc.length === 5
+            ? `${data.gioKetThuc}:00`
+            : data.gioKetThuc,
       };
 
       await api.post("/DangKyOT", payload);
       alert("Đăng ký làm thêm giờ thành công!");
       setIsOTModalOpen(false);
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Lỗi khi đăng ký OT.";
+      const errorMessage =
+        error.response?.data?.message || "Lỗi khi đăng ký OT.";
       alert(`Lỗi: ${errorMessage}`);
     }
   };
 
-  // --- MỚI: XỬ LÝ ĐĂNG KÝ CÔNG TÁC ---
+  // --- XỬ LÝ ĐĂNG KÝ CÔNG TÁC ---
   const handleSaveTripRequest = async (data) => {
     try {
       await api.post("/DangKyCongTac", { ...data, MaNhanVien: employeeId });
@@ -282,22 +299,17 @@ const EmployeeHomePage = () => {
               </button>
 
               <button className="sidebar-action-btn" onClick={openFaceCheckIn}>
-                📸 Chấm công Khuôn mặt
-              </button>
-
-              <button
-                className="sidebar-action-btn sidebar-action-btn-checkin"
-                onClick={() => {
-                  setScanResult(null);
-                  setIsScannerOpen(true);
-                }}
-              >
-                Quét QR Chấm công
+                Chấm công
               </button>
             </div>
 
             <nav className="info-links">
               <ul>
+                <li>
+                  <Link to={`/employee-home/${user.maNhanVien}`}>
+                    Trang chủ
+                  </Link>
+                </li>
                 <li>
                   <Link to={`/employee-home/${user.maNhanVien}/details`}>
                     Thông tin chung

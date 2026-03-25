@@ -1,8 +1,8 @@
 .my-payslip-view {
-  background-color: var(--card-bg, #ffffff);
+  background-color: var(--card-bg); /* ĐÃ SỬA */
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px var(--shadow-color); /* ĐÃ SỬA */
   max-width: 800px;
   margin: 0 auto;
   min-height: 500px;
@@ -15,14 +15,14 @@
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
 }
 
 .month-navigator {
   display: flex;
   align-items: center;
   gap: 15px;
-  background-color: #f8f9fa;
+  background-color: var(--hover-bg); /* ĐÃ SỬA */
   padding: 8px 20px;
   border-radius: 30px;
 }
@@ -31,14 +31,14 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #333;
+  color: var(--main-text); /* ĐÃ SỬA */
   width: 160px;
   text-align: center;
 }
 
 .month-navigator button {
-  background: white;
-  border: 1px solid #ddd;
+  background-color: var(--card-bg); /* ĐÃ SỬA */
+  border: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
   border-radius: 50%;
   width: 32px;
   height: 32px;
@@ -47,12 +47,12 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  color: #555;
+  color: var(--toggle-icon-color); /* ĐÃ SỬA */
 }
 
 .month-navigator button:hover:not(:disabled) {
-  background-color: #e9ecef;
-  color: #000;
+  background-color: var(--hover-bg); /* ĐÃ SỬA */
+  color: var(--main-text); /* ĐÃ SỬA */
 }
 
 .print-btn {
@@ -81,17 +81,17 @@
 
 /* --- Payslip Container --- */
 .payslip-container {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
   border-radius: 8px;
   overflow: hidden;
-  background-color: #fff;
+  background-color: var(--card-bg); /* ĐÃ SỬA */
 }
 
 /* Header */
 .payslip-header-section {
-  background-color: #f9fafb;
+  background-color: var(--hover-bg); /* ĐÃ SỬA */
   padding: 20px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
 }
 
 .company-info {
@@ -101,7 +101,7 @@
 
 .company-info h2 {
   margin: 0;
-  color: #1f2937;
+  color: var(--main-text); /* ĐÃ SỬA */
   font-size: 1.5rem;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -109,7 +109,7 @@
 
 .company-info .period {
   margin: 5px 0 0;
-  color: #6b7280;
+  color: var(--toggle-icon-color); /* ĐÃ SỬA */
   font-size: 0.95rem;
 }
 
@@ -126,12 +126,12 @@
 }
 
 .info-row .label {
-  color: #6b7280;
+  color: var(--toggle-icon-color); /* ĐÃ SỬA */
 }
 
 .info-row .val {
   font-weight: 600;
-  color: #111827;
+  color: var(--main-text); /* ĐÃ SỬA */
 }
 
 /* Body Content */
@@ -146,23 +146,24 @@
 .section-title {
   font-size: 0.85rem;
   text-transform: uppercase;
-  border-bottom: 2px solid #eee;
+  border-bottom: 2px solid var(--sidebar-border); /* ĐÃ SỬA */
   padding-bottom: 5px;
   margin-bottom: 10px;
   font-weight: 700;
+  color: var(--main-text); /* ĐÃ SỬA */
 }
 
-.text-green { color: #059669; border-color: #059669; }
-.text-red { color: #dc2626; border-color: #dc2626; }
-.text-blue { color: #2563eb; border-color: #2563eb; }
+.text-green { color: #10b981; border-color: #10b981; }
+.text-red { color: #ef4444; border-color: #ef4444; }
+.text-blue { color: #3b82f6; border-color: #3b82f6; }
 
 .detail-row {
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px dashed #f3f4f6;
+  border-bottom: 1px dashed var(--sidebar-border); /* ĐÃ SỬA */
   font-size: 0.95rem;
-  color: #374151;
+  color: var(--main-text); /* ĐÃ SỬA */
 }
 
 .detail-row:last-child {
@@ -170,7 +171,7 @@
 }
 
 .detail-row.highlight-bg {
-  background-color: #f9fafb;
+  background-color: var(--hover-bg); /* ĐÃ SỬA */
   padding-left: 5px;
   padding-right: 5px;
   border-radius: 4px;
@@ -183,7 +184,7 @@
 
 .total-row {
   margin-top: 5px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
   border-bottom: none;
   padding-top: 10px;
   font-weight: 700;
@@ -195,7 +196,7 @@
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 10px;
-  background-color: #f8f9fa;
+  background-color: var(--hover-bg); /* ĐÃ SỬA */
   padding: 10px;
   border-radius: 6px;
   text-align: center;
@@ -208,20 +209,20 @@
 
 .att-item .lbl {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--toggle-icon-color); /* ĐÃ SỬA */
   text-transform: uppercase;
 }
 
 .att-item .val {
   font-weight: 700;
-  color: #1f2937;
+  color: var(--main-text); /* ĐÃ SỬA */
   font-size: 1rem;
 }
 
 /* Net Salary */
 .net-salary-section {
-  background-color: #eff6ff;
-  border: 1px solid #dbeafe;
+  background-color: rgba(59, 130, 246, 0.1); /* ĐÃ SỬA: Xanh nhạt dùng RGBA cho darkmode */
+  border: 1px solid rgba(59, 130, 246, 0.2); /* ĐÃ SỬA */
   padding: 20px;
   border-radius: 8px;
   text-align: center;
@@ -230,7 +231,7 @@
 
 .net-label {
   font-size: 1rem;
-  color: #1e40af;
+  color: #3b82f6; /* ĐÃ SỬA */
   margin-bottom: 5px;
   text-transform: uppercase;
   font-weight: 600;
@@ -239,21 +240,21 @@
 .net-amount {
   font-size: 2rem;
   font-weight: 800;
-  color: #1e40af;
+  color: #3b82f6; /* ĐÃ SỬA */
 }
 
 /* Footer */
 .payslip-footer {
   text-align: center;
   padding: 15px;
-  border-top: 1px solid #eee;
-  background-color: #fafafa;
+  border-top: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
+  background-color: var(--hover-bg); /* ĐÃ SỬA */
 }
 
 .payslip-footer .note {
   margin: 0;
   font-size: 0.8rem;
-  color: #9ca3af;
+  color: var(--toggle-icon-color); /* ĐÃ SỬA */
   font-style: italic;
 }
 
@@ -261,7 +262,7 @@
 .loading-text, .error-text, .no-data-text {
   text-align: center;
   padding: 40px;
-  color: #6b7280;
+  color: var(--toggle-icon-color); /* ĐÃ SỬA */
 }
 
 .no-data-text {
@@ -288,12 +289,15 @@
     padding: 0;
     margin: 0;
     box-shadow: none;
+    background-color: white !important; /* Khi in luôn luôn ép nền trắng */
+    color: black !important;
   }
   .month-navigator-bar {
     display: none;
   }
   .payslip-container {
     border: 2px solid #000;
+    background-color: white !important;
   }
   .section-title {
     border-bottom: 1px solid #000;

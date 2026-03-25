@@ -1,0 +1,255 @@
+/* src/styles/AnnouncementPage.css */
+
+.announcement-page-container {
+  padding: 20px;
+  height: 100%;
+  overflow-y: auto;
+  background-color: var(--main-bg);
+}
+
+.announcement-header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.announcement-header-section h1 {
+  margin: 0 0 5px 0;
+  color: var(--main-text);
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.announcement-subtitle {
+  margin: 0;
+  color: var(--toggle-icon-color);
+  font-size: 0.9rem;
+}
+
+.btn-add-news {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-add-news:hover {
+  background-color: #2563eb;
+  transform: translateY(-2px);
+}
+
+.announcement-content-box {
+  background: var(--card-bg);
+  border-radius: 12px;
+  border: 1px solid var(--sidebar-border);
+  padding: 20px;
+  box-shadow: 0 4px 6px -1px var(--shadow-color);
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+.news-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.news-table th {
+  padding: 15px;
+  border-bottom: 2px solid var(--sidebar-border);
+  color: var(--main-text);
+  font-weight: 600;
+  white-space: nowrap;
+  background-color: var(--hover-bg);
+}
+
+.news-table td {
+  padding: 15px;
+  border-bottom: 1px solid var(--separator-color);
+  color: var(--main-text);
+  vertical-align: middle;
+}
+
+.news-table tbody tr:hover {
+  background-color: var(--hover-bg);
+}
+
+.news-empty {
+  text-align: center;
+  padding: 30px !important;
+  font-style: italic;
+  color: var(--toggle-icon-color) !important;
+}
+
+/* Các thẻ Phân loại (Badges) */
+.type-badge {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.type-important { background-color: #fee2e2; color: #ef4444; }
+.type-event { background-color: #fef3c7; color: #d97706; }
+.type-general { background-color: #e0e7ff; color: #4f46e5; }
+
+/* Tiêu đề bảng tin */
+.news-title-cell {
+  font-weight: 500;
+  max-width: 350px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Trạng thái & Hành động */
+.status-visible { color: #10b981; font-weight: 600; font-size: 0.9rem; }
+.status-hidden { color: var(--toggle-icon-color); font-weight: 600; font-size: 0.9rem; }
+
+.action-buttons {
+  display: flex;
+  gap: 15px;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  transition: transform 0.2s;
+}
+
+.action-btn:hover { transform: scale(1.2); }
+.btn-edit { color: #3b82f6; }
+.btn-delete { color: #ef4444; }
+
+/* ===================================== */
+/* == TOAST NOTIFICATION CSS ANIMATION ==*/
+/* ===================================== */
+.toast-notification {
+  position: fixed;
+  bottom: 30px; 
+  right: 20px;
+  min-width: 250px;
+  max-width: 350px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  z-index: 9999;
+  
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(120%); 
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+.toast-notification.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+}
+
+.toast-notification.success { background-color: #28a745; }
+.toast-notification.error { background-color: #dc3545; }
+.toast-notification.warning { background-color: #ffc107; color: #212529; }
+
+/* ===================================== */
+/* == CUSTOM CONFIRM MODAL CSS        == */
+/* ===================================== */
+
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5); 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(2px);
+}
+
+.custom-confirm-modal {
+  background-color: var(--card-bg, #ffffff);
+  color: var(--main-text, #333);
+  width: 400px;
+  max-width: 90%;
+  border-radius: 10px;
+  padding: 24px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.confirm-title {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #dc3545; 
+}
+
+.confirm-message {
+  font-size: 15px;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.confirm-actions button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s;
+}
+
+.btn-cancel {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.btn-cancel:hover {
+  background-color: #dee2e6;
+}
+
+.btn-accept {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-accept:hover {
+  background-color: #c82333;
+}

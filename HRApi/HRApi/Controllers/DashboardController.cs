@@ -3,6 +3,7 @@ using HRApi.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace HRApi.Controllers
 {
@@ -26,155 +27,100 @@ namespace HRApi.Controllers
                 var now = DateTime.Now;
                 var result = new DashboardDto();
 
-                // ==========================================
-                // 1. Thẻ thông tin cơ bản
-                // ==========================================
-                result.TongNhanVien = await _context.NhanViens.CountAsync(x => x.TrangThai == true);
-                result.TongHopDong = await _context.HopDongs.CountAsync(x => x.TrangThai == "HieuLuc");
+                // 1. Lấy thông tin user từ Token
+                var role = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role")?.Value;
+                var userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+                var maPhongBan = User.Claims.FirstOrDefault(c => c.Type == "MaPhongBan")?.Value;
 
-                // Hợp đồng sắp hết hạn (trong vòng 30 ngày)
-                result.HopDongSapHetHan = await _context.HopDongs
-                    .CountAsync(x => x.TrangThai == "HieuLuc" && x.NgayKetThuc.HasValue && x.NgayKetThuc.Value <= now.AddDays(30));
+                // Nếu là Nhân viên thường lọt vào đây thì chặn luôn
+                if (role == "Nhân viên") return StatusCode(403, "Bạn không có quyền truy cập Dashboard Admin.");
 
-                // Tổng lương kỳ trước (Tháng chốt gần nhất)
-                var lastPayroll = await _context.BangLuongs
-                    .Where(x => x.DaChot)
-                    .OrderByDescending(x => x.Nam).ThenByDescending(x => x.Thang)
-                    .FirstOrDefaultAsync();
+                // 2. Khởi tạo các Query gốc (Dành cho Giám đốc/HR - xem tất cả)
+                var nhanVienQuery = _context.NhanViens.Where(x => x.TrangThai == true);
+                var hopDongQuery = _context.HopDongs.Include(h => h.NhanVien).Where(x => x.TrangThai == "HieuLuc");
+                var otQuery = _context.DangKyOTs.Include(o => o.NhanVien).Where(x => x.TrangThai == "Chờ duyệt");
+                var phongBanQuery = _context.PhongBans.Where(pb => pb.TrangThai == true);
 
-                if (lastPayroll != null)
+                // 3. NẾU LÀ TRƯỞNG PHÒNG -> ÉP QUERY CHỈ LỌC DỮ LIỆU CỦA PHÒNG ĐÓ
+                if (role == "Trưởng phòng")
                 {
-                    result.TongLuongKyTruoc = await _context.BangLuongs
-                        .Where(x => x.Thang == lastPayroll.Thang && x.Nam == lastPayroll.Nam && x.DaChot)
-                        .SumAsync(x => x.ThucLanh);
+                    // Phòng hờ trường hợp Token cũ chưa có mã phòng ban
+                    if (string.IsNullOrEmpty(maPhongBan) && !string.IsNullOrEmpty(userId))
+                    {
+                        var me = await _context.NhanViens.AsNoTracking().FirstOrDefaultAsync(x => x.MaNhanVien == userId);
+                        maPhongBan = me?.MaPhongBan;
+                    }
+
+                    if (!string.IsNullOrEmpty(maPhongBan))
+                    {
+                        nhanVienQuery = nhanVienQuery.Where(x => x.MaPhongBan == maPhongBan);
+                        hopDongQuery = hopDongQuery.Where(x => x.NhanVien != null && x.NhanVien.MaPhongBan == maPhongBan);
+                        otQuery = otQuery.Where(x => x.NhanVien != null && x.NhanVien.MaPhongBan == maPhongBan);
+                        phongBanQuery = phongBanQuery.Where(x => x.MaPhongBan == maPhongBan);
+                    }
                 }
 
                 // ==========================================
-                // 2. Thống kê thâm niên
+                // 4. THỰC THI QUERY VÀ LẤY DỮ LIỆU (CARDS)
                 // ==========================================
-                // FIX: Lấy dữ liệu thô về trước
-                var ngayVaoLamList = await _context.NhanViens
-                    .Where(x => x.TrangThai == true && x.NgayVaoLam != null)
-                    .Select(x => x.NgayVaoLam)
+                result.TongNhanVien = await nhanVienQuery.CountAsync();
+
+                result.NhanVienMoiTrongThang = await nhanVienQuery
+                    .CountAsync(x => x.NgayVaoLam.HasValue
+                                  && x.NgayVaoLam.Value.Month == now.Month
+                                  && x.NgayVaoLam.Value.Year == now.Year);
+
+                result.HopDongSapHetHan = await hopDongQuery
+                    .CountAsync(x => x.NgayKetThuc.HasValue
+                                  && x.NgayKetThuc.Value <= now.AddDays(30));
+
+                result.DonOTChoDuyet = await otQuery.CountAsync();
+
+
+                // ==========================================
+                // 5. BIỂU ĐỒ CƠ CẤU NHÂN SỰ THEO PHÒNG BAN
+                // ==========================================
+                result.NhanSuTheoPhongBan = await phongBanQuery
+                    .Select(pb => new ThongKePhongBanDto
+                    {
+                        TenPhongBan = pb.TenPhongBan,
+                        SoLuong = pb.NhanViens.Count(nv => nv.TrangThai == true)
+                    })
+                    .Where(x => x.SoLuong > 0)
                     .ToListAsync();
 
-                int duoi1Nam = 0, tu1Den3 = 0, tu3Den5 = 0, tu5Den8 = 0, tren8Nam = 0;
-
-                foreach (var date in ngayVaoLamList)
-                {
-                    var years = (now - date.Value).TotalDays / 365.25;
-                    if (years < 1) duoi1Nam++;
-                    else if (years < 3) tu1Den3++;
-                    else if (years < 5) tu3Den5++;
-                    else if (years < 8) tu5Den8++;
-                    else tren8Nam++;
-                }
-
-                result.ThamNien = new List<ThongKeThamNienDto>
-                {
-                    new ThongKeThamNienDto { TenThang = "< 1 năm", SoLuong = duoi1Nam },
-                    new ThongKeThamNienDto { TenThang = "1-3 năm", SoLuong = tu1Den3 },
-                    new ThongKeThamNienDto { TenThang = "3-5 năm", SoLuong = tu3Den5 },
-                    new ThongKeThamNienDto { TenThang = "5-8 năm", SoLuong = tu5Den8 },
-                    new ThongKeThamNienDto { TenThang = "> 8 năm", SoLuong = tren8Nam }
-                };
-
 
                 // ==========================================
-                // 3. Giới tính theo phòng ban 
+                // 6. SỰ KIỆN: SINH NHẬT TRONG THÁNG NÀY
                 // ==========================================
-                // Bước A: Lấy dữ liệu thô về RAM (Dùng Include để lấy tên phòng ban)
-                var rawPhongBans = await _context.PhongBans
-                .Where(p => p.TrangThai == true)
-                .Select(p => new
-                {
-                    TenPhongBan = p.TenPhongBan,
-                    // Đếm số lượng nhân viên đang làm việc theo từng giới tính trong phòng này
-                    Nam = p.NhanViens.Count(nv => nv.TrangThai == true && nv.GioiTinh == 1),
-                    Nu = p.NhanViens.Count(nv => nv.TrangThai == true && nv.GioiTinh == 0),
-                    Khac = p.NhanViens.Count(nv => nv.TrangThai == true && nv.GioiTinh != 0 && nv.GioiTinh != 1)
-                })
-                .ToListAsync();
+                var rawSinhNhat = await nhanVienQuery
+                    .Include(nv => nv.PhongBan)
+                    .Where(nv => nv.NgaySinh.HasValue && nv.NgaySinh.Value.Month == now.Month)
+                    .OrderBy(nv => nv.NgaySinh.Value.Day)
+                    .Select(nv => new
+                    {
+                        MaNhanVien = nv.MaNhanVien,
+                        HoTen = nv.HoTen,
+                        TenPhongBan = nv.PhongBan != null ? nv.PhongBan.TenPhongBan : "Chưa xếp phòng",
+                        NgaySinhGoc = nv.NgaySinh.Value
+                    })
+                    .ToListAsync();
 
-                result.GioiTinhTheoPhongBan = rawPhongBans.Select(x => new ThongKeGioiTinhDto
+                result.SinhNhatTrongThang = rawSinhNhat.Select(nv => new NhanVienNganDto
                 {
-                    TenPhongBan = x.TenPhongBan,
-                    Nam = x.Nam,
-                    Nu = x.Nu,
-                    Khac = x.Khac
+                    MaNhanVien = nv.MaNhanVien,
+                    HoTen = nv.HoTen,
+                    TenPhongBan = nv.TenPhongBan,
+                    NgaySinhFormated = nv.NgaySinhGoc.ToString("dd/MM")
                 }).ToList();
-
-
-                // ==========================================
-                // 4. Lương qua các kỳ (FIX LỖI STRING.FORMAT)
-                // ==========================================
-                // Bước A: Lấy số liệu thô về RAM
-                var rawBangLuongs = await _context.BangLuongs
-                    .Where(x => x.DaChot)
-                    .Select(x => new
-                    {
-                        x.Thang,
-                        x.Nam,
-                        x.ThucLanh
-                    })
-                    .ToListAsync();
-
-                // Bước B: Group By và Format chuỗi trên RAM
-                result.LuongQuaCacKy = rawBangLuongs
-                    .GroupBy(x => new { x.Thang, x.Nam })
-                    .Select(g => new
-                    {
-                        Thang = g.Key.Thang,
-                        Nam = g.Key.Nam,
-                        TongTien = g.Sum(x => x.ThucLanh)
-                    })
-                    .OrderByDescending(x => x.Nam).ThenByDescending(x => x.Thang)
-                    .Take(6)
-                    .Select(x => new ThongKeLuongDto
-                    {
-                        KyLuong = $"Tháng {x.Thang:D2}/{x.Nam}", // C# sẽ xử lý chuỗi này
-                        TongTien = x.TongTien
-                    })
-                    .OrderBy(x => x.KyLuong) // Đảo ngược lại để biểu đồ chạy từ trái sang phải
-                    .ToList();
-
-
-                // ==========================================
-                // 5. Đăng ký OT theo phòng ban (FIX LỖI GROUP BY TƯƠNG TỰ)
-                // ==========================================
-                // Bước A: Lấy dữ liệu thô về RAM
-                var rawOTs = await _context.DangKyOTs
-                    .Include(x => x.NhanVien).ThenInclude(n => n.PhongBan)
-                    .Where(x => x.NgayLamThem.Month == now.Month
-                             && x.NgayLamThem.Year == now.Year
-                             && x.TrangThai == "Đã duyệt"
-                             && x.NhanVien != null
-                             && x.NhanVien.PhongBan != null)
-                    .Select(x => new
-                    {
-                        TenPhongBan = x.NhanVien.PhongBan.TenPhongBan,
-                        SoGio = x.SoGio
-                    })
-                    .ToListAsync();
-
-                // Bước B: Group By trên RAM
-                result.OTTheoPhongBan = rawOTs
-                    .GroupBy(x => x.TenPhongBan)
-                    .Select(g => new ThongKeOTDto
-                    {
-                        TenPhongBan = g.Key,
-                        TongSoGio = g.Sum(x => x.SoGio)
-                    }).ToList();
 
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                // Ghi lại lỗi chi tiết để nếu có lỗi khác bạn sẽ thấy ngay trong console Backend
                 Console.WriteLine("LỖI DASHBOARD: " + ex.ToString());
                 return StatusCode(500, "Lỗi khi xử lý dữ liệu: " + ex.Message);
             }
         }
- 
     }
 }

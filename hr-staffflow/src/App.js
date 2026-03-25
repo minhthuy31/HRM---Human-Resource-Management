@@ -13,7 +13,7 @@ import TimekeepingPage from "./pages/TimekeepingPage";
 import PayrollPage from "./pages/PayrollPage";
 import LeaveManagementPage from "./pages/LeaveManagementPage";
 import DisciplinePage from "./pages/DisciplinePage";
-import TrainingPage from "./pages/TrainingPage";
+import AnnouncementPage from "./pages/AnnouncementPage.js";
 import ReportsPage from "./pages/ReportsPage";
 import ProfilePage from "./pages/ProfilePage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
@@ -27,6 +27,7 @@ import MyTimekeepingPage from "./pages/MyTimekeepingPage";
 import KioskPage from "./pages/KioskPage";
 import MyPayslipPage from "./pages/MyPayslipPage";
 import ContractManagementPage from "./pages/ContractManagementPage.js";
+import SystemSettingsPage from "./pages/SystemSettingsPage";
 
 function App() {
   return (
@@ -44,10 +45,11 @@ function App() {
         <Route path="/luong" element={<PayrollPage />} />
         <Route path="/nghi-phep" element={<LeaveManagementPage />} />
         <Route path="/khen-thuong" element={<DisciplinePage />} />
-        <Route path="/dao-tao" element={<TrainingPage />} />
+        <Route path="/thong-bao" element={<AnnouncementPage />} />
         <Route path="/bao-cao" element={<ReportsPage />} />
         <Route path="/kiosk" element={<KioskPage />} />
         <Route path="/hop-dong" element={<ContractManagementPage />} />
+        <Route path="/cai-dat" element={<SystemSettingsPage />} />
 
         <Route path="/nhan-vien/:employeeId" element={<EmployeeDetailPage />} />
         <Route

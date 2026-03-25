@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../api";
 import { getUserFromToken } from "../utils/auth";
@@ -16,6 +16,28 @@ import {
 import "../styles/DepartmentPage.css";
 import DepartmentModal from "../components/modals/DepartmentModal";
 import EmployeeListModal from "../components/modals/EmployeeListModal";
+
+// --- Custom Confirm Modal ---
+const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="custom-modal-overlay">
+      <div className="custom-confirm-modal">
+        <h3 className="confirm-title">Xác nhận</h3>
+        <p className="confirm-message">{message}</p>
+        <div className="confirm-actions">
+          <button className="btn-cancel" onClick={onCancel}>
+            Hủy
+          </button>
+          <button className="btn-accept" onClick={onConfirm}>
+            Đồng ý
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // --- ContextMenu ---
 const DepartmentContextMenu = ({
@@ -42,7 +64,6 @@ const DepartmentContextMenu = ({
           <FaEye /> Xem chi tiết
         </li>
 
-        {/* Chỉ hiện Sửa/Xóa/Kích hoạt nếu có quyền quản lý */}
         {canModify && (
           <>
             <li onClick={() => onAction("edit", department)}>
@@ -77,12 +98,37 @@ const DepartmentPage = () => {
 
   const [activeMenu, setActiveMenu] = useState({ id: null, x: 0, y: 0 });
 
-  // --- LOGIC PHÂN QUYỀN (ĐÃ SỬA) ---
+  // --- LOGIC PHÂN QUYỀN ---
   const user = getUserFromToken();
   const userRole = user?.role || user?.Role || "";
-
-  // SỬA Ở ĐÂY: Thêm điều kiện userRole === "Giám đốc"
   const isHRManager = userRole === "Nhân sự trưởng" || userRole === "Giám đốc";
+
+  // --- TOAST STATE ---
+  const [toast, setToast] = useState({
+    message: "",
+    type: "success",
+    visible: false,
+  });
+  const toastTimerRef = useRef(null);
+
+  const showToast = useCallback((message, type = "success") => {
+    setToast({ message, type, visible: true });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      setToast((prev) => ({ ...prev, visible: false }));
+    }, 3000);
+  }, []);
+
+  // --- CONFIRM MODAL STATE ---
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    message: "",
+    onConfirm: null,
+  });
+
+  const closeConfirm = () => {
+    setConfirmDialog({ isOpen: false, message: "", onConfirm: null });
+  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -102,13 +148,15 @@ const DepartmentPage = () => {
       ) {
         setPermissionDenied(true);
         setPhongBans([]);
+        showToast("Bạn không có quyền xem danh sách phòng ban.", "error");
       } else {
         console.error("Failed to fetch departments", error);
+        showToast("Lỗi khi tải dữ liệu phòng ban.", "error");
       }
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, filterTrangThai]);
+  }, [searchTerm, filterTrangThai, showToast]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -136,14 +184,13 @@ const DepartmentPage = () => {
   const handleAction = (actionType, dept) => {
     setActiveMenu({ id: null, x: 0, y: 0 });
 
-    // --- CHẶN HÀNH ĐỘNG SỬA/XÓA NẾU KHÔNG PHẢI QUẢN LÝ ---
     if (
       (actionType === "edit" ||
         actionType === "disable" ||
         actionType === "activate") &&
       !isHRManager
     ) {
-      alert("Bạn không có quyền thực hiện hành động này.");
+      showToast("Bạn không có quyền thực hiện hành động này.", "error");
       return;
     }
 
@@ -192,68 +239,101 @@ const DepartmentPage = () => {
   };
 
   const handleDisable = async (dept) => {
-    if (
-      window.confirm(
-        `Bạn có chắc muốn vô hiệu hóa phòng ban ${dept.tenPhongBan}?`,
-      )
-    ) {
-      try {
-        await api.post(`/PhongBan/${dept.maPhongBan}/disable`);
-        fetchData();
-      } catch (error) {
-        const message =
-          error.response?.status === 403
-            ? "Bạn không có quyền thực hiện hành động này."
-            : error.response?.data?.message || "Lỗi khi vô hiệu hóa phòng ban.";
-        alert(message);
-      }
-    }
+    setConfirmDialog({
+      isOpen: true,
+      message: `Bạn có chắc muốn vô hiệu hóa phòng ban ${dept.tenPhongBan}?`,
+      onConfirm: async () => {
+        closeConfirm();
+        try {
+          await api.post(`/PhongBan/${dept.maPhongBan}/disable`);
+          showToast("Vô hiệu hóa phòng ban thành công!", "success");
+          fetchData();
+        } catch (error) {
+          const message =
+            error.response?.status === 403
+              ? "Bạn không có quyền thực hiện hành động này."
+              : error.response?.data?.message ||
+                "Lỗi khi vô hiệu hóa phòng ban.";
+          showToast(message, "error");
+        }
+      },
+    });
   };
 
   const handleActivate = async (dept) => {
-    if (
-      window.confirm(
-        `Bạn có chắc muốn kích hoạt lại phòng ban ${dept.tenPhongBan}?`,
-      )
-    ) {
-      try {
-        await api.post(`/PhongBan/${dept.maPhongBan}/activate`);
-        fetchData();
-      } catch (error) {
-        const message =
-          error.response?.status === 403
-            ? "Bạn không có quyền thực hiện hành động này."
-            : error.response?.data?.message || "Lỗi khi kích hoạt lại.";
-        alert(message);
-      }
-    }
+    setConfirmDialog({
+      isOpen: true,
+      message: `Bạn có chắc muốn kích hoạt lại phòng ban ${dept.tenPhongBan}?`,
+      onConfirm: async () => {
+        closeConfirm();
+        try {
+          await api.post(`/PhongBan/${dept.maPhongBan}/activate`);
+          showToast("Kích hoạt lại phòng ban thành công!", "success");
+          fetchData();
+        } catch (error) {
+          const message =
+            error.response?.status === 403
+              ? "Bạn không có quyền thực hiện hành động này."
+              : error.response?.data?.message || "Lỗi khi kích hoạt lại.";
+          showToast(message, "error");
+        }
+      },
+    });
   };
 
   const handleSave = async (deptData) => {
-    // Chặn ở client trước khi gọi API
     if (!isHRManager) {
-      alert("Bạn không có quyền thêm/sửa phòng ban.");
+      showToast("Bạn không có quyền thêm/sửa phòng ban.", "error");
       return;
     }
 
+    const cleanData = { ...deptData };
+    for (let key in cleanData) {
+      if (cleanData[key] === "") {
+        cleanData[key] = null;
+      }
+    }
+
+    const isTrangThaiActive =
+      deptData.trangThai !== undefined
+        ? deptData.trangThai === "true" || deptData.trangThai === true
+        : true;
+
+    const dataToSave = {
+      ...cleanData,
+      trangThai: isTrangThaiActive,
+    };
+
     try {
-      const dataToSave = {
-        ...deptData,
-        trangThai: deptData.trangThai === "true" || deptData.trangThai === true,
-      };
       if (currentDepartment) {
         await api.put(`/PhongBan/${currentDepartment.maPhongBan}`, dataToSave);
+        showToast("Cập nhật phòng ban thành công!", "success");
       } else {
+        dataToSave.maPhongBan = "NEW_PB";
         await api.post("/PhongBan", dataToSave);
+        showToast("Thêm phòng ban mới thành công!", "success");
       }
+
       setIsEditModalOpen(false);
       fetchData();
     } catch (error) {
-      const message =
-        error.response?.status === 403
-          ? "Bạn không có quyền thêm/sửa phòng ban."
-          : error.response?.data?.message || "Lưu thất bại!";
-      alert(message);
+      console.error("Lỗi chi tiết từ Backend:", error.response?.data);
+
+      if (error.response?.data?.errors) {
+        const errorMessages = Object.values(error.response.data.errors)
+          .flat()
+          .join("\n");
+        showToast("Dữ liệu không hợp lệ:\n" + errorMessages, "error");
+      } else {
+        const message =
+          error.response?.status === 403
+            ? "Bạn không có quyền thêm/sửa phòng ban."
+            : error.response?.data?.message ||
+              (typeof error.response?.data === "string"
+                ? error.response?.data
+                : "Lưu thất bại!");
+        showToast(message, "error");
+      }
     }
   };
 
@@ -266,6 +346,12 @@ const DepartmentPage = () => {
             <h2>Truy cập bị từ chối</h2>
             <p>Bạn không có quyền xem danh sách phòng ban.</p>
           </div>
+        </div>
+        {/* TOAST COMPONENT FOR DENIED STATE */}
+        <div
+          className={`toast-notification ${toast.type} ${toast.visible ? "show" : ""}`}
+        >
+          {toast.message}
         </div>
       </DashboardLayout>
     );
@@ -301,7 +387,6 @@ const DepartmentPage = () => {
               </select>
             </div>
 
-            {/* Chỉ hiện nút THÊM MỚI nếu có quyền quản lý */}
             {isHRManager && (
               <button onClick={handleAdd} className="dept-add-btn">
                 <FaPlus /> Thêm mới
@@ -379,7 +464,7 @@ const DepartmentPage = () => {
           onClose={() => setActiveMenu({ id: null, x: 0, y: 0 })}
           x={activeMenu.x}
           y={activeMenu.y}
-          canModify={isHRManager} // Truyền quyền xuống Menu
+          canModify={isHRManager}
         />
       )}
 
@@ -403,6 +488,21 @@ const DepartmentPage = () => {
           onCancel={() => setIsEmployeeListModalOpen(false)}
         />
       )}
+
+      {/* --- CONFIRM MODAL --- */}
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
+      />
+
+      {/* --- TOAST COMPONENT --- */}
+      <div
+        className={`toast-notification ${toast.type} ${toast.visible ? "show" : ""}`}
+      >
+        {toast.message}
+      </div>
     </DashboardLayout>
   );
 };

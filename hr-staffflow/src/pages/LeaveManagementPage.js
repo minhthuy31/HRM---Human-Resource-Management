@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../api";
 import { getUserFromToken } from "../utils/auth";
@@ -11,7 +11,29 @@ import {
   FaClock,
   FaUmbrellaBeach,
 } from "react-icons/fa";
-import "../styles/LeaveManagementPage.css"; // Reuse the CSS you provided
+import "../styles/LeaveManagementPage.css";
+
+// --- Custom Confirm Modal ---
+const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="custom-modal-overlay">
+      <div className="custom-confirm-modal">
+        <h3 className="confirm-title">Xác nhận</h3>
+        <p className="confirm-message">{message}</p>
+        <div className="confirm-actions">
+          <button className="btn-cancel" onClick={onCancel}>
+            Hủy
+          </button>
+          <button className="btn-accept" onClick={onConfirm}>
+            Đồng ý
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // --- Helper Functions ---
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString("vi-VN") : "-");
@@ -19,7 +41,7 @@ const formatMoney = (v) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
     v || 0,
   );
-const formatTime = (t) => (t ? t.substring(0, 5) : ""); // Format TimeSpan "HH:mm:ss" -> "HH:mm"
+const formatTime = (t) => (t ? t.substring(0, 5) : "");
 
 const RequestManagementPage = () => {
   // --- STATE MANAGEMENT ---
@@ -32,16 +54,41 @@ const RequestManagementPage = () => {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // --- TOAST STATE ---
+  const [toast, setToast] = useState({
+    message: "",
+    type: "success",
+    visible: false,
+  });
+  const toastTimerRef = useRef(null);
+
+  const showToast = useCallback((message, type = "success") => {
+    setToast({ message, type, visible: true });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      setToast((prev) => ({ ...prev, visible: false }));
+    }, 3000);
+  }, []);
+
+  // --- CONFIRM MODAL STATE ---
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    message: "",
+    onConfirm: null,
+  });
+
+  const closeConfirm = () => {
+    setConfirmDialog({ isOpen: false, message: "", onConfirm: null });
+  };
+
   // --- USER INFO & PERMISSIONS ---
   const user = getUserFromToken();
   const userRole = user?.role || user?.Role || "";
 
-  // Permission Logic:
-  // Approve/Reject: Only Manager (of that dept), Director, General Director
   const canApprove = ["Trưởng phòng", "Giám đốc", "Tổng giám đốc"].includes(
     userRole,
   );
-  // View All & Filter Dept: Director, General Director, HR, Accountant
+
   const canViewAllAndFilter = [
     "Giám đốc",
     "Tổng giám đốc",
@@ -49,7 +96,7 @@ const RequestManagementPage = () => {
     "Nhân sự trưởng",
   ].includes(userRole);
 
-  // --- LOAD DEPARTMENTS (For Filter) ---
+  // --- LOAD DEPARTMENTS ---
   useEffect(() => {
     if (canViewAllAndFilter) {
       api
@@ -87,52 +134,59 @@ const RequestManagementPage = () => {
       setData(response.data);
     } catch (error) {
       console.error("Error fetching data:", error);
-      // Optional: alert("Failed to load requests.");
+      showToast("Không thể tải dữ liệu đơn từ.", "error");
     } finally {
       setLoading(false);
     }
-  }, [activeTab, statusFilter, deptFilter, searchTerm]);
+  }, [activeTab, statusFilter, deptFilter, searchTerm, showToast]);
 
-  // Debounce search input to avoid too many API calls
   useEffect(() => {
     const timer = setTimeout(() => fetchData(), 500);
     return () => clearTimeout(timer);
   }, [fetchData]);
 
   // --- HANDLE ACTIONS (APPROVE/REJECT) ---
-  const handleAction = async (id, action) => {
-    // action = 'approve' | 'reject'
+  const handleAction = (id, action) => {
     const actionText = action === "approve" ? "DUYỆT" : "TỪ CHỐI";
-    if (!window.confirm(`Bạn có chắc chắn muốn ${actionText} đơn này?`)) return;
 
-    let endpointPrefix = "";
-    switch (activeTab) {
-      case "LEAVE":
-        endpointPrefix = "/DonNghiPhep";
-        break;
-      case "OT":
-        endpointPrefix = "/DangKyOT";
-        break;
-      case "TRIP":
-        endpointPrefix = "/DangKyCongTac";
-        break;
-      default:
-        return;
-    }
+    setConfirmDialog({
+      isOpen: true,
+      message: `Bạn có chắc chắn muốn ${actionText} đơn này?`,
+      onConfirm: async () => {
+        closeConfirm();
+        let endpointPrefix = "";
+        switch (activeTab) {
+          case "LEAVE":
+            endpointPrefix = "/DonNghiPhep";
+            break;
+          case "OT":
+            endpointPrefix = "/DangKyOT";
+            break;
+          case "TRIP":
+            endpointPrefix = "/DangKyCongTac";
+            break;
+          default:
+            return;
+        }
 
-    try {
-      await api.post(`${endpointPrefix}/${action}/${id}`);
-      // alert("Thao tác thành công!");
-      fetchData(); // Reload data after action
-    } catch (error) {
-      const msg =
-        error.response?.data?.message ||
-        "Có lỗi xảy ra (có thể do không đủ quyền hạn).";
-      alert(msg);
-    }
+        try {
+          await api.post(`${endpointPrefix}/${action}/${id}`);
+          showToast(
+            `Đã ${actionText.toLowerCase()} đơn thành công!`,
+            "success",
+          );
+          fetchData();
+        } catch (error) {
+          const msg =
+            error.response?.data?.message ||
+            "Có lỗi xảy ra (có thể do không đủ quyền hạn).";
+          showToast(msg, "error");
+        }
+      },
+    });
   };
 
-  // --- RENDER TABLE ROW CONTENT ---
+  // --- RENDER TABLE BODY ---
   const renderTableBody = () => {
     if (data.length === 0) {
       return (
@@ -146,7 +200,6 @@ const RequestManagementPage = () => {
 
     return data.map((item) => (
       <tr key={item.id}>
-        {/* Column 1: Employee Info */}
         <td>
           <strong>{item.hoTenNhanVien}</strong>
           <br />
@@ -155,10 +208,8 @@ const RequestManagementPage = () => {
           </span>
         </td>
 
-        {/* Column 2: Department */}
         <td>{item.tenPhongBan || "---"}</td>
 
-        {/* Column 3+: Dynamic Content based on Tab */}
         {activeTab === "LEAVE" && (
           <>
             <td className="reason-cell">{item.lyDo}</td>
@@ -185,7 +236,6 @@ const RequestManagementPage = () => {
                 "-"
               )}
             </td>
-            {/* Remaining Leave Days */}
             <td
               className="text-center"
               style={{
@@ -243,7 +293,6 @@ const RequestManagementPage = () => {
           </>
         )}
 
-        {/* Status Column */}
         <td>
           <span
             className={`status-badge ${
@@ -258,7 +307,6 @@ const RequestManagementPage = () => {
           </span>
         </td>
 
-        {/* Action Column (Only visible if canApprove AND status is Pending) */}
         {canApprove && (
           <td>
             {item.trangThai === "Chờ duyệt" && (
@@ -290,7 +338,6 @@ const RequestManagementPage = () => {
       <div className="leave-management-container">
         <h1>Quản lý Đơn từ & Yêu cầu</h1>
 
-        {/* 1. TOP TOOLBAR: Search & Department Filter */}
         <div
           className="filters-bar"
           style={{
@@ -300,7 +347,6 @@ const RequestManagementPage = () => {
             flexWrap: "wrap",
           }}
         >
-          {/* Search Box */}
           <div
             className="search-box"
             style={{ position: "relative", flex: 1, minWidth: "250px" }}
@@ -329,7 +375,6 @@ const RequestManagementPage = () => {
             />
           </div>
 
-          {/* Department Filter (Only for Admin/HR/Accountant) */}
           {canViewAllAndFilter && (
             <select
               value={deptFilter}
@@ -352,13 +397,12 @@ const RequestManagementPage = () => {
           )}
         </div>
 
-        {/* 2. MAIN TABS (Request Types) */}
         <div className="main-tabs">
           <button
             className={activeTab === "LEAVE" ? "active" : ""}
             onClick={() => {
               setActiveTab("LEAVE");
-              setStatusFilter("Chờ duyệt"); // Reset filter on tab change
+              setStatusFilter("Chờ duyệt");
             }}
           >
             <FaUmbrellaBeach style={{ marginRight: 8 }} /> Nghỉ Phép
@@ -383,7 +427,6 @@ const RequestManagementPage = () => {
           </button>
         </div>
 
-        {/* 3. SUB FILTERS (Status Tabs) */}
         <div className="sub-filters">
           {[
             { key: "Chờ duyệt", label: "Chờ duyệt" },
@@ -401,7 +444,6 @@ const RequestManagementPage = () => {
           ))}
         </div>
 
-        {/* 4. DATA TABLE */}
         <div className="requests-table-container">
           {loading ? (
             <div
@@ -416,14 +458,13 @@ const RequestManagementPage = () => {
                   <th style={{ width: "180px" }}>Nhân viên</th>
                   <th style={{ width: "150px" }}>Phòng ban</th>
 
-                  {/* Dynamic Headers based on Active Tab */}
                   {activeTab === "LEAVE" && (
                     <>
                       <th>Lý do</th>
                       <th>Thời gian</th>
                       <th className="text-center">Số ngày</th>
                       <th>File</th>
-                      <th className="text-center">Còn lại</th>
+                      <th className="text-center">Phép còn lại</th>
                     </>
                   )}
                   {activeTab === "OT" && (
@@ -453,6 +494,21 @@ const RequestManagementPage = () => {
             </table>
           )}
         </div>
+      </div>
+
+      {/* --- CONFIRM MODAL --- */}
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
+      />
+
+      {/* --- TOAST COMPONENT --- */}
+      <div
+        className={`toast-notification ${toast.type} ${toast.visible ? "show" : ""}`}
+      >
+        {toast.message}
       </div>
     </DashboardLayout>
   );

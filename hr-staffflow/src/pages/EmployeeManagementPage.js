@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../api";
 import { getUserFromToken } from "../utils/auth";
@@ -12,17 +12,40 @@ import {
   FaEllipsisV,
   FaDownload,
   FaUpload,
-  FaPenNib, // Icon cho chữ ký
+  FaPenNib,
+  FaUndo,
 } from "react-icons/fa";
 import "../styles/EmployeePage.css";
 import EmployeeModal from "../components/modals/EmployeeModal";
 import * as XLSX from "xlsx";
-import SignatureModal from "../components/modals/SignatureModal"; // Import Modal Ký tên
+import SignatureModal from "../components/modals/SignatureModal";
 
 const getImageUrl = (path) => {
   if (!path) return null;
   if (path.startsWith("blob:")) return path;
   return `http://localhost:5260${path}`;
+};
+
+// --- Custom Confirm Modal ---
+const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="custom-modal-overlay">
+      <div className="custom-confirm-modal">
+        <h3 className="confirm-title">Xác nhận</h3>
+        <p className="confirm-message">{message}</p>
+        <div className="confirm-actions">
+          <button className="btn-cancel" onClick={onCancel}>
+            Hủy
+          </button>
+          <button className="btn-accept" onClick={onConfirm}>
+            Đồng ý
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // --- ContextMenu ---
@@ -39,19 +62,23 @@ const ContextMenu = ({ employee, onAction, onClose, x, y, canModify }) => {
         <li onClick={() => onAction("view", employee)}>
           <FaEye /> Xem chi tiết
         </li>
-        {/* Chỉ hiện chức năng sửa/xóa nếu có quyền */}
         {canModify && (
           <>
             <li onClick={() => onAction("edit", employee)}>
               <FaEdit /> Chỉnh sửa
             </li>
-            {/* THÊM MỤC CẬP NHẬT CHỮ KÝ */}
             <li onClick={() => onAction("signature", employee)}>
               <FaPenNib /> Cập nhật chữ ký
             </li>
-            <li onClick={() => onAction("delete", employee)}>
-              <FaTrash /> Vô hiệu hóa
-            </li>
+            {employee.trangThai ? (
+              <li onClick={() => onAction("delete", employee)}>
+                <FaTrash /> Vô hiệu hóa
+              </li>
+            ) : (
+              <li onClick={() => onAction("activate", employee)}>
+                <FaUndo /> Kích hoạt
+              </li>
+            )}
           </>
         )}
       </ul>
@@ -81,21 +108,14 @@ const EmployeePage = () => {
   const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // --- STATE CHO CHỮ KÝ ---
   const [showSigModal, setShowSigModal] = useState(false);
   const [selectedEmpForSig, setSelectedEmpForSig] = useState(null);
 
-  // --- LOGIC PHÂN QUYỀN ---
   const user = getUserFromToken();
   const userRole = user?.role || user?.Role || "";
   const isHRManager = userRole === "Nhân sự trưởng" || userRole === "Giám đốc";
 
-  const [activeMenu, setActiveMenu] = useState({
-    id: null,
-    x: 0,
-    y: 0,
-  });
-
+  const [activeMenu, setActiveMenu] = useState({ id: null, x: 0, y: 0 });
   const [modal, setModal] = useState({ type: null, data: null });
 
   const [filters, setFilters] = useState({
@@ -105,6 +125,33 @@ const EmployeePage = () => {
     selectedTrangThai: "true",
     selectedTrinhDo: "",
   });
+
+  // --- TOAST STATE ---
+  const [toast, setToast] = useState({
+    message: "",
+    type: "success",
+    visible: false,
+  });
+  const toastTimerRef = useRef(null);
+
+  const showToast = useCallback((message, type = "success") => {
+    setToast({ message, type, visible: true });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      setToast((prev) => ({ ...prev, visible: false }));
+    }, 3000);
+  }, []);
+
+  // --- CONFIRM MODAL STATE ---
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    message: "",
+    onConfirm: null,
+  });
+
+  const closeConfirm = () => {
+    setConfirmDialog({ isOpen: false, message: "", onConfirm: null });
+  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -142,30 +189,21 @@ const EmployeePage = () => {
     } catch (error) {
       console.error("Failed to fetch data", error);
       if (error.response && error.response.status === 403) {
-        alert("Bạn không có quyền truy cập dữ liệu này.");
+        showToast("Bạn không có quyền truy cập dữ liệu này.", "error");
       }
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, showToast]);
 
   useEffect(() => {
     const timer = setTimeout(() => fetchData(), 500);
     return () => clearTimeout(timer);
   }, [fetchData]);
 
-  useEffect(() => {
-    const handleClickOutside = () => setActiveMenu({ id: null, x: 0, y: 0 });
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
-
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters((prevFilters) => ({
-      ...prevFilters,
-      [name]: value,
-    }));
+    setFilters((prevFilters) => ({ ...prevFilters, [name]: value }));
   };
 
   const handleSearchChange = (e) =>
@@ -180,28 +218,23 @@ const EmployeePage = () => {
     e.stopPropagation();
 
     const menuWidth = 200;
-    const menuHeight = 200;
-
+    const menuHeight = 250;
     let x = e.clientX;
     let y = e.clientY;
 
-    if (x + menuWidth > window.innerWidth) {
+    if (x + menuWidth > window.innerWidth)
       x = window.innerWidth - menuWidth - 10;
-    }
-    if (y + menuHeight > window.innerHeight) {
+    if (y + menuHeight > window.innerHeight)
       y = window.innerHeight - menuHeight - 10;
-    }
 
     setActiveMenu({ id: employee.maNhanVien, x, y });
   };
 
-  // --- HÀM MỞ MODAL KÝ TÊN ---
   const openSignatureModal = (employee) => {
     setSelectedEmpForSig(employee);
     setShowSigModal(true);
   };
 
-  // --- HÀM LƯU CHỮ KÝ (GỌI API) ---
   const handleSaveSignature = async (base64String) => {
     if (!selectedEmpForSig) return;
 
@@ -211,12 +244,15 @@ const EmployeePage = () => {
         base64Image: base64String,
       });
 
-      alert("Đã cập nhật chữ ký thành công!");
+      showToast("Đã cập nhật chữ ký thành công!", "success");
       setShowSigModal(false);
-      fetchData(); // Load lại để update data mới nhất
+      fetchData();
     } catch (err) {
       console.error(err);
-      alert("Lỗi lưu chữ ký: " + (err.response?.data?.message || err.message));
+      showToast(
+        "Lỗi lưu chữ ký: " + (err.response?.data?.message || err.message),
+        "error",
+      );
     }
   };
 
@@ -228,24 +264,23 @@ const EmployeePage = () => {
         const response = await api.get(`/NhanVien/${employee.maNhanVien}`);
         setModal({ type: "view", data: response.data });
       } catch (error) {
-        alert("Không thể tải dữ liệu để xem.");
+        showToast("Không thể tải dữ liệu để xem.", "error");
       }
       return;
     }
 
-    // --- CHECK QUYỀN TRƯỚC KHI THỰC HIỆN ACTION ---
     if (
       (actionType === "edit" ||
         actionType === "delete" ||
+        actionType === "activate" ||
         actionType === "edit-external" ||
-        actionType === "signature") && // Thêm quyền signature
+        actionType === "signature") &&
       !isHRManager
     ) {
-      alert("Bạn không có quyền thực hiện chức năng này.");
+      showToast("Bạn không có quyền thực hiện chức năng này.", "error");
       return;
     }
 
-    // Xử lý mở Modal Ký tên
     if (actionType === "signature") {
       openSignatureModal(employee);
       return;
@@ -256,24 +291,50 @@ const EmployeePage = () => {
         const response = await api.get(`/NhanVien/${employee.maNhanVien}`);
         setModal({ type: "edit", data: response.data });
       } catch (error) {
-        alert("Không thể tải dữ liệu để sửa.");
+        showToast("Không thể tải dữ liệu để sửa.", "error");
       }
       return;
     }
 
     if (actionType === "delete") {
-      if (
-        window.confirm(
-          `Bạn có chắc muốn vô hiệu hóa nhân viên ${employee.hoTen}?`,
-        )
-      ) {
-        try {
-          await api.delete(`/NhanVien/${employee.maNhanVien}`);
-          fetchData();
-        } catch (error) {
-          alert(error.response?.data?.message || "Lỗi khi vô hiệu hóa.");
-        }
-      }
+      setConfirmDialog({
+        isOpen: true,
+        message: `Bạn có chắc muốn vô hiệu hóa nhân viên ${employee.hoTen}?`,
+        onConfirm: async () => {
+          closeConfirm();
+          try {
+            await api.delete(`/NhanVien/${employee.maNhanVien}`);
+            showToast("Vô hiệu hóa thành công!", "success");
+            fetchData();
+          } catch (error) {
+            showToast(
+              error.response?.data?.message || "Lỗi khi vô hiệu hóa.",
+              "error",
+            );
+          }
+        },
+      });
+      return;
+    }
+
+    if (actionType === "activate") {
+      setConfirmDialog({
+        isOpen: true,
+        message: `Bạn có chắc muốn kích hoạt lại nhân viên ${employee.hoTen}?`,
+        onConfirm: async () => {
+          closeConfirm();
+          try {
+            await api.post(`/NhanVien/${employee.maNhanVien}/activate`);
+            showToast("Kích hoạt lại thành công!", "success");
+            fetchData();
+          } catch (error) {
+            showToast(
+              error.response?.data?.message || "Lỗi khi kích hoạt lại.",
+              "error",
+            );
+          }
+        },
+      });
       return;
     }
 
@@ -290,14 +351,29 @@ const EmployeePage = () => {
 
   const handleSave = async (employeeData, imageFile) => {
     if (!isHRManager) {
-      alert("Bạn không có quyền lưu thay đổi.");
+      showToast("Bạn không có quyền lưu thay đổi.", "error");
+      return;
+    }
+
+    const cleanData = { ...employeeData };
+    for (let key in cleanData) {
+      if (cleanData[key] === "") cleanData[key] = null;
+    }
+
+    if (!cleanData.maPhongBan) {
+      showToast("Vui lòng chọn Phòng ban!", "warning");
+      return;
+    }
+    if (!cleanData.maChucVuNV) {
+      showToast("Vui lòng chọn Chức vụ!", "warning");
       return;
     }
 
     const dataToSave = {
-      ...employeeData,
+      ...cleanData,
       trangThai: employeeData.trangThai.toString() === "true",
     };
+
     try {
       if (imageFile) {
         const formData = new FormData();
@@ -307,25 +383,39 @@ const EmployeePage = () => {
         });
         dataToSave.hinhAnh = uploadRes.data.filePath;
       }
+
       if (modal.data) {
         await api.put(`/NhanVien/${modal.data.maNhanVien}`, dataToSave);
       } else {
         await api.post("/NhanVien", dataToSave);
       }
+
       setModal({ type: null, data: null });
       fetchData();
+      showToast("Lưu thành công!", "success");
     } catch (error) {
-      const errorMsg = error.response?.data?.errors
-        ? JSON.stringify(error.response.data.errors)
-        : error.response?.data?.message || "Lưu thất bại!";
-      alert(errorMsg);
+      console.error("Lỗi chi tiết từ Backend:", error.response?.data);
+
+      if (error.response?.data?.errors) {
+        const errorMessages = Object.values(error.response.data.errors)
+          .flat()
+          .join("\n");
+        showToast("Dữ liệu không hợp lệ:\n" + errorMessages, "error");
+      } else {
+        showToast(
+          error.response?.data?.message ||
+            (typeof error.response?.data === "string"
+              ? error.response?.data
+              : "Lưu thất bại!"),
+          "error",
+        );
+      }
     }
   };
 
-  // ... (Giữ nguyên các hàm handleExportExcel, handleImportExcel, findIdByName, excelDateToJSDate) ...
   const handleExportExcel = () => {
     if (employees.length === 0) {
-      alert("Không có dữ liệu nhân viên để xuất.");
+      showToast("Không có dữ liệu nhân viên để xuất.", "warning");
       return;
     }
     const formatDate = (dateString) => {
@@ -391,10 +481,9 @@ const EmployeePage = () => {
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "DanhSachNhanVien");
-    const fileName = `DanhSachNhanVien_${
-      new Date().toISOString().split("T")[0]
-    }.xlsx`;
+    const fileName = `DanhSachNhanVien_${new Date().toISOString().split("T")[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
+    showToast("Xuất Excel thành công!", "success");
   };
 
   const findIdByName = (list, name, nameField, idField) => {
@@ -426,7 +515,7 @@ const EmployeePage = () => {
 
   const handleImportExcel = (e) => {
     if (!isHRManager) {
-      alert("Bạn không có quyền nhập dữ liệu.");
+      showToast("Bạn không có quyền nhập dữ liệu.", "error");
       return;
     }
 
@@ -523,23 +612,28 @@ const EmployeePage = () => {
         const invalidCount = employeesToImport.length - validEmployees.length;
 
         if (invalidCount > 0)
-          alert(
-            `Cảnh báo: ${invalidCount} nhân viên không thể nhập do thiếu/sai tên.`,
+          showToast(
+            `Cảnh báo: ${invalidCount} nhân viên thiếu/sai tên phòng ban, chức vụ.`,
+            "warning",
           );
         if (validEmployees.length === 0) {
-          alert("Không có nhân viên nào hợp lệ để nhập.");
+          showToast("Không có nhân viên nào hợp lệ để nhập.", "error");
           setLoading(false);
           return;
         }
 
         const response = await api.post("/NhanVien/import", validEmployees);
-        alert(response.data.message);
+        showToast(
+          response.data.message || "Nhập dữ liệu thành công!",
+          "success",
+        );
         fetchData();
       } catch (err) {
         console.error("Lỗi khi nhập Excel:", err);
-        alert(
+        showToast(
           "Đã xảy ra lỗi khi đọc hoặc gửi file. " +
             (err.response?.data?.message || ""),
+          "error",
         );
       } finally {
         setLoading(false);
@@ -616,11 +710,13 @@ const EmployeePage = () => {
                 onChange={handleFilterChange}
               >
                 <option value="">-- Tất cả phòng ban --</option>
-                {phongBans.map((pb) => (
-                  <option key={pb.maPhongBan} value={pb.maPhongBan}>
-                    {pb.tenPhongBan}
-                  </option>
-                ))}
+                {phongBans
+                  .filter((pb) => pb.trangThai === true)
+                  .map((pb) => (
+                    <option key={pb.maPhongBan} value={pb.maPhongBan}>
+                      {pb.tenPhongBan}
+                    </option>
+                  ))}
               </select>
             </div>
             <div className="filter-item">
@@ -740,7 +836,11 @@ const EmployeePage = () => {
           onCancel={() => setModal({ type: null, data: null })}
           onSave={handleSave}
           isViewOnly={modal.type === "view" || !isHRManager}
-          phongBans={phongBans}
+          phongBans={phongBans.filter(
+            (pb) =>
+              pb.trangThai === true ||
+              (modal.data && pb.maPhongBan === modal.data.maPhongBan),
+          )}
           chucVus={chucVus}
           chuyenNganhs={chuyenNganhs}
           trinhDoHocVans={trinhDoHocVans}
@@ -749,13 +849,27 @@ const EmployeePage = () => {
         />
       )}
 
-      {/* RENDER MODAL KÝ TÊN */}
       {showSigModal && (
         <SignatureModal
           onSave={handleSaveSignature}
           onCancel={() => setShowSigModal(false)}
         />
       )}
+
+      {/* --- CONFIRM MODAL --- */}
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
+      />
+
+      {/* --- TOAST COMPONENT --- */}
+      <div
+        className={`toast-notification ${toast.type} ${toast.visible ? "show" : ""}`}
+      >
+        {toast.message}
+      </div>
     </DashboardLayout>
   );
 };

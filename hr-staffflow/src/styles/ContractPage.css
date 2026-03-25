@@ -1,8 +1,8 @@
 .contract-page {
     padding: 20px;
-    background-color: #fff;
+    background-color: var(--card-bg); /* ĐÃ SỬA */
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 12px var(--shadow-color); /* ĐÃ SỬA */
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -17,20 +17,21 @@
 
 .page-header h1 {
     font-size: 24px;
-    color: #333;
+    color: var(--main-text); /* ĐÃ SỬA */
     display: flex;
     align-items: center;
     gap: 10px;
+    margin: 0;
 }
 
 .toolbar {
     display: flex;
     gap: 15px;
     margin-bottom: 20px;
-    background-color: #f8f9fa;
+    background-color: var(--main-bg); /* ĐÃ SỬA */
     padding: 10px;
     border-radius: 6px;
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
 }
 
 .search-box {
@@ -41,10 +42,13 @@
 .search-box input {
     width: 100%;
     padding: 8px 10px 8px 35px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
+    background-color: var(--card-bg); /* ĐÃ SỬA */
+    color: var(--main-text); /* ĐÃ SỬA */
     border-radius: 4px;
     height: 38px;
     box-sizing: border-box;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 .search-box svg {
@@ -52,7 +56,7 @@
     left: 10px;
     top: 50%;
     transform: translateY(-50%);
-    color: #888;
+    color: var(--toggle-icon-color); /* ĐÃ SỬA */
 }
 
 .filter-box {
@@ -63,17 +67,22 @@
 
 .status-select {
     padding: 8px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
+    background-color: var(--card-bg); /* ĐÃ SỬA */
+    color: var(--main-text); /* ĐÃ SỬA */
     border-radius: 4px;
     height: 38px;
     min-width: 180px;
     font-size: 14px;
     cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 .table-container {
     flex: 1;
     overflow: auto;
+    border-radius: 6px;
+    border: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
 }
 
 .data-table {
@@ -82,23 +91,26 @@
 }
 
 .data-table th {
-    background-color: #f1f3f5;
+    background-color: var(--hover-bg); /* ĐÃ SỬA */
     padding: 12px;
     text-align: left;
     font-weight: 600;
-    color: #495057;
+    color: var(--main-text); /* ĐÃ SỬA */
     position: sticky;
     top: 0;
+    border-bottom: 2px solid var(--sidebar-border); /* ĐÃ SỬA */
+    z-index: 1;
 }
 
 .data-table td {
     padding: 12px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--separator-color); /* ĐÃ SỬA */
     vertical-align: middle;
+    color: var(--main-text); /* ĐÃ SỬA */
 }
 
 .data-table tbody tr:hover {
-    background-color: #f8f9fa;
+    background-color: var(--hover-bg); /* ĐÃ SỬA */
 }
 
 /* Badges */
@@ -109,10 +121,10 @@
     font-weight: 600;
     display: inline-block;
 }
-.badge-green { background-color: #d1fae5; color: #065f46; }
-.badge-red { background-color: #fee2e2; color: #991b1b; }
-.badge-gray { background-color: #f3f4f6; color: #4b5563; }
-.badge-warning { background-color: #fff7ed; color: #9a3412; border: 1px solid #ffedd5; }
+.badge-green { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
+.badge-red { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.badge-gray { background-color: var(--hover-bg); color: var(--toggle-icon-color); }
+.badge-warning { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 
 /* Buttons */
 .btn-add {
@@ -155,6 +167,6 @@
 .loading-state, .no-data {
     text-align: center;
     padding: 40px;
-    color: #888;
+    color: var(--toggle-icon-color); 
     font-style: italic;
 }

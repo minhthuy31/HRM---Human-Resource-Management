@@ -151,9 +151,9 @@ const DashboardLayout = ({ children }) => {
             </Link>
           </li>
           <li>
-            <Link to="/dao-tao">
+            <Link to="/thong-bao">
               <span className="icon">📚</span>
-              <span className="text">Đào tạo</span>
+              <span className="text">Thông báo</span>
             </Link>
           </li>
           <li>

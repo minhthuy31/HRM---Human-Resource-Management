@@ -245,6 +245,11 @@ namespace HRApi.Controllers
                     LuongTroCap = nv.LuongTroCap,
                     SoHopDong = nv.SoHopDong,
                     ChuKy = nv.ChuKy,
+                    TenPhongBan = nv.PhongBan != null ? nv.PhongBan.TenPhongBan : null,
+                    TenChucVu = nv.ChucVuNhanVien != null ? nv.ChucVuNhanVien.TenChucVu : null,
+                    TenChuyenNganh = nv.ChuyenNganh != null ? nv.ChuyenNganh.TenChuyenNganh : null,
+                    TenTrinhDoHocVan = nv.TrinhDoHocVan != null ? nv.TrinhDoHocVan.TenTrinhDo : null,
+                    TenRole = nv.UserRole != null ? nv.UserRole.NameRole : null,
                     // Map danh sách Hợp đồng
                     HopDongs = nv.HopDongs.Select(hd => new HopDongDetailDto
                     {

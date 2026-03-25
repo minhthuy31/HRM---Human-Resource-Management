@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import { FaUserCircle, FaEye, FaFileContract } from "react-icons/fa";
-ư;
 import { api } from "../api";
 import "react-datepicker/dist/react-datepicker.css";
 import "../styles/EmployeeDetailPage.css";
-
 import ContractTemplate from "../components/templates/ContractTemplate";
 
 const getImageUrl = (path) => {

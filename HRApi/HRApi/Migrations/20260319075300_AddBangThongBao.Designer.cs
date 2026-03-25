@@ -4,6 +4,7 @@ using HRApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HRApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260319075300_AddBangThongBao")]
+    partial class AddBangThongBao
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -653,76 +656,6 @@ namespace HRApi.Migrations
                     b.HasKey("MaPhongBan");
 
                     b.ToTable("PhongBans");
-                });
-
-            modelBuilder.Entity("HRApi.Models.SystemSetting", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("DiaChi")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("EmailGuiDi")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("GiamTruGiaCanh")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("GiamTruPhuThuoc")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("GioTanLam")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("GioVaoLam")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("GuiMailTuDong")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("MaSoThue")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("MucLuongCoSo")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("NgayPhepTieuChuan")
-                        .HasColumnType("int");
-
-                    b.Property<double>("PhanTramBHXHCompany")
-                        .HasColumnType("float");
-
-                    b.Property<double>("PhanTramBHXHEmployee")
-                        .HasColumnType("float");
-
-                    b.Property<string>("SdtHotline")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SmtpPort")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SmtpServer")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("SoPhutDiMuonChoPhep")
-                        .HasColumnType("int");
-
-                    b.Property<string>("TenCongTy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TenVietTat")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ThoiGianNghiTrua")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("SystemSettings");
                 });
 
             modelBuilder.Entity("HRApi.Models.ThongBao", b =>

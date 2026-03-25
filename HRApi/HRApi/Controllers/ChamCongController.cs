@@ -413,76 +413,69 @@ namespace HRApi.Controllers
 
             return Ok(new { success = true, message = "Đăng ký khuôn mặt thành công!" });
         }
+
         [HttpPost("check-in-face")]
         public async Task<IActionResult> CheckInWithFace([FromBody] CheckInFaceDto dto)
         {
-            // 1. Lấy tất cả dữ liệu khuôn mặt trong DB ra để so sánh
-            // Lưu ý: Với đồ án hoặc công ty nhỏ < 1000 NV thì cách này OK. 
-            // Nếu dữ liệu lớn cần dùng Vector Database chuyên dụng.
-            var allFaces = await _context.FaceDatas.ToListAsync();
-
-            string foundEmployeeId = null;
-            double bestMatchDistance = double.MaxValue; // Khoảng cách nhỏ nhất tìm thấy
-
-            // 2. Thuật toán so sánh (Duyệt qua từng người trong DB)
-            foreach (var face in allFaces)
+            // 1. LẤY MÃ NHÂN VIÊN TỪ TÀI KHOẢN ĐANG ĐĂNG NHẬP (Chống nhận nhầm 100%)
+            var currentUserId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(currentUserId))
             {
-                // Giải nén chuỗi JSON trong DB ra thành mảng số
-                var storedVector = JsonSerializer.Deserialize<float[]>(face.FaceDescriptor);
-
-                // Tính khoảng cách giữa khuôn mặt gửi lên và khuôn mặt trong DB
-                var distance = CalculateEuclideanDistance(dto.FaceDescriptor, storedVector);
-
-                // Ngưỡng (Threshold) cho face-api.js thường là 0.45 - 0.5
-                // Nếu khoảng cách nhỏ hơn 0.5 nghĩa là khớp
-                if (distance < 0.5 && distance < bestMatchDistance)
-                {
-                    bestMatchDistance = distance;
-                    foundEmployeeId = face.MaNhanVien;
-                }
+                return Unauthorized(new { success = false, message = "Phiên đăng nhập không hợp lệ." });
             }
 
-            if (string.IsNullOrEmpty(foundEmployeeId))
+            // 2. CHỈ TÌM DỮ LIỆU KHUÔN MẶT CỦA ĐÚNG TÀI KHOẢN NÀY
+            var userFace = await _context.FaceDatas.FirstOrDefaultAsync(f => f.MaNhanVien == currentUserId);
+            if (userFace == null)
             {
-                return BadRequest(new { success = false, message = "Không nhận diện được khuôn mặt nhân viên." });
+                return BadRequest(new { success = false, message = "Bạn chưa cài đặt dữ liệu khuôn mặt. Vui lòng cài đặt trước khi chấm công!" });
             }
 
-            // 3. Nếu tìm thấy người -> Thực hiện logic chấm công (tương tự như QR Code)
+            // 3. SO SÁNH KHUÔN MẶT (Cam gửi lên vs DB của người này)
+            var storedVector = JsonSerializer.Deserialize<float[]>(userFace.FaceDescriptor);
+            var distance = CalculateEuclideanDistance(dto.FaceDescriptor, storedVector);
+
+            // Ngưỡng 0.45: Càng nhỏ càng khắt khe. Nếu > 0.45 nghĩa là không phải chủ tài khoản
+            if (distance > 0.45)
+            {
+                return BadRequest(new { success = false, message = "Khuôn mặt không khớp với tài khoản của bạn. Vui lòng thử lại!" });
+            }
+
+            // --- 4. THỰC HIỆN CHẤM CÔNG (Vì đã xác nhận chính chủ) ---
             var today = DateTime.Today;
-            var existing = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == foundEmployeeId && c.NgayChamCong.Date == today);
+            var existing = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == currentUserId && c.NgayChamCong.Date == today);
 
             if (existing != null)
             {
-                // LOGIC CHECK-OUT (Ra về)
+                // --- LOGIC CHECK-OUT (Ra về) ---
                 if (existing.GioCheckOut != null)
                     return BadRequest(new { success = false, message = "Bạn đã check-out hôm nay rồi." });
 
                 existing.GioCheckOut = DateTime.Now;
                 existing.GhiChu = (existing.GhiChu ?? "") + $" | Face Check-out: {existing.GioCheckOut:HH:mm}";
 
-                // Tính toán công dựa trên giờ làm
-                double totalHours = (existing.GioCheckOut.Value - (existing.GioCheckIn ?? existing.NgayChamCong)).TotalHours;
-                if (totalHours > 5) totalHours -= 1.0; // Trừ giờ nghỉ trưa
+                // THỬ NGHIỆM: Tính công theo số PHÚT (Thay vì số giờ)
+                double totalMinutes = (existing.GioCheckOut.Value - (existing.GioCheckIn ?? existing.NgayChamCong)).TotalMinutes;
 
-                if (totalHours >= 7.5) existing.NgayCong = 1.0;
-                else if (totalHours >= 3.5) existing.NgayCong = 0.5;
+                if (totalMinutes >= 5.0) existing.NgayCong = 1.0;
+                else if (totalMinutes >= 2.0) existing.NgayCong = 0.5;
                 else existing.NgayCong = 0.0;
 
                 _context.ChamCongs.Update(existing);
                 await _context.SaveChangesAsync();
 
-                var nv = await _context.NhanViens.FindAsync(foundEmployeeId);
+                var nv = await _context.NhanViens.FindAsync(currentUserId);
                 return Ok(new { success = true, message = $"Check-out thành công cho {nv?.HoTen}.", ngayCong = existing.NgayCong });
             }
             else
             {
-                // LOGIC CHECK-IN (Vào làm)
+                // --- LOGIC CHECK-IN (Vào làm) ---
                 var newChamCong = new ChamCong
                 {
-                    MaNhanVien = foundEmployeeId,
-                    NgayChamCong = DateTime.Now, // Ngày chấm công
+                    MaNhanVien = currentUserId,
+                    NgayChamCong = DateTime.Now, // Ngày chấm công (bỏ phần giờ)
                     GioCheckIn = DateTime.Now,   // Giờ vào thực tế
-                    NgayCong = 0.0,
+                    NgayCong = 0.0,              // Mới vào thì chưa có công
                     GhiChu = "Face Check-in",
                     LoaiNgayCong = "Làm việc"
                 };
@@ -497,10 +490,95 @@ namespace HRApi.Controllers
                 _context.ChamCongs.Add(newChamCong);
                 await _context.SaveChangesAsync();
 
-                var nv = await _context.NhanViens.FindAsync(foundEmployeeId);
+                var nv = await _context.NhanViens.FindAsync(currentUserId);
                 return Ok(new { success = true, message = $"Check-in thành công cho {nv?.HoTen}!", time = newChamCong.GioCheckIn });
             }
         }
+
+        //[HttpPost("check-in-face")]
+        //public async Task<IActionResult> CheckInWithFace([FromBody] CheckInFaceDto dto)
+        //{
+        //    // 1. LẤY MÃ NHÂN VIÊN TỪ TÀI KHOẢN ĐANG ĐĂNG NHẬP (Chống nhận nhầm 100%)
+        //    var currentUserId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+        //    if (string.IsNullOrEmpty(currentUserId))
+        //    {
+        //        return Unauthorized(new { success = false, message = "Phiên đăng nhập không hợp lệ." });
+        //    }
+
+        //    // 2. CHỈ TÌM DỮ LIỆU KHUÔN MẶT CỦA ĐÚNG TÀI KHOẢN NÀY
+        //    var userFace = await _context.FaceDatas.FirstOrDefaultAsync(f => f.MaNhanVien == currentUserId);
+        //    if (userFace == null)
+        //    {
+        //        return BadRequest(new { success = false, message = "Bạn chưa cài đặt dữ liệu khuôn mặt. Vui lòng cài đặt trước khi chấm công!" });
+        //    }
+
+        //    // 3. SO SÁNH KHUÔN MẶT (Cam gửi lên vs DB của người này)
+        //    var storedVector = JsonSerializer.Deserialize<float[]>(userFace.FaceDescriptor);
+        //    var distance = CalculateEuclideanDistance(dto.FaceDescriptor, storedVector);
+
+        //    // Ngưỡng 0.45: Càng nhỏ càng khắt khe. Nếu > 0.45 nghĩa là không phải chủ tài khoản
+        //    if (distance > 0.45)
+        //    {
+        //        return BadRequest(new { success = false, message = "Khuôn mặt không khớp với tài khoản của bạn. Vui lòng thử lại!" });
+        //    }
+
+        //    // --- 4. THỰC HIỆN CHẤM CÔNG (Vì đã xác nhận chính chủ) ---
+        //    var today = DateTime.Today;
+        //    var existing = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == currentUserId && c.NgayChamCong.Date == today);
+
+        //    if (existing != null)
+        //    {
+        //        // --- LOGIC CHECK-OUT (Ra về) ---
+        //        if (existing.GioCheckOut != null)
+        //            return BadRequest(new { success = false, message = "Bạn đã check-out hôm nay rồi." });
+
+        //        existing.GioCheckOut = DateTime.Now;
+        //        existing.GhiChu = (existing.GhiChu ?? "") + $" | Face Check-out: {existing.GioCheckOut:HH:mm}";
+
+        //        // --- QUAY LẠI LOGIC THỰC TẾ: Tính toán công dựa trên số GIỜ (Hours) ---
+        //        double totalHours = (existing.GioCheckOut.Value - (existing.GioCheckIn ?? existing.NgayChamCong)).TotalHours;
+
+        //        // Trừ 1 tiếng nghỉ trưa nếu làm việc trên 5 tiếng
+        //        if (totalHours > 5) totalHours -= 1.0;
+
+        //        // Phân loại công
+        //        if (totalHours >= 7.5) existing.NgayCong = 1.0;
+        //        else if (totalHours >= 3.5) existing.NgayCong = 0.5;
+        //        else existing.NgayCong = 0.0;
+
+        //        _context.ChamCongs.Update(existing);
+        //        await _context.SaveChangesAsync();
+
+        //        var nv = await _context.NhanViens.FindAsync(currentUserId);
+        //        return Ok(new { success = true, message = $"Check-out thành công cho {nv?.HoTen}.", ngayCong = existing.NgayCong });
+        //    }
+        //    else
+        //    {
+        //        // --- LOGIC CHECK-IN (Vào làm) ---
+        //        var newChamCong = new ChamCong
+        //        {
+        //            MaNhanVien = currentUserId,
+        //            NgayChamCong = DateTime.Now, // Ngày chấm công (bỏ phần giờ)
+        //            GioCheckIn = DateTime.Now,   // Giờ vào thực tế
+        //            NgayCong = 0.0,              // Mới vào thì chưa có công
+        //            GhiChu = "Face Check-in",
+        //            LoaiNgayCong = "Làm việc"
+        //        };
+
+        //        // Logic đi muộn (Ví dụ sau 8:15 là muộn)
+        //        if (DateTime.Now.Hour > 8 || (DateTime.Now.Hour == 8 && DateTime.Now.Minute > 15))
+        //        {
+        //            newChamCong.DiMuon = true;
+        //            newChamCong.GhiChu += " (Đi muộn)";
+        //        }
+
+        //        _context.ChamCongs.Add(newChamCong);
+        //        await _context.SaveChangesAsync();
+
+        //        var nv = await _context.NhanViens.FindAsync(currentUserId);
+        //        return Ok(new { success = true, message = $"Check-in thành công cho {nv?.HoTen}!", time = newChamCong.GioCheckIn });
+        //    }
+        //}
 
         // Helper: Hàm tính khoảng cách Euclid giữa 2 vector khuôn mặt
         private double CalculateEuclideanDistance(float[] a, float[] b)

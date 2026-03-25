@@ -202,3 +202,9 @@
   padding: 50px 0;
   font-style: italic;
 }
+.dash-welcome-text {
+  font-size: 1.5rem;
+  color: var(--main-text);
+  margin-top: 0;
+  margin-bottom: 20px;
+}
