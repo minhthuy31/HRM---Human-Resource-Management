@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { FaFileContract } from "react-icons/fa"; // <--- ĐÃ BỔ SUNG IMPORT NÀY
+import { FaFileContract } from "react-icons/fa";
 import "../../styles/Modal.css";
 
 const ContractModal = ({ contract, employees, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     soHopDong: "",
     maNhanVien: "",
-    loaiHopDong: "Chính thức 1 năm",
+    loaiHopDong: "Chính thức", // Mặc định là Chính thức
     ngayBatDau: new Date().toISOString().split("T")[0],
     ngayKetThuc: "",
     luongCoBan: "",
@@ -15,7 +15,6 @@ const ContractModal = ({ contract, employees, onSave, onCancel }) => {
   });
   const [file, setFile] = useState(null);
 
-  // Load dữ liệu khi sửa
   useEffect(() => {
     if (contract) {
       setFormData({
@@ -45,7 +44,7 @@ const ContractModal = ({ contract, employees, onSave, onCancel }) => {
   };
 
   const handleCurrencyChange = (e) => {
-    const val = e.target.value.replace(/\D/g, ""); // Chỉ lấy số
+    const val = e.target.value.replace(/\D/g, "");
     setFormData((prev) => ({ ...prev, luongCoBan: val }));
   };
 
@@ -90,7 +89,6 @@ const ContractModal = ({ contract, employees, onSave, onCancel }) => {
           className="modal-body"
           style={{ maxHeight: "70vh", overflowY: "auto", paddingRight: "10px" }}
         >
-          {/* Hàng 1: Số HĐ & Nhân viên */}
           <div className="form-group-row">
             <div className="form-group">
               <label>
@@ -100,7 +98,7 @@ const ContractModal = ({ contract, employees, onSave, onCancel }) => {
                 name="soHopDong"
                 value={formData.soHopDong}
                 onChange={handleChange}
-                disabled={!!contract} // Không cho sửa số HĐ khi update
+                disabled={!!contract}
                 placeholder="VD: HĐ-2025/001"
               />
             </div>
@@ -124,7 +122,6 @@ const ContractModal = ({ contract, employees, onSave, onCancel }) => {
             </div>
           </div>
 
-          {/* Hàng 2: Loại & Trạng thái */}
           <div className="form-group-row">
             <div className="form-group">
               <label>Loại hợp đồng</label>
@@ -133,11 +130,9 @@ const ContractModal = ({ contract, employees, onSave, onCancel }) => {
                 value={formData.loaiHopDong}
                 onChange={handleChange}
               >
-                <option value="Thử việc">Thử việc (2 tháng)</option>
-                <option value="Chính thức 1 năm">Chính thức 1 năm</option>
-                <option value="Chính thức 3 năm">Chính thức 3 năm</option>
-                <option value="Vô thời hạn">Vô thời hạn</option>
-                <option value="CTV">Cộng tác viên</option>
+                {/* CHỈ CÒN 2 LOẠI HỢP ĐỒNG */}
+                <option value="Chính thức">Hợp đồng Chính thức</option>
+                <option value="Thử việc">Hợp đồng Thử việc</option>
               </select>
             </div>
             <div className="form-group">
@@ -159,7 +154,6 @@ const ContractModal = ({ contract, employees, onSave, onCancel }) => {
             </div>
           </div>
 
-          {/* Hàng 3: Thời gian */}
           <div className="form-group-row">
             <div className="form-group">
               <label>Ngày bắt đầu</label>
@@ -181,7 +175,6 @@ const ContractModal = ({ contract, employees, onSave, onCancel }) => {
             </div>
           </div>
 
-          {/* Hàng 4: Lương & File */}
           <div className="form-group">
             <label>
               Lương ký hợp đồng (VNĐ) <span style={{ color: "red" }}>*</span>

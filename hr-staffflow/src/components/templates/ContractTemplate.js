@@ -2,45 +2,75 @@ import React from "react";
 import { FaPrint, FaTimes, FaFileContract } from "react-icons/fa";
 import "../../styles/ContractTemplate.css";
 
-// Thêm prop 'director' vào danh sách nhận props
 const ContractTemplate = ({ data, director, onClose }) => {
   if (!data) return null;
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const isThuViec = data.loaiHopDong === "Thử việc";
+
+  const handlePrint = () => window.print();
 
   const formatDate = (d) => {
     if (!d) return "...../...../.......";
     const date = new Date(d);
-    if (isNaN(date.getTime())) return "...../...../.......";
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    return `${("0" + date.getDate()).slice(-2)}/${("0" + (date.getMonth() + 1)).slice(-2)}/${date.getFullYear()}`;
   };
 
   const today = new Date();
-  const currentDay = today.getDate();
-  const currentMonth = today.getMonth() + 1;
+  const currentDay = ("0" + today.getDate()).slice(-2);
+  const currentMonth = ("0" + (today.getMonth() + 1)).slice(-2);
   const currentYear = today.getFullYear();
 
   const formatMoney = (val) =>
     val ? new Intl.NumberFormat("vi-VN").format(val) : "................";
 
-  // --- Helper lấy dữ liệu an toàn (xử lý chữ Hoa/Thường của API) ---
-  const getDirectorName = () =>
-    director?.HoTen || director?.hoTen || "CHƯA CẬP NHẬT";
-  const getDirectorPosition = () =>
-    director?.TenChucVu || director?.tenChucVu || "Giám đốc"; // Lấy chức vụ động
-  const getDirectorSign = () => director?.ChuKy || director?.chuKy;
+  // Thêm CSS nhúng tạm cho layout giống ảnh (bạn có thể bỏ vào ContractTemplate.css)
+  const styles = {
+    docHeader: {
+      display: "flex",
+      justifyContent: "space-between",
+      marginBottom: "30px",
+      fontSize: "12pt",
+    },
+    leftHeader: { lineHeight: 1.5, fontStyle: "italic" },
+    rightHeader: { textAlign: "center" },
+    boldUpper: { fontWeight: "bold", textTransform: "uppercase" },
+    title: {
+      textAlign: "center",
+      fontSize: "16pt",
+      fontWeight: "bold",
+      margin: "20px 0",
+    },
+    baseText: {
+      fontStyle: "italic",
+      textAlign: "center",
+      marginBottom: "20px",
+      padding: "0 40px",
+    },
+    sectionTitle: {
+      fontWeight: "bold",
+      textTransform: "uppercase",
+      marginTop: "15px",
+      marginBottom: "10px",
+    },
+    p: { margin: "5px 0", textAlign: "justify" },
+    list: { margin: "5px 0", paddingLeft: "15px" },
+    listItem: { marginBottom: "5px" },
+    signArea: {
+      display: "flex",
+      justifyContent: "space-between",
+      marginTop: "40px",
+      paddingBottom: "50px",
+      textAlign: "center",
+    },
+  };
 
   return (
     <div className="contract-preview-overlay">
+      {/* TOOLBAR */}
       <div className="preview-toolbar">
         <div className="preview-title">
           <FaFileContract style={{ marginRight: "10px" }} />
-          Hợp đồng số: <strong>{data.soHopDong || data.SoHopDong}</strong>
+          Hợp đồng: {data.soHopDong}
         </div>
         <div className="toolbar-actions">
           <button className="btn-action btn-print" onClick={handlePrint}>
@@ -52,365 +82,441 @@ const ContractTemplate = ({ data, director, onClose }) => {
         </div>
       </div>
 
+      {/* CONTENT */}
       <div className="preview-content-scroll">
         <div className="contract-paper">
-          {/* HEADER */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: "20px",
-            }}
-          >
-            <div style={{ textAlign: "center", width: "45%" }}>
-              <div
-                style={{
-                  fontWeight: "bold",
-                  textTransform: "uppercase",
-                  fontSize: "11pt",
-                }}
-              >
-                CÔNG TY CÔNG NGHỆ XYZ
+          {/* HEADER (Góc trái: Cty, Góc phải: Quốc hiệu) */}
+          <div style={styles.docHeader}>
+            <div style={styles.leftHeader}>
+              <div style={{ fontWeight: "bold" }}>
+                Mẫu hợp đồng {isThuViec ? "thử việc" : "lao động"}:
               </div>
-              <div style={{ fontSize: "11pt" }}>
-                Số: {data.soHopDong || data.SoHopDong}
+              <div>
+                Công ty: <strong>CÔNG NGHỆ XYZ</strong>
               </div>
+              <div>Mã NV: {data.maNhanVien}</div>
             </div>
-            <div style={{ textAlign: "center", width: "55%" }}>
-              <div
-                style={{
-                  fontWeight: "bold",
-                  textTransform: "uppercase",
-                  fontSize: "11pt",
-                }}
-              >
+            <div style={styles.rightHeader}>
+              <div style={styles.boldUpper}>
                 CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
               </div>
-              <div
-                style={{
-                  fontWeight: "bold",
-                  borderBottom: "1px solid black",
-                  display: "inline-block",
-                  paddingBottom: "3px",
-                  fontSize: "11pt",
-                }}
-              >
-                Độc lập – Tự do – Hạnh phúc
+              <div style={{ fontWeight: "bold", textDecoration: "underline" }}>
+                Độc lập - Tự do - Hạnh phúc
+              </div>
+              <div style={{ fontStyle: "italic", marginTop: "5px" }}>
+                ......., ngày {currentDay} tháng {currentMonth} năm{" "}
+                {currentYear}
               </div>
             </div>
           </div>
 
-          <div style={{ textAlign: "center", marginBottom: "20px" }}>
-            <h1
-              style={{ fontSize: "18pt", fontWeight: "bold", margin: "15px 0" }}
+          {/* TITLE */}
+          <div style={styles.title}>
+            HỢP ĐỒNG {isThuViec ? "THỬ VIỆC" : "LAO ĐỘNG"}
+          </div>
+
+          <div style={styles.baseText}>
+            (Căn cứ vào Bộ luật lao động số 45/2019/QH13 thông qua ngày
+            20/11/2019 của Quốc Hội nước Cộng hòa xã hội chủ nghĩa Việt Nam)
+          </div>
+
+          {/* ĐẠI DIỆN 2 BÊN */}
+          <div>
+            <div style={styles.sectionTitle}>
+              {isThuViec ? "A." : "-"} BÊN SỬ DỤNG LAO ĐỘNG: CÔNG TY CÔNG NGHỆ
+              XYZ
+            </div>
+            <ul
+              style={{
+                ...styles.list,
+                listStyleType: "none",
+                paddingLeft: "15px",
+              }}
             >
-              HỢP ĐỒNG LAO ĐỘNG
-            </h1>
+              <li style={styles.listItem}>
+                - Địa chỉ: Tầng 72, Tòa nhà Landmark, TP.HCM
+              </li>
+              <li style={styles.listItem}>
+                - Người đại diện:{" "}
+                <strong>
+                  {director ? director.hoTen : "Nguyễn Văn Giám Đốc"}
+                </strong>
+              </li>
+              <li style={styles.listItem}>
+                - Chức vụ: {director ? director.tenChucVu : "Giám đốc"}
+              </li>
+              <li style={styles.listItem}>- Mã số thuế: 0101234567</li>
+              <li style={styles.listItem}>- Điện thoại: 028.1234.5678</li>
+            </ul>
+
+            <div style={styles.sectionTitle}>
+              {isThuViec ? "B." : "-"} BÊN NGƯỜI LAO ĐỘNG:
+            </div>
+            <ul
+              style={{
+                ...styles.list,
+                listStyleType: "none",
+                paddingLeft: "15px",
+              }}
+            >
+              <li style={styles.listItem}>
+                - Ông/Bà: <strong>{data.hoTenNhanVien?.toUpperCase()}</strong>
+              </li>
+              <li style={styles.listItem}>
+                - Ngày sinh: {formatDate(data.ngaySinh)}
+              </li>
+              <li style={styles.listItem}>
+                - Số CMND/CCCD:{" "}
+                {data.cccd ||
+                  "......................................................"}
+              </li>
+              <li style={styles.listItem}>
+                - Thường trú tại:{" "}
+                {data.diaChi ||
+                  "......................................................................................"}
+              </li>
+              <li style={styles.listItem}>
+                - Điện thoại:{" "}
+                {data.SoDienThoai ||
+                  data.soDienThoai ||
+                  "......................................................"}
+              </li>
+            </ul>
           </div>
 
           <div
             style={{
               fontStyle: "italic",
+              marginTop: "15px",
               marginBottom: "15px",
-              paddingLeft: "20px",
-              fontSize: "11pt",
             }}
           >
-            <div>- Căn cứ Bộ luật Lao động nước CHXHCN Việt Nam;</div>
-            <div>- Căn cứ vào nhu cầu và khả năng của Các Bên.</div>
+            Cùng thỏa thuận ký kết Hợp đồng{" "}
+            {isThuViec ? "thử việc" : "lao động"} và cam kết làm đúng những điều
+            sau đây:
           </div>
 
-          <div style={{ marginBottom: "15px", fontSize: "11pt" }}>
-            Hôm nay, ngày {currentDay} tháng {currentMonth} năm {currentYear},
-            tại Văn phòng Công ty XYZ, chúng tôi gồm có:
-          </div>
+          {/* --- NẾU LÀ HỢP ĐỒNG THỬ VIỆC --- */}
+          {isThuViec && (
+            <>
+              <div style={{ fontWeight: "bold" }}>
+                Điều 1: Thời gian thử việc và công việc phải làm trong thời gian
+                thử việc:
+              </div>
+              <ul style={{ ...styles.list, listStyleType: "none" }}>
+                <li style={styles.listItem}>
+                  - Từ ngày <strong>{formatDate(data.ngayBatDau)}</strong> đến
+                  ngày{" "}
+                  <strong>
+                    {data.ngayKetThuc
+                      ? formatDate(data.ngayKetThuc)
+                      : "...................."}
+                  </strong>
+                </li>
+                <li style={styles.listItem}>
+                  - Địa điểm làm việc: Tại văn phòng Công ty.
+                </li>
+                <li style={styles.listItem}>
+                  - Chức danh chuyên môn:{" "}
+                  <strong>{data.tenChucVu || "Nhân viên"}</strong>
+                </li>
+                <li style={styles.listItem}>
+                  - Công việc phải làm: Theo đúng công việc chuyên môn của phòng
+                  ban cũng như sự phân công của người phụ trách.
+                </li>
+              </ul>
 
-          {/* --- BÊN A (NGƯỜI SỬ DỤNG LAO ĐỘNG) - ĐÃ CẬP NHẬT DỮ LIỆU ĐỘNG --- */}
-          <div className="c-section">
-            <div style={{ fontWeight: "bold", fontSize: "11pt" }}>
-              BÊN A (Người sử dụng lao động): CÔNG TY CÔNG NGHỆ XYZ
-            </div>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                marginTop: "5px",
-                fontSize: "11pt",
-              }}
-            >
-              <tbody>
-                <tr>
-                  <td style={{ width: "140px" }}>Đại diện</td>
-                  <td>
-                    : <strong>Ông/Bà {getDirectorName().toUpperCase()}</strong>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Chức vụ</td>
-                  {/* Hiển thị chức vụ lấy từ API (VD: Tổng Giám Đốc) */}
-                  <td>: {getDirectorPosition()}</td>
-                </tr>
-                <tr>
-                  <td>Địa chỉ</td>
-                  <td>: Tầng 10, Tòa nhà Landmark, TP. Hồ Chí Minh</td>
-                </tr>
-                <tr>
-                  <td>Điện thoại</td>
-                  <td>: 028.9999.8888</td>
-                </tr>
-              </tbody>
-            </table>
-            <div
-              style={{
-                fontStyle: "italic",
-                marginTop: "5px",
-                fontSize: "10pt",
-              }}
-            >
-              (Sau đây gọi tắt là “Công ty”)
-            </div>
-          </div>
+              <div style={{ fontWeight: "bold", marginTop: "15px" }}>
+                Điều 2: Chế độ thử việc:
+              </div>
+              <ul style={{ ...styles.list, listStyleType: "none" }}>
+                <li style={styles.listItem}>
+                  - Thời giờ làm việc: 8 tiếng/ ngày.
+                </li>
+                <li style={styles.listItem}>
+                  - Được sử dụng các thiết bị, dụng cụ làm việc do Công ty trang
+                  bị.
+                </li>
+                <li style={styles.listItem}>
+                  - Đảm bảo an toàn, vệ sinh nơi làm việc.
+                </li>
+              </ul>
 
-          <div
-            style={{
-              textAlign: "center",
-              margin: "10px 0",
-              fontWeight: "bold",
-            }}
-          >
-            VÀ
-          </div>
+              <div style={{ fontWeight: "bold", marginTop: "15px" }}>
+                Điều 3: Nghĩa vụ, quyền lợi của Người lao động được hưởng:
+              </div>
+              <div style={{ marginLeft: "15px" }}>
+                <div>
+                  <strong>1. Quyền lợi:</strong>
+                </div>
+                <ul style={{ ...styles.list, listStyleType: "none" }}>
+                  <li style={styles.listItem}>- Phương tiện đi lại: Tự túc.</li>
+                  <li style={styles.listItem}>
+                    - Lương cơ bản:{" "}
+                    <strong>{formatMoney(data.luongCoBan)} đồng</strong>.
+                  </li>
+                  <li style={styles.listItem}>
+                    - Hình thức trả lương: Chuyển khoản.
+                  </li>
+                  <li style={styles.listItem}>
+                    - Ngày trả lương: Ngày 05 hàng tháng.
+                  </li>
+                  <li style={styles.listItem}>
+                    - Chế độ nghỉ ngơi: Theo quy định của Pháp luật hiện hành.
+                  </li>
+                </ul>
+                <div>
+                  <strong>2. Nghĩa vụ:</strong>
+                </div>
+                <ul style={{ ...styles.list, listStyleType: "none" }}>
+                  <li style={styles.listItem}>
+                    - Hoàn thành những công việc đã cam kết trong Hợp đồng thử
+                    việc.
+                  </li>
+                  <li style={styles.listItem}>
+                    - Bồi thường vi phạm và vật chất: Theo nội quy kỷ luật lao
+                    động và quy định của Pháp luật hiện hành.
+                  </li>
+                  <li style={styles.listItem}>
+                    - Người lao động cam kết chấp hành nội quy lao động, các quy
+                    chế, quy định của doanh nghiệp.
+                  </li>
+                </ul>
+              </div>
 
-          {/* BÊN B (NGƯỜI LAO ĐỘNG) */}
-          <div className="c-section">
-            <div style={{ fontWeight: "bold", fontSize: "11pt" }}>
-              BÊN B (Người lao động): Ông/Bà{" "}
-              {(data.HoTenNhanVien || data.hoTenNhanVien || "").toUpperCase()}
-            </div>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                marginTop: "5px",
-                fontSize: "11pt",
-              }}
-            >
-              <tbody>
-                <tr>
-                  <td style={{ width: "140px" }}>Ngày sinh</td>
-                  <td>: {formatDate(data.NgaySinh || data.ngaySinh)}</td>
-                </tr>
-                <tr>
-                  <td>Số CCCD/CMND</td>
-                  <td>
-                    :{" "}
-                    <strong>
-                      {data.CCCD || data.cccd || "...................."}
-                    </strong>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Địa chỉ thường trú</td>
-                  <td>
-                    : {data.DiaChi || data.diaChi || "...................."}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Điện thoại</td>
-                  <td>
-                    :{" "}
-                    {data.SoDienThoai ||
-                      data.soDienThoai ||
-                      "...................."}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <div
-              style={{
-                fontStyle: "italic",
-                marginTop: "5px",
-                fontSize: "10pt",
-              }}
-            >
-              (Sau đây gọi tắt là “Người lao động”)
-            </div>
-          </div>
+              <div style={{ fontWeight: "bold", marginTop: "15px" }}>
+                Điều 4: Nghĩa vụ và quyền lợi của Người sử dụng lao động:
+              </div>
+              <div style={{ marginLeft: "15px" }}>
+                <div>
+                  <strong>1. Nghĩa vụ:</strong>
+                </div>
+                <ul style={{ ...styles.list, listStyleType: "none" }}>
+                  <li style={styles.listItem}>
+                    - Đảm bảo việc làm và những điều cam kết đã ghi trong Hợp
+                    đồng thử việc.
+                  </li>
+                  <li style={styles.listItem}>
+                    - Thanh toán đầy đủ, đúng thời hạn các chế độ và quyền lợi
+                    cho Người lao động.
+                  </li>
+                </ul>
+                <div>
+                  <strong>2. Quyền hạn:</strong>
+                </div>
+                <ul style={{ ...styles.list, listStyleType: "none" }}>
+                  <li style={styles.listItem}>
+                    - Điều hành người lao động hoàn thành công việc theo Hợp
+                    đồng (bố trí, điều chuyển, tạm ngừng việc).
+                  </li>
+                  <li style={styles.listItem}>
+                    - Tạm hoãn, chấm dứt Hợp đồng thử việc, kỷ luật người lao
+                    động theo quy định của pháp luật.
+                  </li>
+                </ul>
+              </div>
 
-          <div style={{ margin: "15px 0", fontSize: "11pt" }}>
-            Hai bên thỏa thuận ký kết hợp đồng lao động và cam kết thực hiện
-            đúng những điều khoản sau đây:
-          </div>
+              <div style={{ fontWeight: "bold", marginTop: "15px" }}>
+                Điều 5: Những thỏa thuận khác
+              </div>
+              <div style={styles.p}>
+                Kết thúc thời gian thử việc, người lao động phải có Phiếu nhận
+                xét kết quả thử việc và có nhận xét của Phụ trách bộ phận. Phòng
+                Nhân sự có trách nhiệm báo cáo kết quả và đề nghị Giám đốc quyết
+                định tiếp nhận (nếu đạt yêu cầu) và chấm dứt hợp đồng (nếu không
+                đạt yêu cầu).
+              </div>
 
-          {/* NỘI DUNG ĐIỀU KHOẢN (Giữ nguyên) */}
-          <div
-            className="c-article"
-            style={{ marginBottom: "15px", fontSize: "11pt" }}
-          >
-            <div style={{ fontWeight: "bold", textTransform: "uppercase" }}>
-              Điều 1: Thời hạn và công việc
-            </div>
-            <div>
-              <strong>1.1. Loại hợp đồng:</strong>{" "}
-              {data.LoaiHopDong || data.loaiHopDong}.
-            </div>
-            <div>
-              <strong>1.2. Thời hạn:</strong> Từ ngày{" "}
-              {formatDate(data.NgayBatDau || data.ngayBatDau)}
-              {data.NgayKetThuc || data.ngayKetThuc
-                ? ` đến ngày ${formatDate(data.NgayKetThuc || data.ngayKetThuc)}`
-                : " (Vô thời hạn)"}
-              .
-            </div>
-            <div>
-              <strong>1.3. Đơn vị công tác:</strong>{" "}
-              {data.TenPhongBan || data.tenPhongBan || "...................."}.
-            </div>
-            <div>
-              <strong>1.4. Chức vụ/Vị trí:</strong>{" "}
-              {data.TenChucVu || data.tenChucVu || "Nhân viên"}.
-            </div>
-            <div>
-              <strong>1.5. Công việc phải làm:</strong> Thực hiện các công việc
-              theo bản mô tả công việc và phân công của quản lý trực tiếp.
-            </div>
-          </div>
+              <div style={{ fontWeight: "bold", marginTop: "15px" }}>
+                Điều 6: Điều khoản thi hành:
+              </div>
+              <div style={styles.p}>
+                Những vấn đề về lao động không ghi trong Hợp đồng này thì áp
+                dụng theo quy định trong thỏa ước lao động tập thể, trường hợp
+                chưa có thỏa ước thì áp dụng theo quy định của Pháp luật hiện
+                hành.
+              </div>
+              <div style={styles.p}>
+                Hợp đồng thử việc được lập thành 02 bản có giá trị như nhau, mỗi
+                bên giữ một bản và có hiệu lực kể từ ngày hai bên ký kết.
+              </div>
+            </>
+          )}
 
-          <div
-            className="c-article"
-            style={{ marginBottom: "15px", fontSize: "11pt" }}
-          >
-            <div style={{ fontWeight: "bold", textTransform: "uppercase" }}>
-              Điều 2: Chế độ làm việc
-            </div>
-            <div>- Thời gian làm việc: 8 giờ/ngày, từ thứ Hai đến thứ Sáu.</div>
-            <div>- Được trang bị đầy đủ dụng cụ làm việc cần thiết.</div>
-          </div>
+          {/* --- NẾU LÀ HỢP ĐỒNG CHÍNH THỨC --- */}
+          {!isThuViec && (
+            <>
+              <div style={{ fontWeight: "bold" }}>
+                Điều 1: Thời gian và công việc hợp đồng:
+              </div>
+              <ul style={{ ...styles.list, listStyleType: "none" }}>
+                <li style={styles.listItem}>
+                  - Loại Hợp đồng lao động:{" "}
+                  <strong>Có xác định thời hạn</strong>
+                </li>
+                <li style={styles.listItem}>
+                  - Từ ngày <strong>{formatDate(data.ngayBatDau)}</strong> đến
+                  ngày{" "}
+                  <strong>
+                    {data.ngayKetThuc
+                      ? formatDate(data.ngayKetThuc)
+                      : "......................."}
+                  </strong>
+                </li>
+                <li style={styles.listItem}>
+                  - Địa điểm làm việc: Tại văn phòng Công ty.
+                </li>
+                <li style={styles.listItem}>
+                  - Chức danh chuyên môn:{" "}
+                  <strong>{data.tenChucVu || "Nhân viên"}</strong>
+                </li>
+                <li style={styles.listItem}>
+                  - Công việc phải làm: Theo đúng chuyên môn của Phòng cũng như
+                  sự phân công của người phụ trách.
+                </li>
+              </ul>
 
-          <div
-            className="c-article"
-            style={{ marginBottom: "15px", fontSize: "11pt" }}
-          >
-            <div style={{ fontWeight: "bold", textTransform: "uppercase" }}>
-              Điều 3: Nghĩa vụ và quyền lợi
-            </div>
-            <div style={{ fontWeight: "bold", marginTop: "5px" }}>
-              3.1. Quyền lợi:
-            </div>
-            <div style={{ paddingLeft: "20px" }}>
-              - Mức lương chính:{" "}
-              <strong>
-                {formatMoney(data.LuongCoBan || data.luongCoBan)} VNĐ/tháng
-              </strong>
-              .
-              <br />- Phụ cấp và thưởng: Theo quy chế của Công ty.
-              <br />- Được đóng BHXH, BHYT, BHTN theo quy định của pháp luật.
-            </div>
-            <div style={{ fontWeight: "bold", marginTop: "5px" }}>
-              3.2. Nghĩa vụ:
-            </div>
-            <div style={{ paddingLeft: "20px" }}>
-              - Hoàn thành công việc được giao, chấp hành nội quy lao động.
-            </div>
-          </div>
+              <div style={{ fontWeight: "bold", marginTop: "15px" }}>
+                Điều 2: Chế độ làm việc:
+              </div>
+              <ul style={{ ...styles.list, listStyleType: "none" }}>
+                <li style={styles.listItem}>
+                  - Thời giờ làm việc: 8 tiếng/ ngày. Được sử dụng các thiết bị
+                  do Công ty trang bị.
+                </li>
+                <li style={styles.listItem}>
+                  - Đảm bảo an toàn, vệ sinh nơi làm việc.
+                </li>
+              </ul>
 
-          <div
-            className="c-article"
-            style={{ marginBottom: "15px", fontSize: "11pt" }}
-          >
-            <div style={{ fontWeight: "bold", textTransform: "uppercase" }}>
-              Điều 4: Điều khoản thi hành
-            </div>
-            <div>
-              - Hợp đồng này có hiệu lực kể từ ngày{" "}
-              {formatDate(data.NgayBatDau || data.ngayBatDau)}.
-            </div>
-            <div>
-              - Hợp đồng được lập thành 02 bản có giá trị pháp lý như nhau, mỗi
-              bên giữ 01 bản.
-            </div>
-          </div>
+              <div style={{ fontWeight: "bold", marginTop: "15px" }}>
+                Điều 3: Nghĩa vụ, quyền lợi của Người lao động được hưởng:
+              </div>
+              <div style={{ marginLeft: "15px" }}>
+                <div>
+                  <strong>1. Quyền lợi:</strong>
+                </div>
+                <ul style={{ ...styles.list, listStyleType: "none" }}>
+                  <li style={styles.listItem}>
+                    - Hình thức trả lương: Lương thời gian/ Chuyển khoản.
+                  </li>
+                  <li style={styles.listItem}>
+                    - Mức lương:{" "}
+                    <strong>{formatMoney(data.luongCoBan)} đồng</strong>.
+                  </li>
+                  <li style={styles.listItem}>
+                    - Chế độ nâng lương: Theo quy chế của Công ty.
+                  </li>
+                  <li style={styles.listItem}>
+                    - Chế độ nghỉ ngơi (nghỉ hàng tuần, phép năm, hiếu hỷ...):
+                    Theo quy định của Pháp luật.
+                  </li>
+                  <li style={styles.listItem}>
+                    - BHXH, BHYT, BHTN: Công ty trả 21.5%; Người lao động trả
+                    10.5% theo quy định Nhà nước.
+                  </li>
+                </ul>
+                <div>
+                  <strong>2. Nghĩa vụ:</strong>
+                </div>
+                <ul style={{ ...styles.list, listStyleType: "none" }}>
+                  <li style={styles.listItem}>
+                    - Hoàn thành những công việc đã cam kết trong Hợp đồng lao
+                    động.
+                  </li>
+                  <li style={styles.listItem}>
+                    - Chấp hành lệnh điều hành công việc, nội quy kỷ luật, an
+                    toàn lao động.
+                  </li>
+                  <li style={styles.listItem}>
+                    - Bồi thường vi phạm và vật chất theo nội quy, quy định của
+                    Pháp luật.
+                  </li>
+                </ul>
+              </div>
 
-          {/* --- PHẦN CHỮ KÝ (CẬP NHẬT CẢ 2 BÊN) --- */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginTop: "40px",
-              paddingBottom: "80px",
-            }}
-          >
-            {/* CỘT NGƯỜI LAO ĐỘNG */}
-            <div style={{ textAlign: "center", width: "45%" }}>
+              <div style={{ fontWeight: "bold", marginTop: "15px" }}>
+                Điều 4: Nghĩa vụ và quyền hạn của Người sử dụng lao động:
+              </div>
+              <div style={{ marginLeft: "15px" }}>
+                <div>
+                  <strong>1. Nghĩa vụ:</strong>
+                </div>
+                <ul style={{ ...styles.list, listStyleType: "none" }}>
+                  <li style={styles.listItem}>
+                    - Đảm bảo việc làm và thực hiện đầy đủ những điều đã cam kết
+                    trong hợp đồng.
+                  </li>
+                  <li style={styles.listItem}>
+                    - Thanh toán đầy đủ, đúng thời hạn các chế độ cho người lao
+                    động.
+                  </li>
+                </ul>
+                <div>
+                  <strong>2. Quyền hạn:</strong>
+                </div>
+                <ul style={{ ...styles.list, listStyleType: "none" }}>
+                  <li style={styles.listItem}>
+                    - Điều hành người lao động hoàn thành công việc theo hợp
+                    đồng.
+                  </li>
+                  <li style={styles.listItem}>
+                    - Tạm hoãn, chấm dứt hợp đồng, kỷ luật người lao động theo
+                    quy định của pháp luật, nội quy lao động của doanh nghiệp.
+                  </li>
+                </ul>
+              </div>
+
+              <div style={{ fontWeight: "bold", marginTop: "15px" }}>
+                Điều 5: Điều khoản thi hành:
+              </div>
+              <div style={styles.p}>
+                Những vấn đề về lao động không ghi trong hợp đồng lao động này
+                thì áp dụng theo quy định của thỏa ước lao động tập thể và pháp
+                luật lao động. Hợp đồng này được lập thành 02 bản có giá trị như
+                nhau, mỗi bên giữ 01 bản và có hiệu lực kể từ ngày ký.
+              </div>
+            </>
+          )}
+
+          {/* --- KHU VỰC CHỮ KÝ --- */}
+          <div style={styles.signArea}>
+            <div style={{ width: "45%" }}>
               <div style={{ fontWeight: "bold" }}>NGƯỜI LAO ĐỘNG</div>
-              <div style={{ fontStyle: "italic", fontSize: "0.9em" }}>
+              <div style={{ fontStyle: "italic", fontSize: "11pt" }}>
                 (Ký, ghi rõ họ tên)
               </div>
 
+              {/* Áp dụng kỹ thuật tạo chữ ký giả bằng CSS (Font Great Vibes) */}
               <div
-                style={{
-                  height: "100px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "10px 0",
-                }}
+                className="signature-text"
+                style={{ minHeight: "100px", marginTop: "20px" }}
               >
-                {data.ChuKy || data.chuKy ? (
-                  <img
-                    src={data.ChuKy || data.chuKy}
-                    alt="Chữ ký NLĐ"
-                    style={{ maxHeight: "80px", maxWidth: "150px" }}
-                  />
-                ) : (
-                  <span style={{ color: "#ccc", fontSize: "12px" }}>
-                    (Chưa có chữ ký)
-                  </span>
-                )}
+                {/* Nếu bạn dùng React-Signature như bước trước, hãy đặt tag <img /> vào đây. Ở đây ta dùng tên giả lập */}
+                {data.hoTenNhanVien}
               </div>
 
-              <div style={{ fontWeight: "bold", textTransform: "uppercase" }}>
-                {data.HoTenNhanVien || data.hoTenNhanVien}
+              <div style={{ fontWeight: "bold", marginTop: "10px" }}>
+                {data.hoTenNhanVien}
               </div>
             </div>
 
-            {/* CỘT ĐẠI DIỆN CÔNG TY (GIÁM ĐỐC) - DỮ LIỆU ĐỘNG */}
-            <div style={{ textAlign: "center", width: "45%" }}>
-              <div style={{ fontWeight: "bold" }}>ĐẠI DIỆN CÔNG TY</div>
-              <div style={{ fontStyle: "italic", fontSize: "0.9em" }}>
+            <div style={{ width: "45%" }}>
+              <div style={{ fontWeight: "bold" }}>NGƯỜI SỬ DỤNG LAO ĐỘNG</div>
+              <div style={{ fontStyle: "italic", fontSize: "11pt" }}>
                 (Ký, đóng dấu, ghi rõ họ tên)
               </div>
 
-              {/* Hiển thị Chữ ký Giám đốc */}
               <div
-                style={{
-                  height: "100px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "10px 0",
-                }}
+                className="signature-text"
+                style={{ minHeight: "100px", marginTop: "20px" }}
               >
-                {getDirectorSign() ? (
-                  <img
-                    src={getDirectorSign()}
-                    alt="Chữ ký GĐ"
-                    style={{ maxHeight: "80px", maxWidth: "150px" }}
-                  />
-                ) : (
-                  /* Để trống để ký tay nếu chưa có chữ ký số */
-                  <span style={{ color: "#ccc", fontSize: "12px" }}>
-                    (Chưa có chữ ký)
-                  </span>
-                )}
+                {director ? director.hoTen : "Nguyễn Văn Giám Đốc"}
               </div>
 
-              {/* Tên Giám đốc & Chức vụ bên dưới */}
-              <div style={{ fontWeight: "bold", textTransform: "uppercase" }}>
-                {getDirectorName()}
+              <div style={{ fontWeight: "bold", marginTop: "10px" }}>
+                {director ? director.hoTen : "Nguyễn Văn Giám Đốc"}
               </div>
-              {/* Hiển thị lại chức vụ dưới tên (Tùy chọn) */}
-              {/* <div style={{ fontSize: "10pt", fontWeight: "bold" }}>{getDirectorPosition()}</div> */}
             </div>
           </div>
         </div>

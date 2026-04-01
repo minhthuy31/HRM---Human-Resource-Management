@@ -15,11 +15,11 @@ var configuration = builder.Configuration;
 builder.Services.AddControllers();
 
 builder.Services.AddControllers();
-    //.AddJsonOptions(options =>
-    //{
-    //    // Giúp xử lý mảng JSON mượt mà hơn và tránh lỗi vòng lặp nếu có
-    //    options.JsonSerializerOptions.PropertyNamingPolicy = null;
-    //});
+//.AddJsonOptions(options =>
+//{
+//    // Giúp xử lý mảng JSON mượt mà hơn và tránh lỗi vòng lặp nếu có
+//    options.JsonSerializerOptions.PropertyNamingPolicy = null;
+//});
 
 // Cấu hình giới hạn kích thước gửi lên (tránh lỗi 413 Payload Too Large)
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
@@ -58,14 +58,14 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
 
-// Cấu hình CORS (Giữ nguyên của bạn)
+// Cấu hình CORS (Đã mở khóa cho AWS)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp",
-        policy => policy.WithOrigins("http://localhost:3000")
+        policy => policy.SetIsOriginAllowed(origin => true)
                           .AllowAnyMethod()
                           .AllowAnyHeader()
-                          .AllowCredentials()); 
+                          .AllowCredentials());
 });
 
 builder.Services.AddEndpointsApiExplorer();

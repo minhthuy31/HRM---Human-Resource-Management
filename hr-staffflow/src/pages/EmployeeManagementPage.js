@@ -23,7 +23,7 @@ import SignatureModal from "../components/modals/SignatureModal";
 const getImageUrl = (path) => {
   if (!path) return null;
   if (path.startsWith("blob:")) return path;
-  return `http://localhost:5260${path}`;
+  return `http://3.107.18.50:5260${path}`;
 };
 
 // --- Custom Confirm Modal ---
