@@ -19,26 +19,20 @@ const ContractManagementPage = () => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // State bộ lọc & tìm kiếm
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("HieuLuc");
 
-  // State Modal & Preview
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingContract, setEditingContract] = useState(null);
   const [printingContract, setPrintingContract] = useState(null);
-
-  // --- 1. THÊM STATE LƯU THÔNG TIN GIÁM ĐỐC ---
   const [directorInfo, setDirectorInfo] = useState(null);
 
-  // --- PHÂN QUYỀN ---
   const user = getUserFromToken();
   const userRole = user?.role || user?.Role || "";
   const canModify = ["Giám đốc", "Tổng giám đốc", "Nhân sự trưởng"].includes(
     userRole,
   );
 
-  // --- HÀM TẢI DỮ LIỆU ---
   const fetchContracts = useCallback(async () => {
     setLoading(true);
     try {
@@ -58,12 +52,9 @@ const ContractManagementPage = () => {
     return () => clearTimeout(timer);
   }, [fetchContracts]);
 
-  // --- 2. THÊM EFFECT GỌI API LẤY THÔNG TIN GIÁM ĐỐC ---
   useEffect(() => {
     const fetchDirector = async () => {
       try {
-        // Gọi API bạn đã viết trong HopDongController
-        // Dùng 'api' instance để tự động gửi kèm Token (tránh lỗi 401)
         const res = await api.get("/HopDong/GiamDoc");
         setDirectorInfo(res.data);
       } catch (err) {
@@ -85,7 +76,6 @@ const ContractManagementPage = () => {
     }
   }, [canModify]);
 
-  // --- FETCH FRESH DATA FOR PRINTING ---
   const handlePrintClick = async (contract) => {
     try {
       const empRes = await api.get(`/NhanVien/${contract.maNhanVien}`);
@@ -99,7 +89,6 @@ const ContractManagementPage = () => {
         SoDienThoai: freshEmployeeData.sdt_NhanVien,
         NgaySinh: freshEmployeeData.ngaySinh,
       };
-
       setPrintingContract(mergedData);
     } catch (error) {
       console.error("Error fetching fresh employee data for print:", error);
@@ -140,7 +129,7 @@ const ContractManagementPage = () => {
     if (status === "HetHan")
       return <span className="badge badge-gray">Hết hạn</span>;
     if (endDate && new Date(endDate) < new Date()) {
-      return <span className="badge badge-warning">Quá hạn (Cần gia hạn)</span>;
+      return <span className="badge badge-warning">Quá hạn</span>;
     }
     return <span className="badge badge-green">Đang hiệu lực</span>;
   };
@@ -148,11 +137,10 @@ const ContractManagementPage = () => {
   return (
     <DashboardLayout>
       <div className="contract-page">
-        {/* --- 3. TRUYỀN BIẾN director={directorInfo} VÀO COMPONENT TEMPLATE --- */}
         {printingContract && (
           <ContractTemplate
             data={printingContract}
-            director={directorInfo} // <--- QUAN TRỌNG: Thêm dòng này
+            director={directorInfo}
             onClose={() => setPrintingContract(null)}
           />
         )}
@@ -249,18 +237,26 @@ const ContractManagementPage = () => {
                           >
                             <FaPrint />
                           </button>
-
                           {canModify && (
-                            <button
-                              className="icon-btn edit"
-                              onClick={() => {
-                                setEditingContract(c);
-                                setIsModalOpen(true);
-                              }}
-                              title="Chỉnh sửa / Chấm dứt"
-                            >
-                              <FaEdit />
-                            </button>
+                            <>
+                              <button
+                                className="icon-btn edit"
+                                onClick={() => {
+                                  setEditingContract(c);
+                                  setIsModalOpen(true);
+                                }}
+                                title="Chỉnh sửa"
+                              >
+                                <FaEdit />
+                              </button>
+                              <button
+                                className="icon-btn delete"
+                                onClick={() => handleDelete(c.soHopDong)}
+                                title="Xóa"
+                              >
+                                <FaTrash />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>

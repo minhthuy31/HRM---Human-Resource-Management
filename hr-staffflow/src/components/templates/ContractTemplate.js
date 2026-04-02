@@ -23,7 +23,6 @@ const ContractTemplate = ({ data, director, onClose }) => {
   const formatMoney = (val) =>
     val ? new Intl.NumberFormat("vi-VN").format(val) : "................";
 
-  // Thêm CSS nhúng tạm cho layout giống ảnh (bạn có thể bỏ vào ContractTemplate.css)
   const styles = {
     docHeader: {
       display: "flex",
@@ -85,7 +84,6 @@ const ContractTemplate = ({ data, director, onClose }) => {
       {/* CONTENT */}
       <div className="preview-content-scroll">
         <div className="contract-paper">
-          {/* HEADER (Góc trái: Cty, Góc phải: Quốc hiệu) */}
           <div style={styles.docHeader}>
             <div style={styles.leftHeader}>
               <div style={{ fontWeight: "bold" }}>
@@ -110,7 +108,6 @@ const ContractTemplate = ({ data, director, onClose }) => {
             </div>
           </div>
 
-          {/* TITLE */}
           <div style={styles.title}>
             HỢP ĐỒNG {isThuViec ? "THỬ VIỆC" : "LAO ĐỘNG"}
           </div>
@@ -120,7 +117,6 @@ const ContractTemplate = ({ data, director, onClose }) => {
             20/11/2019 của Quốc Hội nước Cộng hòa xã hội chủ nghĩa Việt Nam)
           </div>
 
-          {/* ĐẠI DIỆN 2 BÊN */}
           <div>
             <div style={styles.sectionTitle}>
               {isThuViec ? "A." : "-"} BÊN SỬ DỤNG LAO ĐỘNG: CÔNG TY CÔNG NGHỆ
@@ -196,7 +192,7 @@ const ContractTemplate = ({ data, director, onClose }) => {
             sau đây:
           </div>
 
-          {/* --- NẾU LÀ HỢP ĐỒNG THỬ VIỆC --- */}
+          {/* --- ĐIỀU KHOẢN THỬ VIỆC --- */}
           {isThuViec && (
             <>
               <div style={{ fontWeight: "bold" }}>
@@ -205,8 +201,8 @@ const ContractTemplate = ({ data, director, onClose }) => {
               </div>
               <ul style={{ ...styles.list, listStyleType: "none" }}>
                 <li style={styles.listItem}>
-                  - Từ ngày <strong>{formatDate(data.ngayBatDau)}</strong> đến
-                  ngày{" "}
+                  - Thời gian thử việc: Từ ngày{" "}
+                  <strong>{formatDate(data.ngayBatDau)}</strong> đến ngày{" "}
                   <strong>
                     {data.ngayKetThuc
                       ? formatDate(data.ngayKetThuc)
@@ -221,8 +217,8 @@ const ContractTemplate = ({ data, director, onClose }) => {
                   <strong>{data.tenChucVu || "Nhân viên"}</strong>
                 </li>
                 <li style={styles.listItem}>
-                  - Công việc phải làm: Theo đúng công việc chuyên môn của phòng
-                  ban cũng như sự phân công của người phụ trách.
+                  - Công việc phải làm: Theo đúng công việc chuyên môn của Phòng
+                  cũng như sự phân công của người phụ trách.
                 </li>
               </ul>
 
@@ -250,19 +246,22 @@ const ContractTemplate = ({ data, director, onClose }) => {
                   <strong>1. Quyền lợi:</strong>
                 </div>
                 <ul style={{ ...styles.list, listStyleType: "none" }}>
-                  <li style={styles.listItem}>- Phương tiện đi lại: Tự túc.</li>
+                  <li style={styles.listItem}>
+                    - Phương tiện đi lại: Tự túc/ Xe đưa đón.
+                  </li>
                   <li style={styles.listItem}>
                     - Lương cơ bản:{" "}
                     <strong>{formatMoney(data.luongCoBan)} đồng</strong>.
                   </li>
                   <li style={styles.listItem}>
-                    - Hình thức trả lương: Chuyển khoản.
+                    - Hình thức trả lương: Lương thời gian/ Chuyển khoản.
                   </li>
                   <li style={styles.listItem}>
                     - Ngày trả lương: Ngày 05 hàng tháng.
                   </li>
                   <li style={styles.listItem}>
-                    - Chế độ nghỉ ngơi: Theo quy định của Pháp luật hiện hành.
+                    - Chế độ nghỉ ngơi (nghỉ hàng tuần, phép năm, hiếu hỷ...)
+                    theo quy định của Pháp luật hiện hành.
                   </li>
                 </ul>
                 <div>
@@ -279,7 +278,7 @@ const ContractTemplate = ({ data, director, onClose }) => {
                   </li>
                   <li style={styles.listItem}>
                     - Người lao động cam kết chấp hành nội quy lao động, các quy
-                    chế, quy định của doanh nghiệp.
+                    chế, quy định, kỷ luật lao động của doanh nghiệp.
                   </li>
                 </ul>
               </div>
@@ -298,7 +297,8 @@ const ContractTemplate = ({ data, director, onClose }) => {
                   </li>
                   <li style={styles.listItem}>
                     - Thanh toán đầy đủ, đúng thời hạn các chế độ và quyền lợi
-                    cho Người lao động.
+                    cho Người lao động theo Hợp đồng thử việc, thỏa ước lao động
+                    tập thể (nếu có).
                   </li>
                 </ul>
                 <div>
@@ -311,7 +311,8 @@ const ContractTemplate = ({ data, director, onClose }) => {
                   </li>
                   <li style={styles.listItem}>
                     - Tạm hoãn, chấm dứt Hợp đồng thử việc, kỷ luật người lao
-                    động theo quy định của pháp luật.
+                    động theo quy định của pháp luật, thỏa ước lao động tập thể,
+                    nội quy lao động của doanh nghiệp.
                   </li>
                 </ul>
               </div>
@@ -322,28 +323,31 @@ const ContractTemplate = ({ data, director, onClose }) => {
               <div style={styles.p}>
                 Kết thúc thời gian thử việc, người lao động phải có Phiếu nhận
                 xét kết quả thử việc và có nhận xét của Phụ trách bộ phận. Phòng
-                Nhân sự có trách nhiệm báo cáo kết quả và đề nghị Giám đốc quyết
-                định tiếp nhận (nếu đạt yêu cầu) và chấm dứt hợp đồng (nếu không
-                đạt yêu cầu).
+                Nhân sự có trách nhiệm báo cáo kết quả thử việc và đề nghị Giám
+                đốc quyết định tiếp nhận (nếu đạt yêu cầu) và chấm dứt hợp đồng
+                thử việc (nếu không đạt yêu cầu).
               </div>
 
               <div style={{ fontWeight: "bold", marginTop: "15px" }}>
                 Điều 6: Điều khoản thi hành:
               </div>
               <div style={styles.p}>
-                Những vấn đề về lao động không ghi trong Hợp đồng này thì áp
-                dụng theo quy định trong thỏa ước lao động tập thể, trường hợp
-                chưa có thỏa ước thì áp dụng theo quy định của Pháp luật hiện
-                hành.
+                Những vấn đề về lao động không ghi trong Hợp đồng thử việc này
+                thì áp dụng theo quy định trong thỏa ước lao động tập thể,
+                trường hợp chưa có thỏa ước lao động tập thể thì áp dụng theo
+                quy định của Pháp luật hiện hành.
               </div>
               <div style={styles.p}>
                 Hợp đồng thử việc được lập thành 02 bản có giá trị như nhau, mỗi
-                bên giữ một bản và có hiệu lực kể từ ngày hai bên ký kết.
+                bên giữ một bản và có hiệu lực kể từ ngày......Khi hai bên ký
+                kết Phụ lục Hợp đồng thử việc thì nội dung của Phụ lục hợp đồng
+                thử việc cũng có giá trị như nội dung của bản Hợp đồng thử việc
+                này.
               </div>
             </>
           )}
 
-          {/* --- NẾU LÀ HỢP ĐỒNG CHÍNH THỨC --- */}
+          {/* --- ĐIỀU KHOẢN HỢP ĐỒNG CHÍNH THỨC --- */}
           {!isThuViec && (
             <>
               <div style={{ fontWeight: "bold" }}>
@@ -371,8 +375,8 @@ const ContractTemplate = ({ data, director, onClose }) => {
                   <strong>{data.tenChucVu || "Nhân viên"}</strong>
                 </li>
                 <li style={styles.listItem}>
-                  - Công việc phải làm: Theo đúng chuyên môn của Phòng cũng như
-                  sự phân công của người phụ trách.
+                  - Công việc phải làm: Theo đúng công việc chuyên môn của Phòng
+                  cũng như sự phân công của người phụ trách.
                 </li>
               </ul>
 
@@ -381,8 +385,8 @@ const ContractTemplate = ({ data, director, onClose }) => {
               </div>
               <ul style={{ ...styles.list, listStyleType: "none" }}>
                 <li style={styles.listItem}>
-                  - Thời giờ làm việc: 8 tiếng/ ngày. Được sử dụng các thiết bị
-                  do Công ty trang bị.
+                  - Thời giờ làm việc: 8 tiếng/ ngày. Được sử dụng các thiết bị,
+                  dụng cụ làm việc do Công ty trang bị.
                 </li>
                 <li style={styles.listItem}>
                   - Đảm bảo an toàn, vệ sinh nơi làm việc.
@@ -398,22 +402,26 @@ const ContractTemplate = ({ data, director, onClose }) => {
                 </div>
                 <ul style={{ ...styles.list, listStyleType: "none" }}>
                   <li style={styles.listItem}>
-                    - Hình thức trả lương: Lương thời gian/ Chuyển khoản.
+                    - Hình thức trả lương: Lương thời gian/ Chuyển khoản
                   </li>
                   <li style={styles.listItem}>
-                    - Mức lương:{" "}
-                    <strong>{formatMoney(data.luongCoBan)} đồng</strong>.
+                    - Chế độ nâng lương: Theo quy chế của Công ty
                   </li>
                   <li style={styles.listItem}>
-                    - Chế độ nâng lương: Theo quy chế của Công ty.
+                    - Được trang bị bảo hộ lao động: Theo tính chất công việc và
+                    quy định của Công ty
                   </li>
                   <li style={styles.listItem}>
-                    - Chế độ nghỉ ngơi (nghỉ hàng tuần, phép năm, hiếu hỷ...):
-                    Theo quy định của Pháp luật.
+                    - Chế độ nghỉ ngơi (nghỉ hàng tuần, phép năm, hiếu hỷ...)
+                    theo quy định của Pháp luật hiện hành.
                   </li>
                   <li style={styles.listItem}>
-                    - BHXH, BHYT, BHTN: Công ty trả 21.5%; Người lao động trả
-                    10.5% theo quy định Nhà nước.
+                    - BHXH, BHYT, BH TNLĐ, BH BNN: Công ty trả 21.5%; Người lao
+                    động trả 10.5%
+                  </li>
+                  <li style={styles.listItem}>
+                    - Bảo hiểm thất nghiệp: Công ty trả 1%; Người lao động trả
+                    1%
                   </li>
                 </ul>
                 <div>
@@ -422,21 +430,25 @@ const ContractTemplate = ({ data, director, onClose }) => {
                 <ul style={{ ...styles.list, listStyleType: "none" }}>
                   <li style={styles.listItem}>
                     - Hoàn thành những công việc đã cam kết trong Hợp đồng lao
-                    động.
+                    động
                   </li>
                   <li style={styles.listItem}>
                     - Chấp hành lệnh điều hành công việc, nội quy kỷ luật, an
-                    toàn lao động.
+                    toàn lao động
                   </li>
                   <li style={styles.listItem}>
-                    - Bồi thường vi phạm và vật chất theo nội quy, quy định của
-                    Pháp luật.
+                    - Bồi thường vi phạm và vật chất: Theo nội quy kỷ luật lao
+                    động và quy định của Pháp luật hiện hành.
+                  </li>
+                  <li style={styles.listItem}>
+                    - Người lao động cam kết chấp hành nội quy lao động, các quy
+                    chế, quy định, kỷ luật lao động.
                   </li>
                 </ul>
               </div>
 
               <div style={{ fontWeight: "bold", marginTop: "15px" }}>
-                Điều 4: Nghĩa vụ và quyền hạn của Người sử dụng lao động:
+                Điều 4: Nghĩa vụ và quyền lợi của Người sử dụng lao động:
               </div>
               <div style={{ marginLeft: "15px" }}>
                 <div>
@@ -445,11 +457,12 @@ const ContractTemplate = ({ data, director, onClose }) => {
                 <ul style={{ ...styles.list, listStyleType: "none" }}>
                   <li style={styles.listItem}>
                     - Đảm bảo việc làm và thực hiện đầy đủ những điều đã cam kết
-                    trong hợp đồng.
+                    trong hợp đồng lao động.
                   </li>
                   <li style={styles.listItem}>
-                    - Thanh toán đầy đủ, đúng thời hạn các chế độ cho người lao
-                    động.
+                    - Thanh toán đầy đủ, đúng thời hạn các chế độ và quyền lợi
+                    cho người lao động theo hợp đồng lao động, thỏa ước lao động
+                    tập thể (nếu có).
                   </li>
                 </ul>
                 <div>
@@ -458,11 +471,12 @@ const ContractTemplate = ({ data, director, onClose }) => {
                 <ul style={{ ...styles.list, listStyleType: "none" }}>
                   <li style={styles.listItem}>
                     - Điều hành người lao động hoàn thành công việc theo hợp
-                    đồng.
+                    đồng (bố trí, điều chuyển, tạm ngừng việc).
                   </li>
                   <li style={styles.listItem}>
-                    - Tạm hoãn, chấm dứt hợp đồng, kỷ luật người lao động theo
-                    quy định của pháp luật, nội quy lao động của doanh nghiệp.
+                    - Tạm hoãn, chấm dứt hợp đồng lao động, kỷ luật người lao
+                    động theo quy định của pháp luật, thỏa ước lao động tập thể
+                    (nếu có) và nội quy lao động của doanh nghiệp.
                   </li>
                 </ul>
               </div>
@@ -472,9 +486,13 @@ const ContractTemplate = ({ data, director, onClose }) => {
               </div>
               <div style={styles.p}>
                 Những vấn đề về lao động không ghi trong hợp đồng lao động này
-                thì áp dụng theo quy định của thỏa ước lao động tập thể và pháp
-                luật lao động. Hợp đồng này được lập thành 02 bản có giá trị như
-                nhau, mỗi bên giữ 01 bản và có hiệu lực kể từ ngày ký.
+                thì áp dụng theo quy định của thỏa ước lao động tập thể, trường
+                hợp chưa có thỏa ước lao động tập thể thì áp dụng theo quy định
+                của pháp luật lao động.
+              </div>
+              <div style={styles.p}>
+                Hợp đồng này được lập thành 02 bản có giá trị như nhau, mỗi bên
+                giữ 01 bản và có hiệu lực kể từ ngày ký.
               </div>
             </>
           )}
@@ -487,12 +505,11 @@ const ContractTemplate = ({ data, director, onClose }) => {
                 (Ký, ghi rõ họ tên)
               </div>
 
-              {/* Áp dụng kỹ thuật tạo chữ ký giả bằng CSS (Font Great Vibes) */}
+              {/* Chữ ký giả lập (in không bị mất font) */}
               <div
                 className="signature-text"
                 style={{ minHeight: "100px", marginTop: "20px" }}
               >
-                {/* Nếu bạn dùng React-Signature như bước trước, hãy đặt tag <img /> vào đây. Ở đây ta dùng tên giả lập */}
                 {data.hoTenNhanVien}
               </div>
 
@@ -504,9 +521,10 @@ const ContractTemplate = ({ data, director, onClose }) => {
             <div style={{ width: "45%" }}>
               <div style={{ fontWeight: "bold" }}>NGƯỜI SỬ DỤNG LAO ĐỘNG</div>
               <div style={{ fontStyle: "italic", fontSize: "11pt" }}>
-                (Ký, đóng dấu, ghi rõ họ tên)
+                {isThuViec ? "Giám đốc" : "(Ký, đóng dấu, ghi rõ họ tên)"}
               </div>
 
+              {/* Chữ ký giả lập (in không bị mất font) */}
               <div
                 className="signature-text"
                 style={{ minHeight: "100px", marginTop: "20px" }}
