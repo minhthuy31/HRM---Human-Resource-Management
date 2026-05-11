@@ -22,6 +22,7 @@ const LeaveRequestModal = ({ onSave, onCancel }) => {
     "Nghỉ ốm",
     "Nghỉ phép năm",
     "Nghỉ việc gia đình",
+    "Nghỉ không lương",
     "Nghỉ chế độ (thai sản/cưới hỏi)",
     "Khác (ghi rõ lý do)",
   ];

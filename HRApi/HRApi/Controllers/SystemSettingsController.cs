@@ -1,5 +1,6 @@
 ﻿using HRApi.Data;
 using HRApi.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,22 +17,20 @@ namespace HRApi.Controllers
             _context = context;
         }
 
-        // GET: api/SystemSettings
         [HttpGet]
         public async Task<IActionResult> GetSettings()
         {
-            // Lấy dòng cấu hình đầu tiên thay vì tìm theo Id cụ thể
             var settings = await _context.SystemSettings.FirstOrDefaultAsync();
 
-            // Nếu chưa có bất kỳ cấu hình nào trong DB, tạo mặc định 
-            // KHÔNG GÁN Id = 1 Ở ĐÂY NỮA, ĐỂ DATABASE TỰ TĂNG
             if (settings == null)
             {
                 settings = new SystemSetting
                 {
-                    // Gán các giá trị mặc định nếu muốn, hoặc để trống
                     TenCongTy = "",
-                    MucLuongCoSo = 1800000
+                    MucLuongCoSo = 1800000,
+                    HeSoOTNgayThuong = 1.5,
+                    HeSoOTCuoiTuan = 2.0,
+                    HeSoOTNgayLe = 3.0
                 };
 
                 _context.SystemSettings.Add(settings);
@@ -41,24 +40,19 @@ namespace HRApi.Controllers
             return Ok(settings);
         }
 
-        // POST: api/SystemSettings
         [HttpPost]
+        [Authorize(Roles = "Nhân sự trưởng, Giám đốc")]
         public async Task<IActionResult> UpdateSettings([FromBody] SystemSetting updatedSettings)
         {
-            // Tìm bản ghi đầu tiên trong cơ sở dữ liệu
             var settings = await _context.SystemSettings.FirstOrDefaultAsync();
 
             if (settings == null)
             {
-                // Nếu DB hoàn toàn rỗng, thêm mới (EF sẽ tự bỏ qua trường Id của updatedSettings)
-                // Đảm bảo Id = 0 (giá trị mặc định của int) để EF hiểu là bản ghi mới
                 updatedSettings.Id = 0;
-
                 _context.SystemSettings.Add(updatedSettings);
             }
             else
             {
-                // Nếu đã có cấu hình, ghi đè tất cả các trường (ngoại trừ Id)
                 settings.TenCongTy = updatedSettings.TenCongTy;
                 settings.TenVietTat = updatedSettings.TenVietTat;
                 settings.MaSoThue = updatedSettings.MaSoThue;
@@ -77,6 +71,10 @@ namespace HRApi.Controllers
                 settings.GiamTruGiaCanh = updatedSettings.GiamTruGiaCanh;
                 settings.GiamTruPhuThuoc = updatedSettings.GiamTruPhuThuoc;
 
+                settings.HeSoOTNgayThuong = updatedSettings.HeSoOTNgayThuong;
+                settings.HeSoOTCuoiTuan = updatedSettings.HeSoOTCuoiTuan;
+                settings.HeSoOTNgayLe = updatedSettings.HeSoOTNgayLe;
+
                 settings.SmtpServer = updatedSettings.SmtpServer;
                 settings.SmtpPort = updatedSettings.SmtpPort;
                 settings.EmailGuiDi = updatedSettings.EmailGuiDi;
@@ -84,7 +82,6 @@ namespace HRApi.Controllers
             }
 
             await _context.SaveChangesAsync();
-
             return Ok(new { message = "Lưu cấu hình thành công!" });
         }
     }

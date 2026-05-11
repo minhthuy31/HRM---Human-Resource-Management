@@ -13,22 +13,25 @@ namespace HRApi.Models
         [Required]
         public int Nam { get; set; }
 
-        // --- 1. CÁC KHOẢN THU NHẬP (Lưu snapshot từ Hợp đồng sang) ---
+        // --- 1. CÁC KHOẢN THU NHẬP ---
         [Column(TypeName = "decimal(18,2)")]
-        public decimal LuongCoBan { get; set; } // Lương cứng
+        public decimal LuongCoBan { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal LuongDongBaoHiem { get; set; } // Mức lương dùng để đóng bảo hiểm
+        public decimal LuongDongBaoHiem { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal TongPhuCap { get; set; } // Tổng các loại phụ cấp (Lương trợ cấp)
+        public decimal TongPhuCap { get; set; }
 
         // --- 2. SỐ LIỆU TỪ CHẤM CÔNG ---
-        public double TongNgayCong { get; set; } // Tổng số công thực tế
-        public double TongGioOT { get; set; }    // Tổng số giờ OT
+        public double TongNgayCong { get; set; }
+        public double TongGioOT { get; set; }
 
-        // --- [MỚI] THUỘC TÍNH CHỈ HIỂN THỊ (Không lưu DB) ---
-        // Dùng để Frontend hiển thị chi tiết
+        // [MỚI] Lưu lại Công chuẩn của tháng đó (VD: 24, 26, 27 ngày)
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal SoCongChuanTrongThang { get; set; }
+
+        // --- CÁC THUỘC TÍNH CHỈ HIỂN THỊ (Không lưu DB) ---
         [NotMapped]
         public int NghiCoPhep { get; set; }
         [NotMapped]
@@ -36,39 +39,43 @@ namespace HRApi.Models
         [NotMapped]
         public int LamNuaNgay { get; set; }
 
+        // [MỚI] Nghỉ không lương (có đơn)
+        [NotMapped]
+        public int NghiKhongLuong { get; set; }
+
         // --- 3. TÍNH TOÁN CHI TIẾT ---
         [Column(TypeName = "decimal(18,2)")]
-        public decimal LuongChinh { get; set; } // Lương theo ngày công
+        public decimal LuongChinh { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal LuongOT { get; set; }    // Lương làm thêm giờ
+        public decimal LuongOT { get; set; }
 
-        // --- 4. CÁC KHOẢN KHẤU TRỪ (BẢO HIỂM & THUẾ) ---
+        // --- 4. CÁC KHOẢN KHẤU TRỪ ---
         [Column(TypeName = "decimal(18,2)")]
-        public decimal KhauTruBHXH { get; set; } // 8%
-
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal KhauTruBHYT { get; set; } // 1.5%
+        public decimal KhauTruBHXH { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal KhauTruBHTN { get; set; } // 1%
+        public decimal KhauTruBHYT { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal KhauTruBHTN { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal ThueTNCN { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal KhoanTruKhac { get; set; } // Phạt, tạm ứng... (Cho phép sửa)
+        public decimal KhoanTruKhac { get; set; }
 
         // --- 5. TỔNG KẾT ---
         [Column(TypeName = "decimal(18,2)")]
         public decimal TongThuNhap { get; set; } // Gross
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal ThucLanh { get; set; }    // Net (Thực nhận)
+        public decimal ThucLanh { get; set; }    // Net 
 
         // --- TRẠNG THÁI ---
         public DateTime NgayTinhLuong { get; set; } = DateTime.UtcNow;
-        public bool DaChot { get; set; } = false; // true: Đã chốt sổ
+        public bool DaChot { get; set; } = false;
         public string? GhiChu { get; set; }
 
         // --- KHÓA NGOẠI ---

@@ -328,3 +328,43 @@
 .btn-accept:hover {
   background-color: #c82333;
 }
+
+/* Table Ngày Lễ */
+.holiday-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  background-color: var(--main-bg);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.holiday-table th, .holiday-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--sidebar-border);
+  color: var(--main-text);
+}
+
+.holiday-table th {
+  background-color: var(--hover-bg);
+  font-weight: 600;
+}
+
+.holiday-table tr:hover td {
+  background-color: var(--hover-bg);
+}
+
+.btn-delete-holiday {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: 0.2s;
+}
+
+.btn-delete-holiday:hover {
+  background-color: #fef2f2;
+}

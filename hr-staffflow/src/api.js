@@ -1,7 +1,8 @@
 import axios from "axios";
 
 // ĐỊNH NGHĨA IP AWS TẠI ĐÂY ĐỂ DỄ QUẢN LÝ
-const AWS_IP = "3.107.18.50";
+//const AWS_IP = "3.107.18.50";
+const AWS_IP = "localhost";
 
 const api = axios.create({
   // Sửa localhost thành IP của AWS

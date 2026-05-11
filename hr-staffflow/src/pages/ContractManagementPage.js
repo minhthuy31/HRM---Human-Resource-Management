@@ -3,6 +3,7 @@ import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../api";
 import { getUserFromToken } from "../utils/auth";
 import {
+  FaTrash,
   FaPlus,
   FaSearch,
   FaEdit,
@@ -36,9 +37,15 @@ const ContractManagementPage = () => {
   const fetchContracts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get(
-        `/HopDong?search=${searchTerm}&trangThai=${statusFilter}`,
-      );
+      let url = `/HopDong?search=${searchTerm}`;
+      // Nếu chọn bộ lọc sắp hết hạn, gọi params sapHetHan
+      if (statusFilter === "SapHetHan") {
+        url += `&sapHetHan=true`;
+      } else {
+        url += `&trangThai=${statusFilter}`;
+      }
+
+      const res = await api.get(url);
       setContracts(res.data);
     } catch (err) {
       console.error("Lỗi tải hợp đồng:", err);
@@ -115,6 +122,22 @@ const ContractManagementPage = () => {
     }
   };
 
+  // --- HÀM XÓA ĐƯỢC THÊM VÀO TẠI ĐÂY ---
+  const handleDelete = async (soHopDong) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa hợp đồng này không?")) {
+      try {
+        // Gọi API xóa, bạn có thể chỉnh lại URL tùy theo thiết kế API backend của bạn
+        const id = encodeURIComponent(soHopDong);
+        await api.delete(`/HopDong?id=${id}`);
+        alert("Xóa hợp đồng thành công!");
+        fetchContracts(); // Load lại danh sách sau khi xóa
+      } catch (err) {
+        const msg = err.response?.data?.message || "Có lỗi xảy ra khi xóa.";
+        alert("Lỗi: " + msg);
+      }
+    }
+  };
+
   const formatMoney = (val) =>
     new Intl.NumberFormat("vi-VN", {
       style: "currency",
@@ -181,6 +204,7 @@ const ContractManagementPage = () => {
               className="status-select"
             >
               <option value="HieuLuc">Đang hiệu lực</option>
+              <option value="SapHetHan">Sắp hết hạn (≤ 30 ngày)</option>
               <option value="HetHan">Đã hết hạn</option>
               <option value="DaChamDut">Đã chấm dứt</option>
               <option value="All">Tất cả</option>
@@ -208,7 +232,10 @@ const ContractManagementPage = () => {
               <tbody>
                 {contracts.length > 0 ? (
                   contracts.map((c) => (
-                    <tr key={c.soHopDong}>
+                    <tr
+                      key={c.soHopDong}
+                      className={c.isExpiringSoon ? "row-expiring-soon" : ""}
+                    >
                       <td style={{ fontWeight: "bold", color: "#333" }}>
                         {c.soHopDong}
                       </td>
@@ -219,10 +246,15 @@ const ContractManagementPage = () => {
                       <td>{c.tenPhongBan || "---"}</td>
                       <td>{c.loaiHopDong}</td>
                       <td>
-                        {formatDate(c.ngayBatDau)} -{" "}
-                        {c.ngayKetThuc
-                          ? formatDate(c.ngayKetThuc)
-                          : "Vô thời hạn"}
+                        <div>
+                          {formatDate(c.ngayBatDau)} -{" "}
+                          {c.ngayKetThuc
+                            ? formatDate(c.ngayKetThuc)
+                            : "Vô thời hạn"}
+                        </div>
+                        {c.isExpiringSoon && (
+                          <div className="expiring-warning">⚠️ Sắp hết hạn</div>
+                        )}
                       </td>
                       <td style={{ fontWeight: "bold", color: "#10b981" }}>
                         {formatMoney(c.luongCoBan)}

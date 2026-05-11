@@ -8,15 +8,15 @@ import {
   FaLock,
   FaUnlock,
   FaBan,
+  FaFileAlt,
 } from "react-icons/fa";
 import "../styles/TimekeepingPage.css";
 import AttendanceModal from "../components/modals/AttendanceModal";
 import BulkEditModal from "../components/modals/BulkEditModal";
+import RequestDetailModal from "../components/modals/RequestDetailModal";
 
-// --- Custom Confirm Modal ---
 const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }) => {
   if (!isOpen) return null;
-
   return (
     <div className="custom-modal-overlay">
       <div className="custom-confirm-modal">
@@ -59,12 +59,13 @@ const TimekeepingPage = () => {
     ["Nhân sự trưởng", "Giám đốc", "Tổng giám đốc", "Trưởng phòng"].includes(
       userRole,
     ) && !isLocked;
-
   const canLock = ["Nhân sự trưởng", "Giám đốc", "Tổng giám đốc"].includes(
     userRole,
   );
 
-  // --- TOAST STATE ---
+  const [requestsMap, setRequestsMap] = useState({});
+  const [viewingRequest, setViewingRequest] = useState(null);
+
   const [toast, setToast] = useState({
     message: "",
     type: "success",
@@ -80,7 +81,6 @@ const TimekeepingPage = () => {
     }, 3000);
   }, []);
 
-  // --- CONFIRM MODAL STATE ---
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     message: "",
@@ -110,6 +110,7 @@ const TimekeepingPage = () => {
           dailyRecords = [],
           summaries: summaryData = {},
           isLocked: lockedStatus = false,
+          requests = [],
         } = attendanceRes.data;
 
         setSummaries(summaryData);
@@ -122,16 +123,23 @@ const TimekeepingPage = () => {
             const dateParts = dateString.split("-");
             if (dateParts.length === 3) {
               const dateKey = parseInt(dateParts[2], 10);
-              if (!attendanceMap[rec.maNhanVien]) {
+              if (!attendanceMap[rec.maNhanVien])
                 attendanceMap[rec.maNhanVien] = {};
-              }
               attendanceMap[rec.maNhanVien][dateKey] = rec;
             }
           });
         }
         setAttendance(attendanceMap);
+
+        const reqMap = {};
+        if (requests.length > 0) {
+          requests.forEach((req) => {
+            if (!reqMap[req.maNhanVien]) reqMap[req.maNhanVien] = {};
+            reqMap[req.maNhanVien][req.day] = req;
+          });
+        }
+        setRequestsMap(reqMap);
       } catch (error) {
-        console.error("Lỗi:", error);
         if (error.response?.status === 403 || error.response?.status === 401) {
           setPermissionDenied(true);
           showToast("Bạn không có quyền xem bảng công tổng hợp.", "error");
@@ -173,6 +181,7 @@ const TimekeepingPage = () => {
         inTime: null,
         outTime: null,
         isLate: false,
+        isEarly: false,
         note: "",
       };
 
@@ -206,16 +215,21 @@ const TimekeepingPage = () => {
 
     let cleanNote = record.ghiChu || "";
     let isLate = false;
+    let isEarly = false; // THÊM BIẾN BẮT VỀ SỚM
 
     if (cleanNote) {
       if (cleanNote.includes("Đi muộn")) isLate = true;
+      if (cleanNote.includes("Về sớm")) isEarly = true; // BẮT KEYWORD TỪ C#
+
       cleanNote = cleanNote
         .replace(/Check-in qua QR/gi, "")
         .replace(/Face Check-in/gi, "")
         .replace(/\|? *Face Check-out: \d{2}:\d{2}/gi, "")
         .replace(/Check-in: \d{2}:\d{2} \| Check-out: \d{2}:\d{2}/gi, "")
         .replace(/\(Đi muộn\)/gi, "")
+        .replace(/\(Về sớm\)/gi, "") // LÀM SẠCH CHỮ VỀ SỚM ĐỂ HIỂN THỊ ICON THAY THẾ
         .trim();
+
       if (cleanNote.startsWith("|")) cleanNote = cleanNote.substring(1).trim();
       if (cleanNote.endsWith("|")) cleanNote = cleanNote.slice(0, -1).trim();
     }
@@ -226,6 +240,7 @@ const TimekeepingPage = () => {
       inTime: formatTime(record.gioCheckIn),
       outTime: formatTime(record.gioCheckOut),
       isLate: isLate,
+      isEarly: isEarly, // TRẢ VỀ CHO RENDER
       note: cleanNote,
     };
   };
@@ -320,9 +335,7 @@ const TimekeepingPage = () => {
     if (!editingCell || !canEdit) return;
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
-    const formattedDate = `${year}-${String(month).padStart(2, "0")}-${String(
-      editingCell.day,
-    ).padStart(2, "0")}`;
+    const formattedDate = `${year}-${String(month).padStart(2, "0")}-${String(editingCell.day).padStart(2, "0")}`;
 
     try {
       await api.post("/ChamCong/upsert", {
@@ -378,11 +391,8 @@ const TimekeepingPage = () => {
     }
 
     cellsToUpdate.forEach(({ maNhanVien, day }) => {
-      const formattedDate = `${currentDate.getFullYear()}-${String(
-        currentDate.getMonth() + 1,
-      ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const formattedDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       const hasData = attendance[maNhanVien] && attendance[maNhanVien][day];
-
       if (hasData) return;
 
       promises.push(
@@ -419,7 +429,6 @@ const TimekeepingPage = () => {
 
   const handleLockAction = async (lockStatus) => {
     const actionText = lockStatus ? "KHÓA" : "HỦY KHÓA";
-
     setConfirmDialog({
       isOpen: true,
       message: `Bạn có chắc muốn ${actionText} bảng công tháng này?`,
@@ -457,8 +466,6 @@ const TimekeepingPage = () => {
           <h2 style={{ color: "#ef4444" }}>Truy cập bị từ chối</h2>
           <p>Bạn không có quyền xem bảng công tổng hợp.</p>
         </div>
-
-        {/* TOAST COMPONENT FOR DENIED STATE */}
         <div
           className={`toast-notification ${toast.type} ${toast.visible ? "show" : ""}`}
         >
@@ -481,7 +488,6 @@ const TimekeepingPage = () => {
               <FaChevronRight />
             </button>
           </div>
-
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
             {isLocked && (
               <span
@@ -501,7 +507,6 @@ const TimekeepingPage = () => {
                 <FaLock size={12} /> ĐÃ KHÓA
               </span>
             )}
-
             {canLock && (
               <>
                 {!isLocked ? (
@@ -561,11 +566,7 @@ const TimekeepingPage = () => {
                   {daysArray.map((day) => (
                     <th
                       key={day}
-                      className={`day-header ${
-                        selection.type === "column" && selection.id === day
-                          ? "selected"
-                          : ""
-                      }`}
+                      className={`day-header ${selection.type === "column" && selection.id === day ? "selected" : ""}`}
                       onClick={() => handleSelectColumn(day)}
                       style={{ cursor: canEdit ? "pointer" : "default" }}
                     >
@@ -580,7 +581,6 @@ const TimekeepingPage = () => {
                   employees.map((emp) => {
                     const empId = emp.maNhanVien;
                     const summary = summaries[empId] || {};
-
                     return (
                       <tr key={empId}>
                         <td
@@ -603,12 +603,14 @@ const TimekeepingPage = () => {
                         </td>
                         {daysArray.map((day) => {
                           const record = attendance[empId]?.[day] || null;
+                          const request = requestsMap[empId]?.[day] || null;
                           const {
                             ngayCong,
                             className,
                             inTime,
                             outTime,
                             isLate,
+                            isEarly,
                             note,
                           } = getWorkDayStyle(record);
                           const selected = isCellSelected(empId, day);
@@ -624,8 +626,28 @@ const TimekeepingPage = () => {
                                 cursor: canEdit ? "pointer" : "default",
                                 verticalAlign: "top",
                                 padding: "8px 4px",
+                                position: "relative",
                               }}
                             >
+                              {request && (
+                                <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setViewingRequest(request);
+                                  }}
+                                  style={{
+                                    position: "absolute",
+                                    top: "2px",
+                                    right: "4px",
+                                    color: "#2563eb",
+                                    cursor: "pointer",
+                                    fontSize: "16px",
+                                  }}
+                                  title={`Xem chi tiết đơn ${request.loaiDon}`}
+                                >
+                                  <FaFileAlt />
+                                </div>
+                              )}
                               <div
                                 style={{
                                   display: "flex",
@@ -684,6 +706,19 @@ const TimekeepingPage = () => {
                                     }}
                                   >
                                     ⚠️ Muộn
+                                  </span>
+                                )}
+                                {/* --- HIỂN THỊ VỀ SỚM --- */}
+                                {isEarly && (
+                                  <span
+                                    style={{
+                                      color: "#f59e0b",
+                                      fontSize: "10px",
+                                      fontStyle: "italic",
+                                      fontWeight: "600",
+                                    }}
+                                  >
+                                    ⚠️ Về sớm
                                   </span>
                                 )}
                                 {note && (
@@ -745,16 +780,18 @@ const TimekeepingPage = () => {
           }}
         />
       )}
-
-      {/* --- CONFIRM MODAL --- */}
+      {viewingRequest && (
+        <RequestDetailModal
+          request={viewingRequest}
+          onClose={() => setViewingRequest(null)}
+        />
+      )}
       <ConfirmModal
         isOpen={confirmDialog.isOpen}
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
         onCancel={closeConfirm}
       />
-
-      {/* --- TOAST COMPONENT --- */}
       <div
         className={`toast-notification ${toast.type} ${toast.visible ? "show" : ""}`}
       >

@@ -17,75 +17,254 @@ namespace HRApi.Controllers
         private readonly AppDbContext _context;
         public ChamCongController(AppDbContext context) { _context = context; }
 
-        public class CheckInQRDto
-        {
-            public string QrToken { get; set; }
-        }
+        public class CheckInQRDto { public string QrToken { get; set; } }
+        public class LockDto { public int Year { get; set; } public int Month { get; set; } }
+        public class LockActionDto { public int Year { get; set; } public int Month { get; set; } public bool IsLocked { get; set; } }
 
-        public class LockDto
-        {
-            public int Year { get; set; }
-            public int Month { get; set; }
-        }
+        // ==============================================================
+        // CẤU HÌNH CA LÀM VIÊC CHUẨN (SHIFT SETTINGS)
+        // ==============================================================
+        private readonly TimeSpan SHIFT_START = new TimeSpan(8, 0, 0);       // Bắt đầu ca: 08:00
+        private readonly TimeSpan SHIFT_END = new TimeSpan(17, 0, 0);        // Kết thúc ca: 17:00
+        private readonly TimeSpan LATE_GRACE = new TimeSpan(8, 15, 0);       // Cho phép muộn đến: 08:15
+        private readonly TimeSpan EARLY_GRACE = new TimeSpan(16, 55, 0);     // Cho phép về sớm từ: 16:55
+        private readonly TimeSpan LUNCH_START = new TimeSpan(12, 0, 0);      // Bắt đầu nghỉ trưa: 12:00
+        private readonly TimeSpan LUNCH_END = new TimeSpan(13, 0, 0);        // Kết thúc nghỉ trưa: 13:00
+        private const double CONG_FULL = 7.5;  // Mức giờ để đạt 1 công
+        private const double CONG_NUA = 3.5;   // Mức giờ để đạt 0.5 công
 
-        // Helper: Check quyền Admin (HR hoặc Giám đốc)
+        // HELPER: Đồng bộ múi giờ UTC+7
+        private DateTime GetVnTime() => DateTime.UtcNow.AddHours(7);
+
         private bool IsAdminOrHR()
         {
             var role = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
             return role == "Giám đốc" || role == "Nhân sự trưởng" || role == "Tổng giám đốc";
         }
 
-        // --- 1. Check-in QR (Giữ nguyên) ---
+        // ==============================================================
+        // HELPER: KIỂM TRA MẠNG CÔNG TY CHUẨN (STRICT IP WHITELISTING)
+        // ==============================================================
+        private bool IsCompanyNetwork(out string detectedIp)
+        {
+            string[] companyIPs = { "58.187.57.2", "172.19.0.1", "127.0.0.1", "::1" };
+
+            var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+            if (Request.Headers.ContainsKey("X-Forwarded-For"))
+            {
+                clientIp = Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',')[0].Trim();
+            }
+
+            // 1. Tạo biến cục bộ bình thường để hứng IP
+            string ipToCheck = clientIp ?? "Unknown";
+
+            // 2. Gán giá trị đó cho biến out để trả về thông báo lỗi
+            detectedIp = ipToCheck;
+
+            Console.WriteLine($"[DEBUG] Đang kiểm tra IP: {ipToCheck}");
+
+            // 3. Sử dụng biến cục bộ 'ipToCheck' trong Lambda (KHÔNG dùng 'detectedIp')
+            return companyIPs.Any(allowedIp => ipToCheck.Contains(allowedIp));
+        }
+
+        // ==============================================================
+        // 1. CHECK-IN / CHECK-OUT BẰNG MÃ QR
+        // ==============================================================
         [HttpPost("check-in-qr")]
         public async Task<IActionResult> CheckInWithQr([FromBody] CheckInQRDto dto)
         {
+            if (!IsCompanyNetwork(out string detectedIp))
+            {
+                return BadRequest(new { message = $"Bạn đang dùng mạng ngoài (IP: {detectedIp}). Chỉ được chấm công khi kết nối Wifi công ty!" });
+            }
+
             var maNhanVien = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             if (maNhanVien == null) return Unauthorized();
 
             var qrToken = await _context.ActiveQRTokens.FirstOrDefaultAsync(t => t.Token == dto.QrToken);
-            if (qrToken == null) return BadRequest(new { message = "Mã QR không hợp lệ." });
-            if (qrToken.IsUsed) return BadRequest(new { message = "Mã QR đã được sử dụng." });
-            if (qrToken.ExpiresAt < DateTime.UtcNow) return BadRequest(new { message = "Mã QR đã hết hạn." });
-
-            var today = DateTime.Today;
-            var existing = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == maNhanVien && c.NgayChamCong.Date == today);
+            if (qrToken == null || qrToken.IsUsed || qrToken.ExpiresAt < DateTime.UtcNow)
+                return BadRequest(new { message = "Mã QR không hợp lệ hoặc đã hết hạn." });
 
             qrToken.IsUsed = true;
 
+            DateTime vnTime = GetVnTime();
+            DateTime today = vnTime.Date;
+
+            var existing = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == maNhanVien && c.NgayChamCong.Date == today);
+
             if (existing != null)
             {
-                if (existing.GioCheckOut != null) return BadRequest(new { message = "Bạn đã check-out rồi." });
+                if (existing.GioCheckIn == null)
+                {
+                    existing.GioCheckIn = vnTime;
+                    existing.DiMuon = vnTime.TimeOfDay > LATE_GRACE;
+                    existing.GhiChu = existing.DiMuon ? "Check-in qua QR (Đi muộn)" : "Check-in qua QR";
 
-                existing.GioCheckOut = DateTime.Now;
-                existing.GhiChu = $"Check-in: {existing.NgayChamCong:HH:mm} | Check-out: {existing.GioCheckOut:HH:mm}";
+                    _context.ChamCongs.Update(existing);
+                    await _context.SaveChangesAsync();
+                    return Ok(new { message = "Check-in thành công!", time = existing.GioCheckIn });
+                }
+                else
+                {
+                    if (existing.GioCheckOut != null) return BadRequest(new { message = "Bạn đã check-out rồi." });
 
-                double totalHours = (existing.GioCheckOut.Value - existing.NgayChamCong).TotalHours;
-                if (totalHours > 5) totalHours -= 1.0;
+                    existing.GioCheckOut = vnTime;
 
-                if (totalHours >= 7.5) existing.NgayCong = 1.0;
-                else if (totalHours >= 3.5) existing.NgayCong = 0.5;
-                else existing.NgayCong = 0.0;
+                    // NẾU DATABASE BẠN CHƯA THÊM CỘT VeSom THÌ CỨ ĐỂ COMMENT DÒNG NÀY LẠI
+                    // existing.VeSom = vnTime.TimeOfDay < EARLY_GRACE;
 
-                _context.ChamCongs.Update(existing);
-                await _context.SaveChangesAsync();
-                return Ok(new { message = $"Check-out thành công. Công: {existing.NgayCong}" });
+                    existing.NgayCong = CalculateWorkDay(existing.GioCheckIn.Value, existing.GioCheckOut.Value);
+
+                    string note = $"Check-in: {existing.GioCheckIn:HH:mm} | Check-out: {existing.GioCheckOut:HH:mm}";
+                    if (existing.DiMuon) note += " (Đi muộn)";
+                    // if (existing.VeSom) note += " (Về sớm)";
+                    existing.GhiChu = note;
+
+                    _context.ChamCongs.Update(existing);
+                    await _context.SaveChangesAsync();
+                    return Ok(new { message = $"Check-out thành công. Công: {existing.NgayCong}" });
+                }
             }
             else
             {
+                bool isLate = vnTime.TimeOfDay > LATE_GRACE;
                 var newChamCong = new ChamCong
                 {
                     MaNhanVien = maNhanVien,
-                    NgayChamCong = DateTime.Now,
+                    NgayChamCong = today,
+                    GioCheckIn = vnTime,
                     NgayCong = 0.0,
-                    GhiChu = "Check-in qua QR"
+                    DiMuon = isLate,
+                    LoaiNgayCong = "Làm việc",
+                    GhiChu = isLate ? "Check-in qua QR (Đi muộn)" : "Check-in qua QR"
                 };
                 _context.ChamCongs.Add(newChamCong);
                 await _context.SaveChangesAsync();
-                return Ok(new { message = "Check-in thành công!" });
+                return Ok(new { message = "Check-in thành công!", time = newChamCong.GioCheckIn });
             }
         }
 
-        // --- 2. Lấy dữ liệu chấm công tháng (LOGIC PHÂN QUYỀN MỚI ĐÃ FIX LỖI 500) ---
+        // ==============================================================
+        // 2. FACE ID: CHECK-IN / CHECK-OUT
+        // ==============================================================
+        [HttpPost("check-in-face")]
+        public async Task<IActionResult> CheckInWithFace([FromBody] CheckInFaceDto dto)
+        {
+            if (!IsCompanyNetwork(out string detectedIp))
+            {
+                return BadRequest(new { success = false, message = $"Bạn đang dùng mạng ngoài (IP: {detectedIp}). Chỉ được chấm công bằng Wifi công ty!" });
+            }
+
+            var currentUserId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(currentUserId)) return Unauthorized(new { success = false, message = "Phiên đăng nhập không hợp lệ." });
+
+            var userFace = await _context.FaceDatas.FirstOrDefaultAsync(f => f.MaNhanVien == currentUserId);
+            if (userFace == null) return BadRequest(new { success = false, message = "Bạn chưa cài đặt dữ liệu khuôn mặt." });
+
+            var storedVector = JsonSerializer.Deserialize<float[]>(userFace.FaceDescriptor);
+            var distance = CalculateEuclideanDistance(dto.FaceDescriptor, storedVector);
+
+            if (distance > 0.45) return BadRequest(new { success = false, message = "Khuôn mặt không khớp với tài khoản." });
+
+            DateTime vnTime = GetVnTime();
+            DateTime today = vnTime.Date;
+
+            var existing = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == currentUserId && c.NgayChamCong.Date == today);
+
+            if (existing != null)
+            {
+                if (existing.GioCheckIn == null)
+                {
+                    existing.GioCheckIn = vnTime;
+                    existing.DiMuon = vnTime.TimeOfDay > LATE_GRACE;
+                    existing.GhiChu = existing.DiMuon ? "Face Check-in (Đi muộn)" : "Face Check-in";
+
+                    _context.ChamCongs.Update(existing);
+                    await _context.SaveChangesAsync();
+
+                    var nvCheckIn = await _context.NhanViens.FindAsync(currentUserId);
+                    return Ok(new { success = true, message = $"Check-in thành công cho {nvCheckIn?.HoTen}!", time = existing.GioCheckIn });
+                }
+                else
+                {
+                    if (existing.GioCheckOut != null) return BadRequest(new { success = false, message = "Bạn đã check-out hôm nay rồi." });
+
+                    existing.GioCheckOut = vnTime;
+
+                    // NẾU DATABASE BẠN CHƯA THÊM CỘT VeSom THÌ CỨ ĐỂ COMMENT DÒNG NÀY LẠI
+                    // existing.VeSom = vnTime.TimeOfDay < EARLY_GRACE;
+
+                    // TÍNH PHÚT LÀM VIỆC (15 phút = 1 công) 
+                    double totalMinutes = (existing.GioCheckOut.Value - existing.GioCheckIn.Value).TotalMinutes;
+                    if (totalMinutes >= 15.0) existing.NgayCong = 1.0;
+                    else if (totalMinutes >= 7.0) existing.NgayCong = 0.5;
+                    else existing.NgayCong = 0.0;
+
+                    string note = $"Check-in: {existing.GioCheckIn:HH:mm} | Check-out: {existing.GioCheckOut:HH:mm}";
+                    if (existing.DiMuon) note += " (Đi muộn)";
+                    // if (existing.VeSom) note += " (Về sớm)";
+                    existing.GhiChu = note;
+
+                    _context.ChamCongs.Update(existing);
+                    await _context.SaveChangesAsync();
+
+                    var nvCheckOut = await _context.NhanViens.FindAsync(currentUserId);
+                    return Ok(new { success = true, message = $"Check-out thành công cho {nvCheckOut?.HoTen}.", ngayCong = existing.NgayCong });
+                }
+            }
+            else
+            {
+                bool isLate = vnTime.TimeOfDay > LATE_GRACE;
+                var newChamCong = new ChamCong
+                {
+                    MaNhanVien = currentUserId,
+                    NgayChamCong = today,
+                    GioCheckIn = vnTime,
+                    NgayCong = 0.0,
+                    DiMuon = isLate,
+                    LoaiNgayCong = "Làm việc",
+                    GhiChu = isLate ? "Face Check-in (Đi muộn)" : "Face Check-in"
+                };
+
+                _context.ChamCongs.Add(newChamCong);
+                await _context.SaveChangesAsync();
+
+                var nv = await _context.NhanViens.FindAsync(currentUserId);
+                return Ok(new { success = true, message = $"Check-in thành công cho {nv?.HoTen}!", time = newChamCong.GioCheckIn });
+            }
+        }
+
+        // ==============================================================
+        // 3. THUẬT TOÁN TÍNH CÔNG THEO GIỜ (CORE BUSINESS LOGIC)
+        // ==============================================================
+        private double CalculateWorkDay(DateTime checkIn, DateTime checkOut)
+        {
+            TimeSpan inTime = checkIn.TimeOfDay;
+            TimeSpan outTime = checkOut.TimeOfDay;
+
+            if (inTime < SHIFT_START) inTime = SHIFT_START;
+            if (outTime > SHIFT_END) outTime = SHIFT_END;
+            if (outTime <= inTime) return 0.0;
+
+            double totalHours = (outTime - inTime).TotalHours;
+
+            if (inTime < LUNCH_END && outTime > LUNCH_START)
+            {
+                TimeSpan overlapStart = (inTime > LUNCH_START) ? inTime : LUNCH_START;
+                TimeSpan overlapEnd = (outTime < LUNCH_END) ? outTime : LUNCH_END;
+                double lunchOverlapHours = (overlapEnd - overlapStart).TotalHours;
+                if (lunchOverlapHours > 0) totalHours -= lunchOverlapHours;
+            }
+
+            if (totalHours >= CONG_FULL) return 1.0;
+            if (totalHours >= CONG_NUA) return 0.5;
+            return 0.0;
+        }
+
+        // ==============================================================
+        // 4. LẤY DỮ LIỆU BẢNG CÔNG TỔNG HỢP THÁNG
+        // ==============================================================
         [HttpGet]
         public async Task<IActionResult> GetChamCongThang([FromQuery] int year, [FromQuery] int month)
         {
@@ -97,20 +276,17 @@ namespace HRApi.Controllers
 
                 if (year < 1 || month < 1 || month > 12) return BadRequest("Thời gian sai.");
 
-                // Check trạng thái khóa
                 var lockRecord = await _context.KhoaCongs.FirstOrDefaultAsync(k => k.Nam == year && k.Thang == month);
                 bool isLocked = lockRecord != null && lockRecord.IsLocked;
 
                 var startDate = new DateTime(year, month, 1);
                 var endDate = startDate.AddMonths(1);
 
-                // Include NhanVien để check phòng ban
-                var query = _context.ChamCongs
-                    .Include(c => c.NhanVien)
-                    .Where(c => c.NgayChamCong >= startDate && c.NgayChamCong < endDate)
-                    .AsQueryable();
+                var queryChamCong = _context.ChamCongs.Include(c => c.NhanVien).Where(c => c.NgayChamCong >= startDate && c.NgayChamCong < endDate).AsQueryable();
+                var queryNghi = _context.DonNghiPheps.Include(c => c.NhanVien).Where(d => d.NgayBatDau < endDate && d.NgayKetThuc >= startDate).AsQueryable();
+                var queryOT = _context.DangKyOTs.Include(c => c.NhanVien).Where(d => d.NgayLamThem >= startDate && d.NgayLamThem < endDate).AsQueryable();
+                var queryCongTac = _context.DangKyCongTacs.Include(c => c.NhanVien).Where(d => d.NgayBatDau < endDate && d.NgayKetThuc >= startDate).AsQueryable();
 
-                // --- PHÂN QUYỀN ---
                 if (currentUserRole == "Trưởng phòng")
                 {
                     if (string.IsNullOrEmpty(currentUserMaPhongBan) && !string.IsNullOrEmpty(currentUserId))
@@ -122,53 +298,63 @@ namespace HRApi.Controllers
                     if (!string.IsNullOrEmpty(currentUserMaPhongBan))
                     {
                         var trimmedPB = currentUserMaPhongBan.Trim();
-                        // FIX LỖI 500: Bỏ .Trim() bên trong LINQ để tránh lỗi Entity Framework
-                        query = query.Where(c => c.NhanVien != null && c.NhanVien.MaPhongBan == trimmedPB);
+                        queryChamCong = queryChamCong.Where(c => c.NhanVien != null && c.NhanVien.MaPhongBan == trimmedPB);
+                        queryNghi = queryNghi.Where(c => c.NhanVien != null && c.NhanVien.MaPhongBan == trimmedPB);
+                        queryOT = queryOT.Where(c => c.NhanVien != null && c.NhanVien.MaPhongBan == trimmedPB);
+                        queryCongTac = queryCongTac.Where(c => c.NhanVien != null && c.NhanVien.MaPhongBan == trimmedPB);
                     }
                     else
                     {
-                        return Ok(new { DailyRecords = new List<object>(), Summaries = new Dictionary<string, object>(), IsLocked = isLocked });
+                        return Ok(new { DailyRecords = new List<object>(), Summaries = new Dictionary<string, object>(), Requests = new List<object>(), IsLocked = isLocked });
                     }
                 }
-                else if (IsAdminOrHR() || currentUserRole == "Kế toán trưởng")
-                {
-                    // Xem hết
-                }
-                else
+                else if (!IsAdminOrHR() && currentUserRole != "Kế toán trưởng")
                 {
                     return StatusCode(403, "Bạn không có quyền xem bảng công tổng hợp.");
                 }
 
-                var data = await query.ToListAsync();
+                var dataChamCong = await queryChamCong.ToListAsync();
+                var listNghi = await queryNghi.ToListAsync();
+                var listOT = await queryOT.ToListAsync();
+                var listCongTac = await queryCongTac.ToListAsync();
 
-                // FIX LỖI 500: Lọc bỏ các bản ghi có MaNhanVien bị NULL (tránh crash khi ToDictionary)
-                var validData = data.Where(c => !string.IsNullOrEmpty(c.MaNhanVien)).ToList();
+                var validData = dataChamCong.Where(c => !string.IsNullOrEmpty(c.MaNhanVien)).ToList();
 
-                // --- TÍNH SUMMARY ---
                 var employeeIds = validData.Select(c => c.MaNhanVien).Distinct().ToList();
                 var startYear = new DateTime(year, 1, 1);
                 var endYear = startYear.AddYears(1);
-
                 var paidLeaves = new Dictionary<string, int>();
 
-                // Tránh lỗi khi danh sách nhân viên rỗng
+                var employeesInfo = await _context.NhanViens
+                    .Where(nv => employeeIds.Contains(nv.MaNhanVien))
+                    .Select(nv => new { nv.MaNhanVien, nv.LoaiNhanVien })
+                    .ToDictionaryAsync(nv => nv.MaNhanVien, nv => nv.LoaiNhanVien);
+
                 if (employeeIds.Any())
                 {
                     paidLeaves = await _context.ChamCongs
                         .Where(c => employeeIds.Contains(c.MaNhanVien) &&
                                c.NgayChamCong >= startYear && c.NgayChamCong < endYear &&
-                               c.NgayCong == 1.0 && !string.IsNullOrEmpty(c.GhiChu))
+                               c.NgayCong == 1.0 && !string.IsNullOrEmpty(c.GhiChu) &&
+                               c.GhiChu.ToLower().Contains("nghỉ phép"))
                         .GroupBy(c => c.MaNhanVien)
                         .ToDictionaryAsync(g => g.Key, g => g.Count());
                 }
 
-                var summaries = validData.GroupBy(c => c.MaNhanVien).ToDictionary(g => g.Key, g => new
+                var summaries = validData.GroupBy(c => c.MaNhanVien).ToDictionary(g => g.Key, g =>
                 {
-                    MaNhanVien = g.Key,
-                    TongCong = g.Sum(c => c.NgayCong),
-                    DiLamDu = g.Count(c => c.NgayCong == 1.0 && string.IsNullOrEmpty(c.GhiChu)),
-                    NghiCoPhep = g.Count(c => c.NgayCong == 1.0 && !string.IsNullOrEmpty(c.GhiChu)),
-                    RemainingLeaveDays = 12 - (paidLeaves.ContainsKey(g.Key) ? paidLeaves[g.Key] : 0)
+                    string loaiNV = employeesInfo.ContainsKey(g.Key) ? (employeesInfo[g.Key] ?? "") : "";
+                    int maxLeaves = loaiNV.ToLower().Contains("thử việc") ? 0 : 12;
+                    int usedLeaves = paidLeaves.ContainsKey(g.Key) ? paidLeaves[g.Key] : 0;
+
+                    return new
+                    {
+                        MaNhanVien = g.Key,
+                        TongCong = g.Sum(c => c.NgayCong),
+                        DiLamDu = g.Count(c => c.NgayCong == 1.0 && string.IsNullOrEmpty(c.GhiChu)),
+                        NghiCoPhep = g.Count(c => c.NgayCong == 1.0 && !string.IsNullOrEmpty(c.GhiChu) && c.GhiChu.ToLower().Contains("nghỉ phép")),
+                        RemainingLeaveDays = maxLeaves - usedLeaves
+                    };
                 });
 
                 var dailyRecords = validData.Select(c => new
@@ -178,21 +364,29 @@ namespace HRApi.Controllers
                     NgayChamCong = c.NgayChamCong.ToString("yyyy-MM-dd"),
                     c.NgayCong,
                     c.GhiChu,
-                    GioCheckIn = c.GioCheckIn,
-                    GioCheckOut = c.GioCheckOut
+                    c.GioCheckIn,
+                    c.GioCheckOut
                 }).ToList();
 
-                return Ok(new { DailyRecords = dailyRecords, Summaries = summaries, IsLocked = isLocked });
+                var flattenedRequests = FlattenAllRequests(listNghi, listOT, listCongTac, year, month);
+
+                return Ok(new
+                {
+                    DailyRecords = dailyRecords,
+                    Summaries = summaries,
+                    Requests = flattenedRequests,
+                    IsLocked = isLocked
+                });
             }
             catch (Exception ex)
             {
-                // In lỗi ra terminal của Backend để dễ sửa nếu còn bị
-                Console.WriteLine($"\n[ERROR GetChamCongThang]: {ex.Message}\n{ex.StackTrace}\n");
                 return StatusCode(500, $"Lỗi xử lý server: {ex.Message}");
             }
         }
 
-        // --- 3. Lấy dữ liệu cá nhân ---
+        // ==============================================================
+        // 5. LẤY DỮ LIỆU CÁ NHÂN (Dành cho App Nhân viên)
+        // ==============================================================
         [HttpGet("{maNhanVien}")]
         public async Task<IActionResult> GetChamCongNhanVien(string maNhanVien, [FromQuery] int year, [FromQuery] int month)
         {
@@ -200,11 +394,8 @@ namespace HRApi.Controllers
             var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var currentUserMaPhongBan = User.FindFirst("MaPhongBan")?.Value;
 
-            // 1. Nhân viên thường chỉ xem của mình
-            if (currentUserRole == "Nhân viên" && currentUserId != maNhanVien)
-                return Forbid();
+            if (currentUserRole == "Nhân viên" && currentUserId != maNhanVien) return Forbid();
 
-            // 2. Trưởng phòng chỉ xem nhân viên phòng mình
             if (currentUserRole == "Trưởng phòng")
             {
                 var targetEmp = await _context.NhanViens.AsNoTracking().FirstOrDefaultAsync(nv => nv.MaNhanVien == maNhanVien);
@@ -216,82 +407,89 @@ namespace HRApi.Controllers
             var startDate = new DateTime(year, month, 1);
             var endDate = startDate.AddMonths(1);
 
-            var data = await _context.ChamCongs
-                .Where(c => c.MaNhanVien == maNhanVien && c.NgayChamCong >= startDate && c.NgayChamCong < endDate)
-                .ToListAsync();
+            var dataChamCong = await _context.ChamCongs.Where(c => c.MaNhanVien == maNhanVien && c.NgayChamCong >= startDate && c.NgayChamCong < endDate).ToListAsync();
+            var listNghi = await _context.DonNghiPheps.Where(d => d.MaNhanVien == maNhanVien && d.NgayBatDau < endDate && d.NgayKetThuc >= startDate).ToListAsync();
+            var listOT = await _context.DangKyOTs.Where(d => d.MaNhanVien == maNhanVien && d.NgayLamThem >= startDate && d.NgayLamThem < endDate).ToListAsync();
+            var listCongTac = await _context.DangKyCongTacs.Where(d => d.MaNhanVien == maNhanVien && d.NgayBatDau < endDate && d.NgayKetThuc >= startDate).ToListAsync();
 
-            var dailyRecords = data.Select(c => new
+            var dailyRecords = dataChamCong.Select(c => new
             {
                 c.Id,
                 c.MaNhanVien,
                 NgayChamCong = c.NgayChamCong.ToString("yyyy-MM-dd"),
                 c.NgayCong,
                 c.GhiChu,
-                GioCheckIn = c.GioCheckIn,
-                GioCheckOut = c.GioCheckOut
+                c.GioCheckIn,
+                c.GioCheckOut
             }).ToList();
-            return Ok(new { DailyRecords = dailyRecords });
+
+            var flattenedRequests = FlattenAllRequests(listNghi, listOT, listCongTac, year, month);
+
+            return Ok(new { DailyRecords = dailyRecords, Requests = flattenedRequests });
         }
 
-        // --- 4. NHẬP / SỬA CÔNG (Upsert - CẬP NHẬT PHÂN QUYỀN & KHÓA CÔNG) ---
+        // ==============================================================
+        // 6. SỬA CÔNG / NHẬP TAY (TÍCH HỢP KIỂM TRA PHÉP NĂM)
+        // ==============================================================
         [HttpPost("upsert")]
         public async Task<IActionResult> UpsertChamCong([FromBody] ChamCongUpsertDto dto)
         {
             var currentUserRole = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
             var currentUserMaPhongBan = User.Claims.FirstOrDefault(c => c.Type == "MaPhongBan")?.Value;
 
-            // 1. CHẶN QUYỀN CƠ BẢN
             if (currentUserRole == "Kế toán trưởng" || currentUserRole == "Nhân viên")
-            {
                 return StatusCode(403, "Bạn chỉ có quyền xem, không được sửa đổi chấm công.");
-            }
 
             if (!DateTime.TryParse(dto.NgayChamCong, out DateTime dateParsed)) return BadRequest("Ngày sai.");
 
-            // 2. CHECK KHÓA CÔNG
             var isLocked = await _context.KhoaCongs.AnyAsync(k => k.Nam == dateParsed.Year && k.Thang == dateParsed.Month && k.IsLocked);
-            if (isLocked)
-            {
-                return BadRequest(new { message = $"Bảng công tháng {dateParsed.Month}/{dateParsed.Year} đã bị khóa." });
-            }
+            if (isLocked) return BadRequest(new { message = $"Bảng công tháng {dateParsed.Month}/{dateParsed.Year} đã bị khóa." });
 
-            // 3. CHECK TRƯỞNG PHÒNG
             var targetEmp = await _context.NhanViens.AsNoTracking().FirstOrDefaultAsync(nv => nv.MaNhanVien == dto.MaNhanVien);
             if (targetEmp == null) return BadRequest("NV không tồn tại.");
 
             if (currentUserRole == "Trưởng phòng")
             {
                 if (string.IsNullOrEmpty(currentUserMaPhongBan) || targetEmp.MaPhongBan != currentUserMaPhongBan)
-                {
                     return StatusCode(403, "Trưởng phòng chỉ được nhập công cho nhân viên thuộc phòng mình.");
-                }
             }
 
-            // 4. LOGIC LƯU DỮ LIỆU
             var existingRecord = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == dto.MaNhanVien && c.NgayChamCong.Date == dateParsed.Date);
             if (dto.OnlyIfEmpty && existingRecord != null)
-            {
-                // Nếu yêu cầu "Chỉ điền ô trống" MÀ ô này đã có dữ liệu -> Bỏ qua, không làm gì cả
-                // Trả về OK để frontend không báo lỗi, coi như đã xử lý xong (skip)
                 return Ok(new { message = "Skipped (Data exists)", skipped = true });
-            }
+
             bool wasConverted = false;
             double finalCong = dto.NgayCong;
             string? finalGhiChu = dto.GhiChu;
 
-            if (dto.NgayCong == 1.0 && !string.IsNullOrEmpty(dto.GhiChu))
+            if (dto.NgayCong == 1.0 && !string.IsNullOrEmpty(dto.GhiChu) && dto.GhiChu.ToLower().Contains("nghỉ phép"))
             {
-                var startY = new DateTime(dateParsed.Year, 1, 1);
-                var endY = startY.AddYears(1);
+                int maxLeave = (targetEmp.LoaiNhanVien != null && targetEmp.LoaiNhanVien.ToLower().Contains("thử việc")) ? 0 : 12;
 
-                // Fix lỗi LINQ null propagate: tính ID trước
-                int excludeId = existingRecord != null ? existingRecord.Id : 0;
+                if (maxLeave == 0)
+                {
+                    finalCong = 0.0;
+                    finalGhiChu = "Thử việc không có phép (Chuyển thành Nghỉ không lương)";
+                    wasConverted = true;
+                }
+                else
+                {
+                    var startY = new DateTime(dateParsed.Year, 1, 1);
+                    var endY = startY.AddYears(1);
+                    int excludeId = existingRecord != null ? existingRecord.Id : 0;
 
-                var taken = await _context.ChamCongs.CountAsync(c =>
-                    c.MaNhanVien == dto.MaNhanVien && c.NgayChamCong >= startY && c.NgayChamCong < endY &&
-                    c.NgayCong == 1.0 && !string.IsNullOrEmpty(c.GhiChu) && c.Id != excludeId);
+                    var taken = await _context.ChamCongs.CountAsync(c =>
+                        c.MaNhanVien == dto.MaNhanVien && c.NgayChamCong >= startY && c.NgayChamCong < endY &&
+                        c.NgayCong == 1.0 && !string.IsNullOrEmpty(c.GhiChu) && c.GhiChu.ToLower().Contains("nghỉ phép") &&
+                        c.Id != excludeId);
 
-                if (taken >= 12) { finalCong = 0.0; finalGhiChu = "Hết phép -> Không phép"; wasConverted = true; }
+                    if (taken >= maxLeave)
+                    {
+                        finalCong = 0.0;
+                        finalGhiChu = "Hết quỹ phép năm -> Chuyển thành Nghỉ không lương";
+                        wasConverted = true;
+                    }
+                }
             }
 
             if (existingRecord != null)
@@ -316,41 +514,15 @@ namespace HRApi.Controllers
             return Ok(new { message = "Lưu thành công", wasConverted });
         }
 
-        // --- 5. KHÓA CÔNG (Dành cho HR/Admin) ---
-        [HttpPost("lock")]
-        public async Task<IActionResult> LockChamCong([FromBody] LockDto dto)
-        {
-            if (!IsAdminOrHR()) return StatusCode(403, "Chỉ HR hoặc Giám đốc mới được khóa công.");
-
-            var record = await _context.KhoaCongs.FirstOrDefaultAsync(k => k.Nam == dto.Year && k.Thang == dto.Month);
-            if (record == null)
-            {
-                _context.KhoaCongs.Add(new KhoaCong { Nam = dto.Year, Thang = dto.Month, IsLocked = true });
-            }
-            else
-            {
-                record.IsLocked = true;
-                _context.KhoaCongs.Update(record);
-            }
-
-            await _context.SaveChangesAsync();
-            return Ok(new { message = $"Đã khóa bảng công tháng {dto.Month}/{dto.Year}." });
-        }
-        // --- 5. KHÓA / HỦY KHÓA CÔNG ---
-        public class LockActionDto
-        {
-            public int Year { get; set; }
-            public int Month { get; set; }
-            public bool IsLocked { get; set; } // true: Khóa, false: Hủy khóa
-        }
-
-        [HttpPost("lock-action")] // Đổi tên endpoint cho rõ nghĩa hơn hoặc dùng lại "lock"
+        // ==============================================================
+        // 7. KHÓA / HỦY KHÓA CÔNG (ADMIN / HR)
+        // ==============================================================
+        [HttpPost("lock-action")]
         public async Task<IActionResult> LockOrUnlockChamCong([FromBody] LockActionDto dto)
         {
             if (!IsAdminOrHR()) return StatusCode(403, "Chỉ HR hoặc Giám đốc mới được thực hiện thao tác này.");
 
             var record = await _context.KhoaCongs.FirstOrDefaultAsync(k => k.Nam == dto.Year && k.Thang == dto.Month);
-
             if (record == null)
             {
                 _context.KhoaCongs.Add(new KhoaCong { Nam = dto.Year, Thang = dto.Month, IsLocked = dto.IsLocked });
@@ -362,233 +534,84 @@ namespace HRApi.Controllers
             }
 
             await _context.SaveChangesAsync();
-
             string actionText = dto.IsLocked ? "khóa" : "hủy khóa";
             return Ok(new { message = $"Đã {actionText} bảng công tháng {dto.Month}/{dto.Year}." });
         }
 
-        // --- MỚI: API Chấm công bằng khuôn mặt ---
-        // --- BỔ SUNG: API ĐĂNG KÝ KHUÔN MẶT (Fix lỗi 405) ---
+        // ==============================================================
+        // 8. FACE ID: ĐĂNG KÝ KHUÔN MẶT
+        // ==============================================================
         [HttpPost("register-face")]
         public async Task<IActionResult> RegisterFace([FromBody] RegisterFaceDto dto)
         {
-            // 1. Kiểm tra dữ liệu đầu vào
             if (dto.FaceDescriptor == null || dto.FaceDescriptor.Length != 128)
-            {
-                return BadRequest(new { success = false, message = "Dữ liệu khuôn mặt không hợp lệ (Phải đủ 128 chiều)." });
-            }
+                return BadRequest(new { success = false, message = "Dữ liệu khuôn mặt không hợp lệ." });
 
-            // 2. Kiểm tra nhân viên có tồn tại không
             var nhanVien = await _context.NhanViens.FindAsync(dto.MaNhanVien);
-            if (nhanVien == null)
-            {
-                return NotFound(new { success = false, message = "Không tìm thấy nhân viên này." });
-            }
+            if (nhanVien == null) return NotFound(new { success = false, message = "Không tìm thấy nhân viên." });
 
-            // 3. Chuyển mảng float[] thành chuỗi JSON để lưu vào Database
-            // Vì Model FaceData của bạn lưu FaceDescriptor dưới dạng string
             string jsonVector = JsonSerializer.Serialize(dto.FaceDescriptor);
-
-            // 4. Kiểm tra xem nhân viên này đã có dữ liệu khuôn mặt chưa
             var existingFace = await _context.FaceDatas.FirstOrDefaultAsync(f => f.MaNhanVien == dto.MaNhanVien);
 
             if (existingFace != null)
             {
-                // Nếu có rồi -> Cập nhật lại khuôn mặt mới
                 existingFace.FaceDescriptor = jsonVector;
                 _context.FaceDatas.Update(existingFace);
             }
             else
             {
-                // Nếu chưa có -> Tạo mới
-                var newFaceData = new FaceData
-                {
-                    MaNhanVien = dto.MaNhanVien,
-                    FaceDescriptor = jsonVector
-                };
-                _context.FaceDatas.Add(newFaceData);
+                _context.FaceDatas.Add(new FaceData { MaNhanVien = dto.MaNhanVien, FaceDescriptor = jsonVector });
             }
 
             await _context.SaveChangesAsync();
-
             return Ok(new { success = true, message = "Đăng ký khuôn mặt thành công!" });
         }
 
-        [HttpPost("check-in-face")]
-        public async Task<IActionResult> CheckInWithFace([FromBody] CheckInFaceDto dto)
+        // ==============================================================
+        // HELPER FUNCTIONS (TRẢ VỀ ĐƠN TỪ)
+        // ==============================================================
+        private List<object> FlattenAllRequests(List<DonNghiPhep> nghis, List<DangKyOT> ots, List<DangKyCongTac> congtacs, int year, int month)
         {
-            // 1. LẤY MÃ NHÂN VIÊN TỪ TÀI KHOẢN ĐANG ĐĂNG NHẬP (Chống nhận nhầm 100%)
-            var currentUserId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(currentUserId))
+            var result = new List<object>();
+
+            foreach (var req in nghis)
             {
-                return Unauthorized(new { success = false, message = "Phiên đăng nhập không hợp lệ." });
-            }
-
-            // 2. CHỈ TÌM DỮ LIỆU KHUÔN MẶT CỦA ĐÚNG TÀI KHOẢN NÀY
-            var userFace = await _context.FaceDatas.FirstOrDefaultAsync(f => f.MaNhanVien == currentUserId);
-            if (userFace == null)
-            {
-                return BadRequest(new { success = false, message = "Bạn chưa cài đặt dữ liệu khuôn mặt. Vui lòng cài đặt trước khi chấm công!" });
-            }
-
-            // 3. SO SÁNH KHUÔN MẶT (Cam gửi lên vs DB của người này)
-            var storedVector = JsonSerializer.Deserialize<float[]>(userFace.FaceDescriptor);
-            var distance = CalculateEuclideanDistance(dto.FaceDescriptor, storedVector);
-
-            // Ngưỡng 0.45: Càng nhỏ càng khắt khe. Nếu > 0.45 nghĩa là không phải chủ tài khoản
-            if (distance > 0.45)
-            {
-                return BadRequest(new { success = false, message = "Khuôn mặt không khớp với tài khoản của bạn. Vui lòng thử lại!" });
-            }
-
-            // --- 4. THỰC HIỆN CHẤM CÔNG (Vì đã xác nhận chính chủ) ---
-            var today = DateTime.Today;
-            var existing = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == currentUserId && c.NgayChamCong.Date == today);
-
-            if (existing != null)
-            {
-                // --- LOGIC CHECK-OUT (Ra về) ---
-                if (existing.GioCheckOut != null)
-                    return BadRequest(new { success = false, message = "Bạn đã check-out hôm nay rồi." });
-
-                existing.GioCheckOut = DateTime.Now;
-                existing.GhiChu = (existing.GhiChu ?? "") + $" | Face Check-out: {existing.GioCheckOut:HH:mm}";
-
-                // THỬ NGHIỆM: Tính công theo số PHÚT (Thay vì số giờ)
-                double totalMinutes = (existing.GioCheckOut.Value - (existing.GioCheckIn ?? existing.NgayChamCong)).TotalMinutes;
-
-                if (totalMinutes >= 5.0) existing.NgayCong = 1.0;
-                else if (totalMinutes >= 2.0) existing.NgayCong = 0.5;
-                else existing.NgayCong = 0.0;
-
-                _context.ChamCongs.Update(existing);
-                await _context.SaveChangesAsync();
-
-                var nv = await _context.NhanViens.FindAsync(currentUserId);
-                return Ok(new { success = true, message = $"Check-out thành công cho {nv?.HoTen}.", ngayCong = existing.NgayCong });
-            }
-            else
-            {
-                // --- LOGIC CHECK-IN (Vào làm) ---
-                var newChamCong = new ChamCong
+                for (var d = req.NgayBatDau.Date; d <= req.NgayKetThuc.Date; d = d.AddDays(1))
                 {
-                    MaNhanVien = currentUserId,
-                    NgayChamCong = DateTime.Now, // Ngày chấm công (bỏ phần giờ)
-                    GioCheckIn = DateTime.Now,   // Giờ vào thực tế
-                    NgayCong = 0.0,              // Mới vào thì chưa có công
-                    GhiChu = "Face Check-in",
-                    LoaiNgayCong = "Làm việc"
-                };
-
-                // Logic đi muộn (Ví dụ sau 8:15 là muộn)
-                if (DateTime.Now.Hour > 8 || (DateTime.Now.Hour == 8 && DateTime.Now.Minute > 15))
-                {
-                    newChamCong.DiMuon = true;
-                    newChamCong.GhiChu += " (Đi muộn)";
+                    if (d.Month == month && d.Year == year)
+                    {
+                        string loai = req.LyDo != null && req.LyDo.ToLower().Contains("không lương") ? "Nghỉ không lương" : "Nghỉ phép";
+                        result.Add(new { MaNhanVien = req.MaNhanVien, Day = d.Day, LoaiDon = loai, TrangThai = req.TrangThai, ChiTiet = new { req.NgayBatDau, req.NgayKetThuc, req.SoNgayNghi, req.LyDo } });
+                    }
                 }
-
-                _context.ChamCongs.Add(newChamCong);
-                await _context.SaveChangesAsync();
-
-                var nv = await _context.NhanViens.FindAsync(currentUserId);
-                return Ok(new { success = true, message = $"Check-in thành công cho {nv?.HoTen}!", time = newChamCong.GioCheckIn });
             }
+
+            foreach (var req in ots)
+            {
+                if (req.NgayLamThem.Month == month && req.NgayLamThem.Year == year)
+                {
+                    result.Add(new { MaNhanVien = req.MaNhanVien, Day = req.NgayLamThem.Day, LoaiDon = "OT", TrangThai = req.TrangThai, ChiTiet = new { req.NgayLamThem, req.GioBatDau, req.GioKetThuc, req.SoGio, req.LyDo } });
+                }
+            }
+
+            foreach (var req in congtacs)
+            {
+                for (var d = req.NgayBatDau.Date; d <= req.NgayKetThuc.Date; d = d.AddDays(1))
+                {
+                    if (d.Month == month && d.Year == year)
+                    {
+                        result.Add(new { MaNhanVien = req.MaNhanVien, Day = d.Day, LoaiDon = "Công tác", TrangThai = req.TrangThai, ChiTiet = new { req.NgayBatDau, req.NgayKetThuc, req.NoiCongTac, req.MucDich, req.PhuongTien, req.KinhPhiDuKien, req.SoTienTamUng } });
+                    }
+                }
+            }
+            return result;
         }
 
-        //[HttpPost("check-in-face")]
-        //public async Task<IActionResult> CheckInWithFace([FromBody] CheckInFaceDto dto)
-        //{
-        //    // 1. LẤY MÃ NHÂN VIÊN TỪ TÀI KHOẢN ĐANG ĐĂNG NHẬP (Chống nhận nhầm 100%)
-        //    var currentUserId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-        //    if (string.IsNullOrEmpty(currentUserId))
-        //    {
-        //        return Unauthorized(new { success = false, message = "Phiên đăng nhập không hợp lệ." });
-        //    }
-
-        //    // 2. CHỈ TÌM DỮ LIỆU KHUÔN MẶT CỦA ĐÚNG TÀI KHOẢN NÀY
-        //    var userFace = await _context.FaceDatas.FirstOrDefaultAsync(f => f.MaNhanVien == currentUserId);
-        //    if (userFace == null)
-        //    {
-        //        return BadRequest(new { success = false, message = "Bạn chưa cài đặt dữ liệu khuôn mặt. Vui lòng cài đặt trước khi chấm công!" });
-        //    }
-
-        //    // 3. SO SÁNH KHUÔN MẶT (Cam gửi lên vs DB của người này)
-        //    var storedVector = JsonSerializer.Deserialize<float[]>(userFace.FaceDescriptor);
-        //    var distance = CalculateEuclideanDistance(dto.FaceDescriptor, storedVector);
-
-        //    // Ngưỡng 0.45: Càng nhỏ càng khắt khe. Nếu > 0.45 nghĩa là không phải chủ tài khoản
-        //    if (distance > 0.45)
-        //    {
-        //        return BadRequest(new { success = false, message = "Khuôn mặt không khớp với tài khoản của bạn. Vui lòng thử lại!" });
-        //    }
-
-        //    // --- 4. THỰC HIỆN CHẤM CÔNG (Vì đã xác nhận chính chủ) ---
-        //    var today = DateTime.Today;
-        //    var existing = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == currentUserId && c.NgayChamCong.Date == today);
-
-        //    if (existing != null)
-        //    {
-        //        // --- LOGIC CHECK-OUT (Ra về) ---
-        //        if (existing.GioCheckOut != null)
-        //            return BadRequest(new { success = false, message = "Bạn đã check-out hôm nay rồi." });
-
-        //        existing.GioCheckOut = DateTime.Now;
-        //        existing.GhiChu = (existing.GhiChu ?? "") + $" | Face Check-out: {existing.GioCheckOut:HH:mm}";
-
-        //        // --- QUAY LẠI LOGIC THỰC TẾ: Tính toán công dựa trên số GIỜ (Hours) ---
-        //        double totalHours = (existing.GioCheckOut.Value - (existing.GioCheckIn ?? existing.NgayChamCong)).TotalHours;
-
-        //        // Trừ 1 tiếng nghỉ trưa nếu làm việc trên 5 tiếng
-        //        if (totalHours > 5) totalHours -= 1.0;
-
-        //        // Phân loại công
-        //        if (totalHours >= 7.5) existing.NgayCong = 1.0;
-        //        else if (totalHours >= 3.5) existing.NgayCong = 0.5;
-        //        else existing.NgayCong = 0.0;
-
-        //        _context.ChamCongs.Update(existing);
-        //        await _context.SaveChangesAsync();
-
-        //        var nv = await _context.NhanViens.FindAsync(currentUserId);
-        //        return Ok(new { success = true, message = $"Check-out thành công cho {nv?.HoTen}.", ngayCong = existing.NgayCong });
-        //    }
-        //    else
-        //    {
-        //        // --- LOGIC CHECK-IN (Vào làm) ---
-        //        var newChamCong = new ChamCong
-        //        {
-        //            MaNhanVien = currentUserId,
-        //            NgayChamCong = DateTime.Now, // Ngày chấm công (bỏ phần giờ)
-        //            GioCheckIn = DateTime.Now,   // Giờ vào thực tế
-        //            NgayCong = 0.0,              // Mới vào thì chưa có công
-        //            GhiChu = "Face Check-in",
-        //            LoaiNgayCong = "Làm việc"
-        //        };
-
-        //        // Logic đi muộn (Ví dụ sau 8:15 là muộn)
-        //        if (DateTime.Now.Hour > 8 || (DateTime.Now.Hour == 8 && DateTime.Now.Minute > 15))
-        //        {
-        //            newChamCong.DiMuon = true;
-        //            newChamCong.GhiChu += " (Đi muộn)";
-        //        }
-
-        //        _context.ChamCongs.Add(newChamCong);
-        //        await _context.SaveChangesAsync();
-
-        //        var nv = await _context.NhanViens.FindAsync(currentUserId);
-        //        return Ok(new { success = true, message = $"Check-in thành công cho {nv?.HoTen}!", time = newChamCong.GioCheckIn });
-        //    }
-        //}
-
-        // Helper: Hàm tính khoảng cách Euclid giữa 2 vector khuôn mặt
         private double CalculateEuclideanDistance(float[] a, float[] b)
         {
             if (a.Length != b.Length) return double.MaxValue;
             double sum = 0;
-            for (int i = 0; i < a.Length; i++)
-            {
-                sum += Math.Pow(a[i] - b[i], 2);
-            }
+            for (int i = 0; i < a.Length; i++) sum += Math.Pow(a[i] - b[i], 2);
             return Math.Sqrt(sum);
         }
     }

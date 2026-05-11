@@ -4,6 +4,7 @@ using HRApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HRApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260505060359_AddNgayle")]
+    partial class AddNgayle
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -709,15 +712,6 @@ namespace HRApi.Migrations
 
                     b.Property<bool>("GuiMailTuDong")
                         .HasColumnType("bit");
-
-                    b.Property<double>("HeSoOTCuoiTuan")
-                        .HasColumnType("float");
-
-                    b.Property<double>("HeSoOTNgayLe")
-                        .HasColumnType("float");
-
-                    b.Property<double>("HeSoOTNgayThuong")
-                        .HasColumnType("float");
 
                     b.Property<string>("MaSoThue")
                         .HasColumnType("nvarchar(max)");

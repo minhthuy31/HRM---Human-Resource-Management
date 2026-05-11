@@ -151,5 +151,6 @@ namespace HRApi.Models
         public string? ChuKy { get; set; }
         public string? RefreshToken { get; set; }
         public DateTime? RefreshTokenExpiryTime { get; set; }
+        public int SoNguoiPhuThuoc { get; set; } = 0;
     }
 }

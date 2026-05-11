@@ -1,19 +1,22 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../api";
+import { getUserFromToken } from "../utils/auth";
 import {
   FaBuilding,
   FaClock,
   FaMoneyBillWave,
   FaEnvelope,
   FaSave,
+  FaLock,
+  FaCalendarAlt,
+  FaPlus,
+  FaTrash,
 } from "react-icons/fa";
 import "../styles/SystemSettingsPage.css";
 
-// --- Custom Confirm Modal ---
 const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }) => {
   if (!isOpen) return null;
-
   return (
     <div className="custom-modal-overlay">
       <div className="custom-confirm-modal">
@@ -36,7 +39,10 @@ const SystemSettingsPage = () => {
   const [activeTab, setActiveTab] = useState("company");
   const [loading, setLoading] = useState(false);
 
-  // State mặc định
+  const user = getUserFromToken();
+  const userRole = user?.role || user?.Role || "";
+  const canEdit = ["Nhân sự trưởng", "Giám đốc"].includes(userRole);
+
   const [settings, setSettings] = useState({
     tenCongTy: "",
     tenVietTat: "",
@@ -53,11 +59,18 @@ const SystemSettingsPage = () => {
     phanTramBHXHEmployee: 10.5,
     giamTruGiaCanh: 11000000,
     giamTruPhuThuoc: 4400000,
+    heSoOTNgayThuong: 1.5,
+    heSoOTCuoiTuan: 2.0,
+    heSoOTNgayLe: 3.0, // <-- THÊM MẶC ĐỊNH
     smtpServer: "",
     smtpPort: "",
     emailGuiDi: "",
     guiMailTuDong: false,
   });
+
+  const [holidays, setHolidays] = useState([]);
+  const [newHoliday, setNewHoliday] = useState({ date: "", tenNgayLe: "" });
+  const [holidayYear, setHolidayYear] = useState(new Date().getFullYear());
 
   const [toast, setToast] = useState({
     message: "",
@@ -69,9 +82,10 @@ const SystemSettingsPage = () => {
   const showToast = useCallback((message, type = "success") => {
     setToast({ message, type, visible: true });
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => {
-      setToast((prev) => ({ ...prev, visible: false }));
-    }, 3000);
+    toastTimerRef.current = setTimeout(
+      () => setToast((prev) => ({ ...prev, visible: false })),
+      3000,
+    );
   }, []);
 
   const [confirmDialog, setConfirmDialog] = useState({
@@ -79,17 +93,13 @@ const SystemSettingsPage = () => {
     message: "",
     onConfirm: null,
   });
-
-  const closeConfirm = () => {
+  const closeConfirm = () =>
     setConfirmDialog({ isOpen: false, message: "", onConfirm: null });
-  };
 
-  // 1. FETCH DỮ LIỆU & CHUẨN HÓA KEY
   const fetchSettings = useCallback(async () => {
     try {
       const response = await api.get("/SystemSettings");
       if (response.data) {
-        // Chuyển đổi các key viết hoa từ Backend (PascalCase) sang (camelCase)
         const normalizedData = {};
         for (const key in response.data) {
           const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
@@ -99,16 +109,29 @@ const SystemSettingsPage = () => {
         setSettings((prev) => ({ ...prev, ...normalizedData }));
       }
     } catch (error) {
-      console.error("Lỗi tải cấu hình:", error);
       showToast("Không thể tải cấu hình từ máy chủ.", "error");
     }
   }, [showToast]);
+
+  const fetchHolidays = useCallback(async () => {
+    try {
+      const response = await api.get(`/NgayLe?year=${holidayYear}`);
+      setHolidays(response.data);
+    } catch (error) {
+      showToast("Không thể tải danh sách ngày lễ.", "error");
+    }
+  }, [holidayYear, showToast]);
 
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
 
+  useEffect(() => {
+    if (activeTab === "holidays") fetchHolidays();
+  }, [activeTab, holidayYear, fetchHolidays]);
+
   const handleChange = (e) => {
+    if (!canEdit) return;
     const { name, value, type, checked } = e.target;
     setSettings((prev) => ({
       ...prev,
@@ -116,8 +139,11 @@ const SystemSettingsPage = () => {
     }));
   };
 
-  // 2. ÉP KIỂU SỐ TRƯỚC KHI LƯU TRÁNH LỖI 400 BAD REQUEST
-  const handleSave = () => {
+  const handleSaveSettings = () => {
+    if (!canEdit) {
+      showToast("Bạn không có quyền chỉnh sửa cấu hình.", "error");
+      return;
+    }
     setConfirmDialog({
       isOpen: true,
       message: "Bạn có chắc chắn muốn lưu các thay đổi cấu hình hệ thống này?",
@@ -127,7 +153,6 @@ const SystemSettingsPage = () => {
         try {
           const payload = {
             ...settings,
-            // Ép kiểu các trường Number để C# không bị lỗi chối từ
             soPhutDiMuonChoPhep: Number(settings.soPhutDiMuonChoPhep) || 0,
             ngayPhepTieuChuan: Number(settings.ngayPhepTieuChuan) || 0,
             mucLuongCoSo: Number(settings.mucLuongCoSo) || 0,
@@ -135,15 +160,48 @@ const SystemSettingsPage = () => {
             phanTramBHXHEmployee: Number(settings.phanTramBHXHEmployee) || 0,
             giamTruGiaCanh: Number(settings.giamTruGiaCanh) || 0,
             giamTruPhuThuoc: Number(settings.giamTruPhuThuoc) || 0,
+            heSoOTNgayThuong: Number(settings.heSoOTNgayThuong) || 1.5, // <-- MAP PAYLOAD
+            heSoOTCuoiTuan: Number(settings.heSoOTCuoiTuan) || 2.0,
+            heSoOTNgayLe: Number(settings.heSoOTNgayLe) || 3.0,
           };
-
           await api.post("/SystemSettings", payload);
           showToast("Đã lưu cấu hình hệ thống thành công!", "success");
         } catch (error) {
-          console.error("Lỗi lưu cấu hình:", error);
           showToast("Có lỗi xảy ra khi lưu cấu hình.", "error");
         } finally {
           setLoading(false);
+        }
+      },
+    });
+  };
+
+  const handleAddHoliday = async (e) => {
+    e.preventDefault();
+    if (!canEdit || !newHoliday.date || !newHoliday.tenNgayLe) return;
+    try {
+      await api.post("/NgayLe", newHoliday);
+      setNewHoliday({ date: "", tenNgayLe: "" });
+      fetchHolidays();
+      showToast("Đã thêm ngày lễ thành công!", "success");
+    } catch (err) {
+      showToast(err.response?.data || "Lỗi khi thêm ngày lễ.", "error");
+    }
+  };
+
+  const handleDeleteHoliday = async (id) => {
+    if (!canEdit) return;
+    setConfirmDialog({
+      isOpen: true,
+      message:
+        "Xóa ngày lễ này sẽ ảnh hưởng đến việc tính lương nếu đã chấm công. Vẫn xóa?",
+      onConfirm: async () => {
+        closeConfirm();
+        try {
+          await api.delete(`/NgayLe/${id}`);
+          fetchHolidays();
+          showToast("Đã xóa ngày lễ.", "success");
+        } catch (err) {
+          showToast("Lỗi khi xóa ngày lễ.", "error");
         }
       },
     });
@@ -156,17 +214,37 @@ const SystemSettingsPage = () => {
           <div>
             <h1>Cài đặt hệ thống</h1>
           </div>
-          <button
-            className="btn-save-settings"
-            onClick={handleSave}
-            disabled={loading}
-          >
-            <FaSave /> {loading ? "Đang lưu..." : "Lưu thay đổi"}
-          </button>
+          {canEdit && activeTab !== "holidays" && (
+            <button
+              className="btn-save-settings"
+              onClick={handleSaveSettings}
+              disabled={loading}
+            >
+              <FaSave /> {loading ? "Đang lưu..." : "Lưu thay đổi"}
+            </button>
+          )}
         </div>
 
+        {!canEdit && (
+          <div
+            style={{
+              backgroundColor: "#fff3cd",
+              color: "#856404",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              marginBottom: "20px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              fontWeight: "500",
+              border: "1px solid #ffeeba",
+            }}
+          >
+            <FaLock /> Bạn đang ở chế độ xem.
+          </div>
+        )}
+
         <div className="settings-layout">
-          {/* Menu bên trái */}
           <div className="settings-sidebar">
             <ul className="settings-menu">
               <li
@@ -179,7 +257,13 @@ const SystemSettingsPage = () => {
                 className={activeTab === "timekeeping" ? "active" : ""}
                 onClick={() => setActiveTab("timekeeping")}
               >
-                <FaClock className="tab-icon" /> Chấm công & Ngày nghỉ
+                <FaClock className="tab-icon" /> Chấm công & Tăng ca
+              </li>
+              <li
+                className={activeTab === "holidays" ? "active" : ""}
+                onClick={() => setActiveTab("holidays")}
+              >
+                <FaCalendarAlt className="tab-icon" /> Thiết lập Ngày Lễ
               </li>
               <li
                 className={activeTab === "payroll" ? "active" : ""}
@@ -196,10 +280,8 @@ const SystemSettingsPage = () => {
             </ul>
           </div>
 
-          {/* Form nội dung bên phải */}
           <div className="settings-content">
-            {/* TAB 1: CÔNG TY */}
-            {activeTab === "company" && (
+            {activeTab === "company" /* Giữ nguyên ... */ && (
               <div className="settings-panel">
                 <h2>Thông tin doanh nghiệp</h2>
                 <div className="form-row-2">
@@ -210,15 +292,17 @@ const SystemSettingsPage = () => {
                       name="tenCongTy"
                       value={settings.tenCongTy || ""}
                       onChange={handleChange}
+                      disabled={!canEdit}
                     />
                   </div>
                   <div className="form-group">
-                    <label>Tên viết tắt / Tên giao dịch</label>
+                    <label>Tên viết tắt</label>
                     <input
                       type="text"
                       name="tenVietTat"
                       value={settings.tenVietTat || ""}
                       onChange={handleChange}
+                      disabled={!canEdit}
                     />
                   </div>
                 </div>
@@ -230,6 +314,7 @@ const SystemSettingsPage = () => {
                       name="maSoThue"
                       value={settings.maSoThue || ""}
                       onChange={handleChange}
+                      disabled={!canEdit}
                     />
                   </div>
                   <div className="form-group">
@@ -239,51 +324,55 @@ const SystemSettingsPage = () => {
                       name="sdtHotline"
                       value={settings.sdtHotline || ""}
                       onChange={handleChange}
+                      disabled={!canEdit}
                     />
                   </div>
                 </div>
                 <div className="form-group">
-                  <label>Địa chỉ Trụ sở chính (In lên báo cáo, hợp đồng)</label>
+                  <label>Địa chỉ Trụ sở chính</label>
                   <input
                     type="text"
                     name="diaChi"
                     value={settings.diaChi || ""}
                     onChange={handleChange}
+                    disabled={!canEdit}
                   />
                 </div>
               </div>
             )}
 
-            {/* TAB 2: CHẤM CÔNG */}
             {activeTab === "timekeeping" && (
               <div className="settings-panel">
-                <h2>Chấm công & Ngày nghỉ</h2>
+                <h2>Chấm công cơ bản</h2>
                 <div className="form-row-3">
                   <div className="form-group">
-                    <label>Giờ vào làm tiêu chuẩn</label>
+                    <label>Giờ vào làm</label>
                     <input
                       type="time"
                       name="gioVaoLam"
                       value={settings.gioVaoLam || ""}
                       onChange={handleChange}
+                      disabled={!canEdit}
                     />
                   </div>
                   <div className="form-group">
-                    <label>Giờ tan làm tiêu chuẩn</label>
+                    <label>Giờ tan làm</label>
                     <input
                       type="time"
                       name="gioTanLam"
                       value={settings.gioTanLam || ""}
                       onChange={handleChange}
+                      disabled={!canEdit}
                     />
                   </div>
                   <div className="form-group">
-                    <label>Khung giờ nghỉ trưa</label>
+                    <label>Giờ nghỉ trưa</label>
                     <input
                       type="text"
                       name="thoiGianNghiTrua"
                       value={settings.thoiGianNghiTrua || ""}
                       onChange={handleChange}
+                      disabled={!canEdit}
                     />
                   </div>
                 </div>
@@ -299,11 +388,11 @@ const SystemSettingsPage = () => {
                           : ""
                       }
                       onChange={handleChange}
+                      disabled={!canEdit}
                     />
-                    <small>Số phút ân hạn trước khi tính là đi muộn.</small>
                   </div>
                   <div className="form-group">
-                    <label>Số ngày phép tiêu chuẩn / năm</label>
+                    <label>Số ngày phép / năm</label>
                     <input
                       type="number"
                       name="ngayPhepTieuChuan"
@@ -313,14 +402,250 @@ const SystemSettingsPage = () => {
                           : ""
                       }
                       onChange={handleChange}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                </div>
+
+                {/* --- KHU VỰC HỆ SỐ TĂNG CA (MỚI) --- */}
+                <h3
+                  style={{
+                    marginTop: "30px",
+                    fontSize: "1.2rem",
+                    color: "#0369a1",
+                    borderBottom: "1px solid #e0f2fe",
+                    paddingBottom: "10px",
+                  }}
+                >
+                  Cấu hình Hệ số Tăng ca (OT)
+                </h3>
+                <div className="form-row-3" style={{ marginTop: "15px" }}>
+                  <div className="form-group">
+                    <label>Hệ số OT Ngày thường (x)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      name="heSoOTNgayThuong"
+                      value={
+                        settings.heSoOTNgayThuong !== undefined
+                          ? settings.heSoOTNgayThuong
+                          : ""
+                      }
+                      onChange={handleChange}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Hệ số OT Cuối tuần (x)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      name="heSoOTCuoiTuan"
+                      value={
+                        settings.heSoOTCuoiTuan !== undefined
+                          ? settings.heSoOTCuoiTuan
+                          : ""
+                      }
+                      onChange={handleChange}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Hệ số OT Ngày Lễ (x)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      name="heSoOTNgayLe"
+                      value={
+                        settings.heSoOTNgayLe !== undefined
+                          ? settings.heSoOTNgayLe
+                          : ""
+                      }
+                      onChange={handleChange}
+                      disabled={!canEdit}
                     />
                   </div>
                 </div>
               </div>
             )}
 
-            {/* TAB 3: LƯƠNG THUẾ */}
-            {activeTab === "payroll" && (
+            {activeTab === "holidays" /* Giữ nguyên ... */ && (
+              <div className="settings-panel">
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <h2>Thiết lập Ngày Lễ (Nghỉ hưởng lương)</h2>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                    }}
+                  >
+                    <label style={{ fontWeight: 600 }}>Năm:</label>
+                    <input
+                      type="number"
+                      value={holidayYear}
+                      onChange={(e) => setHolidayYear(e.target.value)}
+                      style={{
+                        padding: "6px",
+                        width: "80px",
+                        borderRadius: "4px",
+                        border: "1px solid #ccc",
+                      }}
+                    />
+                  </div>
+                </div>
+                {canEdit && (
+                  <form
+                    onSubmit={handleAddHoliday}
+                    style={{
+                      display: "flex",
+                      gap: "15px",
+                      alignItems: "flex-end",
+                      backgroundColor: "#f8fafc",
+                      padding: "15px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--sidebar-border)",
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <label
+                        style={{
+                          display: "block",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          marginBottom: "5px",
+                        }}
+                      >
+                        Chọn Ngày
+                      </label>
+                      <input
+                        type="date"
+                        value={newHoliday.date}
+                        onChange={(e) =>
+                          setNewHoliday({ ...newHoliday, date: e.target.value })
+                        }
+                        required
+                        style={{
+                          width: "100%",
+                          padding: "10px",
+                          borderRadius: "6px",
+                          border: "1px solid #cbd5e1",
+                        }}
+                      />
+                    </div>
+                    <div style={{ flex: 2 }}>
+                      <label
+                        style={{
+                          display: "block",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          marginBottom: "5px",
+                        }}
+                      >
+                        Tên dịp lễ
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="VD: Quốc khánh..."
+                        value={newHoliday.tenNgayLe}
+                        onChange={(e) =>
+                          setNewHoliday({
+                            ...newHoliday,
+                            tenNgayLe: e.target.value,
+                          })
+                        }
+                        required
+                        style={{
+                          width: "100%",
+                          padding: "10px",
+                          borderRadius: "6px",
+                          border: "1px solid #cbd5e1",
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      style={{
+                        padding: "10px 20px",
+                        backgroundColor: "#2563eb",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "6px",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <FaPlus /> Thêm
+                    </button>
+                  </form>
+                )}
+                <table className="holiday-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: "20%" }}>Ngày / Tháng</th>
+                      <th style={{ width: "65%" }}>Tên dịp lễ</th>
+                      {canEdit && (
+                        <th style={{ width: "15%", textAlign: "center" }}>
+                          Xóa
+                        </th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {holidays.length > 0 ? (
+                      holidays.map((h) => (
+                        <tr key={h.id}>
+                          <td style={{ fontWeight: "600", color: "#2563eb" }}>
+                            {new Date(h.date).toLocaleDateString("vi-VN", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            })}
+                          </td>
+                          <td>{h.tenNgayLe}</td>
+                          {canEdit && (
+                            <td style={{ textAlign: "center" }}>
+                              <button
+                                className="btn-delete-holiday"
+                                onClick={() => handleDeleteHoliday(h.id)}
+                                title="Xóa"
+                              >
+                                <FaTrash size={16} />
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={canEdit ? 3 : 2}
+                          style={{
+                            textAlign: "center",
+                            padding: "30px",
+                            color: "#6b7280",
+                          }}
+                        >
+                          Chưa có dữ liệu ngày lễ.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {activeTab === "payroll" /* Giữ nguyên ... */ && (
               <div className="settings-panel">
                 <h2>Cấu hình Thuế & Bảo hiểm</h2>
                 <div className="form-group">
@@ -334,8 +659,8 @@ const SystemSettingsPage = () => {
                         : ""
                     }
                     onChange={handleChange}
+                    disabled={!canEdit}
                   />
-                  <small>Áp dụng để tính mức trần đóng BHXH.</small>
                 </div>
                 <div className="form-row-2">
                   <div className="form-group">
@@ -350,10 +675,11 @@ const SystemSettingsPage = () => {
                           : ""
                       }
                       onChange={handleChange}
+                      disabled={!canEdit}
                     />
                   </div>
                   <div className="form-group">
-                    <label>% BHXH Người lao động đóng</label>
+                    <label>% BHXH NLĐ đóng</label>
                     <input
                       type="number"
                       step="0.1"
@@ -364,6 +690,7 @@ const SystemSettingsPage = () => {
                           : ""
                       }
                       onChange={handleChange}
+                      disabled={!canEdit}
                     />
                   </div>
                 </div>
@@ -379,10 +706,11 @@ const SystemSettingsPage = () => {
                           : ""
                       }
                       onChange={handleChange}
+                      disabled={!canEdit}
                     />
                   </div>
                   <div className="form-group">
-                    <label>Giảm trừ người phụ thuộc (VNĐ/người)</label>
+                    <label>Giảm trừ người phụ thuộc (VNĐ)</label>
                     <input
                       type="number"
                       name="giamTruPhuThuoc"
@@ -392,14 +720,14 @@ const SystemSettingsPage = () => {
                           : ""
                       }
                       onChange={handleChange}
+                      disabled={!canEdit}
                     />
                   </div>
                 </div>
               </div>
             )}
 
-            {/* TAB 4: EMAIL */}
-            {activeTab === "email" && (
+            {activeTab === "email" /* Giữ nguyên ... */ && (
               <div className="settings-panel">
                 <h2>Cấu hình máy chủ gửi Email</h2>
                 <div className="form-row-2">
@@ -410,6 +738,7 @@ const SystemSettingsPage = () => {
                       name="smtpServer"
                       value={settings.smtpServer || ""}
                       onChange={handleChange}
+                      disabled={!canEdit}
                     />
                   </div>
                   <div className="form-group">
@@ -419,6 +748,7 @@ const SystemSettingsPage = () => {
                       name="smtpPort"
                       value={settings.smtpPort || ""}
                       onChange={handleChange}
+                      disabled={!canEdit}
                     />
                   </div>
                 </div>
@@ -429,6 +759,7 @@ const SystemSettingsPage = () => {
                     name="emailGuiDi"
                     value={settings.emailGuiDi || ""}
                     onChange={handleChange}
+                    disabled={!canEdit}
                   />
                 </div>
                 <div className="form-group checkbox-group">
@@ -438,10 +769,10 @@ const SystemSettingsPage = () => {
                     name="guiMailTuDong"
                     checked={settings.guiMailTuDong}
                     onChange={handleChange}
+                    disabled={!canEdit}
                   />
                   <label htmlFor="guiMailTuDong">
-                    Cho phép hệ thống tự động gửi email (Mật khẩu mới, Chúc mừng
-                    sinh nhật, Báo cáo lương)
+                    Cho phép tự động gửi email
                   </label>
                 </div>
               </div>
@@ -449,16 +780,12 @@ const SystemSettingsPage = () => {
           </div>
         </div>
       </div>
-
-      {/* --- CONFIRM MODAL --- */}
       <ConfirmModal
         isOpen={confirmDialog.isOpen}
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
         onCancel={closeConfirm}
       />
-
-      {/* --- TOAST COMPONENT --- */}
       <div
         className={`toast-notification ${toast.type} ${toast.visible ? "show" : ""}`}
       >

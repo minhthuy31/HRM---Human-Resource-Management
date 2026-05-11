@@ -75,5 +75,6 @@
         public string? SoBHYT { get; set; }
         public string? SoBHXH { get; set; }
         public string? NoiDKKCB { get; set; }
+        public int SoNguoiPhuThuoc { get; set; }
     }
 }

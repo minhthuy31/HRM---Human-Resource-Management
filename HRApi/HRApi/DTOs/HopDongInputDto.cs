@@ -8,6 +8,7 @@
         public DateTime NgayBatDau { get; set; }
         public DateTime? NgayKetThuc { get; set; }
         public decimal LuongCoBan { get; set; }
+        public decimal LuongDongBaoHiem { get; set; }
         public IFormFile? FileDinhKem { get; set; }
         public string? GhiChu { get; set; }
         public string TrangThai { get; set; } = "HieuLuc";

@@ -13,122 +13,203 @@ namespace HRApi.Controllers
     public class BangLuongController : ControllerBase
     {
         private readonly AppDbContext _context;
+        public BangLuongController(AppDbContext context) { _context = context; }
 
-        public BangLuongController(AppDbContext context)
+        public class SalaryCalcDto { public int Year { get; set; } public int Month { get; set; } }
+
+        // ==============================================================
+        // HELPER: TÍNH THUẾ TNCN LŨY TIẾN
+        // ==============================================================
+        private decimal TinhThueTNCNLuyTien(decimal thuNhapTinhThue)
         {
-            _context = context;
+            if (thuNhapTinhThue <= 0) return 0;
+            if (thuNhapTinhThue <= 5000000) return thuNhapTinhThue * 0.05m;
+            if (thuNhapTinhThue <= 10000000) return thuNhapTinhThue * 0.1m - 250000;
+            if (thuNhapTinhThue <= 18000000) return thuNhapTinhThue * 0.15m - 750000;
+            if (thuNhapTinhThue <= 32000000) return thuNhapTinhThue * 0.2m - 1650000;
+            if (thuNhapTinhThue <= 52000000) return thuNhapTinhThue * 0.25m - 3250000;
+            if (thuNhapTinhThue <= 80000000) return thuNhapTinhThue * 0.3m - 5850000;
+            return thuNhapTinhThue * 0.35m - 9850000;
         }
 
-        public class SalaryCalcDto
+        // ==============================================================
+        // HELPER: CÔNG CHUẨN (CHỈ TRỪ CHỦ NHẬT, KHÔNG TRỪ LỄ)
+        // ==============================================================
+        private int GetStandardWorkDays(int year, int month)
         {
-            public int Year { get; set; }
-            public int Month { get; set; }
+            int days = DateTime.DaysInMonth(year, month);
+            int count = 0;
+            for (int i = 1; i <= days; i++)
+            {
+                var date = new DateTime(year, month, i);
+                if (date.DayOfWeek != DayOfWeek.Sunday)
+                    count++;
+            }
+            return count;
         }
 
-        // --- 1. TÍNH LƯƠNG (Chỉ Kế toán trưởng & Giám đốc) ---
+        // ==============================================================
+        // 1. TÍNH LƯƠNG (TỰ ĐỘNG X300% NẾU CÓ CHẤM CÔNG VÀO NGÀY LỄ)
+        // ==============================================================
         [HttpPost("calculate")]
         public async Task<IActionResult> CalculateSalary([FromBody] SalaryCalcDto dto)
         {
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
-            if (role != "Kế toán trưởng" && role != "Giám đốc")
-                return StatusCode(403, "Bạn không có quyền thực hiện tính lương.");
+            if (role != "Kế toán trưởng" && role != "Giám đốc") return StatusCode(403, "Bạn không có quyền thực hiện tính lương.");
 
-            // Check khóa công
             var isAttendanceLocked = await _context.KhoaCongs.AnyAsync(k => k.Nam == dto.Year && k.Thang == dto.Month && k.IsLocked);
             if (!isAttendanceLocked) return BadRequest("Bảng công chưa khóa. Vui lòng yêu cầu Nhân sự khóa công trước.");
 
-            // Check bảng lương đã chốt
             var isPayrollLocked = await _context.BangLuongs.AnyAsync(b => b.Nam == dto.Year && b.Thang == dto.Month && b.DaChot);
             if (isPayrollLocked) return BadRequest("Bảng lương đã chốt. Cần hủy chốt trước khi tính lại.");
 
-            // Xóa dữ liệu cũ chưa chốt
             var oldDrafts = await _context.BangLuongs.Where(b => b.Nam == dto.Year && b.Thang == dto.Month && !b.DaChot).ToListAsync();
             _context.BangLuongs.RemoveRange(oldDrafts);
             await _context.SaveChangesAsync();
 
-            // Lấy danh sách nhân viên
-            var employees = await _context.NhanViens
-                .Include(n => n.HopDongs)
-                .Where(e => e.TrangThai == true)
+            // Kéo cấu hình từ Cài đặt hệ thống
+            var sysSettings = await _context.SystemSettings.FirstOrDefaultAsync();
+            decimal giamTruBanThanBase = sysSettings?.GiamTruGiaCanh ?? 11000000m;
+            decimal giamTruPhuThuocBase = sysSettings?.GiamTruPhuThuoc ?? 4400000m;
+            decimal phanTramBHXH = (decimal)(sysSettings?.PhanTramBHXHEmployee ?? 10.5) / 100m;
+
+            decimal heSoOtThuong = (decimal)(sysSettings?.HeSoOTNgayThuong ?? 1.5);
+            decimal heSoOtCuoiTuan = (decimal)(sysSettings?.HeSoOTCuoiTuan ?? 2.0);
+            decimal heSoOtLe = (decimal)(sysSettings?.HeSoOTNgayLe ?? 3.0); // Mặc định x3.0
+
+            var employees = await _context.NhanViens.Include(n => n.HopDongs).Where(e => e.TrangThai == true).ToListAsync();
+
+            var monthStart = new DateTime(dto.Year, dto.Month, 1);
+            var monthEnd = monthStart.AddMonths(1);
+
+            var attendanceData = await _context.ChamCongs.Where(c => c.NgayChamCong >= monthStart && c.NgayChamCong < monthEnd).ToListAsync();
+            var otEntries = await _context.DangKyOTs.Where(ot => ot.NgayLamThem >= monthStart && ot.NgayLamThem < monthEnd && ot.TrangThai == "Đã duyệt").ToListAsync();
+
+            // Bảng Ngày Lễ
+            var holidaysInMonth = await _context.NgayLes
+                .Where(nl => nl.Date.Year == dto.Year && nl.Date.Month == dto.Month)
+                .Select(nl => nl.Date.Date)
                 .ToListAsync();
 
-            var startDate = new DateTime(dto.Year, dto.Month, 1);
-            var endDate = startDate.AddMonths(1);
-
-            // Lấy dữ liệu chấm công
-            var attendanceData = await _context.ChamCongs.Where(c => c.NgayChamCong >= startDate && c.NgayChamCong < endDate).ToListAsync();
-
-            // --- [THÊM MỚI] LẤY DỮ LIỆU TĂNG CA (OT) ĐÃ DUYỆT ---
-            var otData = await _context.DangKyOTs
-                .Where(ot => ot.NgayLamThem >= startDate && ot.NgayLamThem < endDate && ot.TrangThai == "Đã duyệt")
-                .GroupBy(ot => ot.MaNhanVien)
-                .ToDictionaryAsync(g => g.Key, g => g.Sum(x => x.SoGio));
-            // ----------------------------------------------------
-
+            decimal standardWorkDays = GetStandardWorkDays(dto.Year, dto.Month);
             var newPayrolls = new List<BangLuong>();
-            decimal standardWorkDays = 26; // Số công chuẩn
 
             foreach (var emp in employees)
             {
-                // Lấy hợp đồng mới nhất
-                var activeContract = emp.HopDongs?
-                    .OrderByDescending(h => h.NgayBatDau)
-                    .FirstOrDefault(h => h.NgayBatDau <= DateTime.Now);
+                var activeContractsInMonth = emp.HopDongs?
+                    .Where(h => h.NgayBatDau < monthEnd && (h.NgayKetThuc == null || h.NgayKetThuc >= monthStart))
+                    .OrderBy(h => h.NgayBatDau)
+                    .ToList();
 
-                decimal luongCoBan = activeContract != null ? activeContract.LuongCoBan : emp.LuongCoBan;
-                decimal luongDongBH = activeContract != null ? activeContract.LuongCoBan : emp.LuongCoBan; // Hoặc có trường riêng
-                decimal phuCap = emp.LuongTroCap;
+                decimal totalLuongChinh = 0, totalLuongOT = 0, totalLuongDongBH = 0;
+                double totalWorkDays = 0, totalOTHours = 0;
+                decimal finalLuongCoBanDisplay = emp.LuongCoBan;
+                decimal finalLuongDongBHDisplay = emp.LuongCoBan;
 
-                // Tính tổng công
-                var empAtt = attendanceData.Where(c => c.MaNhanVien == emp.MaNhanVien).ToList();
-                double totalWorkDays = empAtt.Sum(c => c.NgayCong);
+                var empAttTotal = attendanceData.Where(c => c.MaNhanVien == emp.MaNhanVien).ToList();
+                var empOTTotal = otEntries.Where(x => x.MaNhanVien == emp.MaNhanVien).ToList();
 
-                // --- [TÍNH TOÁN LƯƠNG CHÍNH] ---
-                decimal luongChinh = (luongCoBan / standardWorkDays) * (decimal)totalWorkDays;
+                if (activeContractsInMonth != null && activeContractsInMonth.Any())
+                {
+                    foreach (var contract in activeContractsInMonth)
+                    {
+                        DateTime periodStart = contract.NgayBatDau > monthStart ? contract.NgayBatDau : monthStart;
+                        DateTime periodEnd = (contract.NgayKetThuc.HasValue && contract.NgayKetThuc.Value < monthEnd.AddDays(-1))
+                                             ? contract.NgayKetThuc.Value
+                                             : monthEnd.AddDays(-1);
 
-                // --- [TÍNH TOÁN LƯƠNG OT] ---
-                double totalOtHours = otData.ContainsKey(emp.MaNhanVien) ? otData[emp.MaNhanVien] : 0;
+                        var periodAtt = empAttTotal.Where(c => c.NgayChamCong.Date >= periodStart.Date && c.NgayChamCong.Date <= periodEnd.Date).ToList();
+                        var periodOT = empOTTotal.Where(o => o.NgayLamThem.Date >= periodStart.Date && o.NgayLamThem.Date <= periodEnd.Date).ToList();
 
-                // Công thức: (Lương cơ bản / 26 / 8) * 150% * Số giờ OT
-                // Giả sử làm 8 tiếng/ngày, OT nhân hệ số 1.5
-                decimal hourlyRate = (luongCoBan / standardWorkDays) / 8;
-                decimal otMultiplier = 1.5m; // Hệ số tăng ca thường
-                decimal luongOT = hourlyRate * otMultiplier * (decimal)totalOtHours;
-                // -----------------------------
+                        // --- 1. TÁCH RỔ CHẤM CÔNG ---
+                        var normalAtt = periodAtt.Where(c => !holidaysInMonth.Contains(c.NgayChamCong.Date)).ToList();
+                        var holidayAtt = periodAtt.Where(c => holidaysInMonth.Contains(c.NgayChamCong.Date)).ToList();
 
-                // Bảo hiểm & Thuế
-                decimal bhxh = luongDongBH * 0.08m;
-                decimal bhyt = luongDongBH * 0.015m;
-                decimal bhtn = luongDongBH * 0.01m;
+                        double normalNgayCong = normalAtt.Sum(c => c.NgayCong); // Tổng ngày đi làm thường
+                        double holidayWorkCong = holidayAtt.Sum(c => c.NgayCong); // TỔNG NGÀY ĐI LÀM LỄ (Chìa khóa nằm đây)
 
-                decimal tongThuNhap = luongChinh + luongOT + phuCap;
-                decimal thuNhapChiuThue = tongThuNhap - (bhxh + bhyt + bhtn) - 11000000; // Giảm trừ bản thân 11tr
-                decimal thueTNCN = thuNhapChiuThue > 0 ? thuNhapChiuThue * 0.1m : 0; // Tạm tính 10%
-                decimal khoanTruKhac = 0;
-                decimal thucLanh = tongThuNhap - (bhxh + bhyt + bhtn) - thueTNCN - khoanTruKhac;
+                        // Tổng số ngày lễ trong tháng
+                        int holidaysInPeriod = holidaysInMonth.Count(h => h >= periodStart.Date && h <= periodEnd.Date && h.DayOfWeek != DayOfWeek.Sunday);
+
+                        // Lễ được nghỉ ở nhà hưởng lương
+                        double leNghiONha = Math.Max(0, holidaysInPeriod - holidayWorkCong);
+
+                        // Tổng công hiển thị UI
+                        double congChinh = normalNgayCong + holidayWorkCong + leNghiONha;
+                        totalWorkDays += congChinh;
+
+                        // --- 2. TÍNH TIỀN LƯƠNG CHÍNH (TỰ ĐỘNG X300%) ---
+                        decimal dailyRate = contract.LuongCoBan / standardWorkDays;
+
+                        decimal luongNgayThuong = dailyRate * (decimal)normalNgayCong; // Đi làm ngày thường (x1)
+                        decimal luongNghiLe = dailyRate * (decimal)leNghiONha; // Ở nhà nghỉ lễ (x1)
+
+                        // ĐI LÀM NGÀY LỄ -> TỰ ĐỘNG NHÂN HỆ SỐ (Ví dụ x3.0) KHÔNG CẦN ĐƠN OT
+                        decimal luongDiLamLe = dailyRate * (decimal)holidayWorkCong * heSoOtLe;
+
+                        totalLuongChinh += (luongNgayThuong + luongNghiLe + luongDiLamLe);
+
+                        // --- 3. TÍNH ĐƠN OT NGÀY THƯỜNG ---
+                        decimal periodHourlyRate = dailyRate / 8m;
+                        foreach (var ot in periodOT)
+                        {
+                            // BẢO VỆ KÉP: Bỏ qua các đơn xin OT nếu nó rơi vào ngày Lễ (Vì đã tự x3 ở trên rồi)
+                            if (holidaysInMonth.Contains(ot.NgayLamThem.Date)) continue;
+
+                            decimal multiplier = ot.NgayLamThem.DayOfWeek == DayOfWeek.Sunday ? heSoOtCuoiTuan : heSoOtThuong;
+                            totalLuongOT += periodHourlyRate * multiplier * (decimal)ot.SoGio;
+                            totalOTHours += ot.SoGio;
+                        }
+
+                        // --- 4. TÍNH BẢO HIỂM ---
+                        bool isThuViec = contract.LoaiHopDong != null && contract.LoaiHopDong.ToLower().Contains("thử việc");
+                        if (!isThuViec)
+                        {
+                            totalLuongDongBH += (contract.LuongDongBaoHiem / standardWorkDays) * (decimal)(normalNgayCong + holidaysInPeriod);
+                        }
+
+                        finalLuongCoBanDisplay = contract.LuongCoBan;
+                        finalLuongDongBHDisplay = contract.LuongDongBaoHiem;
+                    }
+                }
+                else
+                {
+                    totalWorkDays = empAttTotal.Sum(c => c.NgayCong);
+                    totalLuongChinh = (emp.LuongCoBan / standardWorkDays) * (decimal)totalWorkDays;
+                    bool isThuViec = emp.LoaiNhanVien != null && emp.LoaiNhanVien.ToLower().Contains("thử việc");
+                    totalLuongDongBH = isThuViec ? 0 : (emp.LuongCoBan / standardWorkDays) * (decimal)totalWorkDays;
+                }
+
+                decimal phuCap = Math.Round((emp.LuongTroCap / standardWorkDays) * (decimal)totalWorkDays, 0);
+                decimal tongBaoHiem = totalLuongDongBH * phanTramBHXH;
+                decimal tongThuNhap = totalLuongChinh + totalLuongOT + phuCap;
+
+                int soNguoiPhuThuoc = emp.SoNguoiPhuThuoc;
+                decimal giamTruPhuThuoc = soNguoiPhuThuoc * giamTruPhuThuocBase;
+
+                decimal thuNhapChiuThue = tongThuNhap - tongBaoHiem - giamTruBanThanBase - giamTruPhuThuoc;
+                decimal thueTNCN = TinhThueTNCNLuyTien(thuNhapChiuThue);
 
                 newPayrolls.Add(new BangLuong
                 {
                     MaNhanVien = emp.MaNhanVien,
                     Thang = dto.Month,
                     Nam = dto.Year,
-                    LuongCoBan = luongCoBan,
-                    LuongDongBaoHiem = luongDongBH,
+                    LuongCoBan = finalLuongCoBanDisplay,
+                    LuongDongBaoHiem = finalLuongDongBHDisplay,
                     TongPhuCap = phuCap,
                     TongNgayCong = totalWorkDays,
-
-                    // Lưu thông tin OT
-                    TongGioOT = totalOtHours,
-                    LuongOT = Math.Round(luongOT, 0),
-
-                    LuongChinh = Math.Round(luongChinh, 0),
-                    KhauTruBHXH = Math.Round(bhxh, 0),
-                    KhauTruBHYT = Math.Round(bhyt, 0),
-                    KhauTruBHTN = Math.Round(bhtn, 0),
+                    SoCongChuanTrongThang = standardWorkDays,
+                    TongGioOT = totalOTHours,
+                    LuongOT = Math.Round(totalLuongOT, 0),
+                    LuongChinh = Math.Round(totalLuongChinh, 0),
+                    KhauTruBHXH = Math.Round(tongBaoHiem, 0),
+                    KhauTruBHYT = 0,
+                    KhauTruBHTN = 0,
                     ThueTNCN = Math.Round(thueTNCN, 0),
                     KhoanTruKhac = 0,
                     TongThuNhap = Math.Round(tongThuNhap, 0),
-                    ThucLanh = Math.Round(thucLanh, 0),
+                    ThucLanh = Math.Round(tongThuNhap - tongBaoHiem - thueTNCN, 0),
                     DaChot = false,
                     NgayTinhLuong = DateTime.UtcNow
                 });
@@ -139,47 +220,31 @@ namespace HRApi.Controllers
             return Ok(new { message = $"Đã tính lương cho {newPayrolls.Count} nhân viên." });
         }
 
-        // GET: api/BangLuong?year=2025&month=12
+        // ==============================================================
+        // 2. LẤY DỮ LIỆU BẢNG LƯƠNG
+        // ==============================================================
         [HttpGet]
         public async Task<IActionResult> GetPayroll([FromQuery] int year, [FromQuery] int month)
         {
             try
             {
-                // 0. Lấy thông tin User hiện tại từ Token một cách linh hoạt
                 var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
                 var deptId = User.FindFirst("MaPhongBan")?.Value;
+                var currentEmpId = User.FindFirst("MaNhanVien")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-                // Quét các loại Claim thường chứa ID người dùng
-                var currentEmpId = User.FindFirst("MaNhanVien")?.Value
-                                ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                                ?? User.FindFirst("nameid")?.Value
-                                ?? User.FindFirst("sub")?.Value;
+                var employees = await _context.NhanViens.Where(nv => nv.TrangThai == true).ToListAsync();
+                var savedPayrolls = await _context.BangLuongs.Include(b => b.NhanVien).Where(b => b.Nam == year && b.Thang == month).ToListAsync();
 
-                // 1. Lấy tất cả nhân viên đang làm việc
-                var employees = await _context.NhanViens
-                    .Where(nv => nv.TrangThai == true)
-                    .ToListAsync();
+                var attendanceData = await _context.ChamCongs.Where(c => c.NgayChamCong.Year == year && c.NgayChamCong.Month == month).ToListAsync();
 
-                // 2. Lấy bảng lương ĐÃ LƯU
-                var savedPayrolls = await _context.BangLuongs
-                    .Include(b => b.NhanVien)
-                    .Where(b => b.Nam == year && b.Thang == month)
-                    .ToListAsync();
-
-                // 3. Lấy dữ liệu CHẤM CÔNG
-                var attendanceData = await _context.ChamCongs
-                    .Where(c => c.NgayChamCong.Year == year && c.NgayChamCong.Month == month)
-                    .ToListAsync();
-
-                var attendanceSummary = attendanceData
-                    .GroupBy(c => c.MaNhanVien)
-                    .ToDictionary(g => g.Key, g => new
-                    {
-                        TongCong = g.Sum(x => x.NgayCong),
-                        NghiCoPhep = g.Count(x => x.NgayCong == 1.0 && !string.IsNullOrEmpty(x.GhiChu) && !x.GhiChu.ToLower().Contains("check-in")),
-                        NghiKhongPhep = g.Count(x => x.NgayCong == 0.0),
-                        LamNuaNgay = g.Count(x => x.NgayCong == 0.5)
-                    });
+                var attendanceSummary = attendanceData.GroupBy(c => c.MaNhanVien).ToDictionary(g => g.Key, g => new
+                {
+                    TongCong = g.Sum(x => x.NgayCong),
+                    NghiCoPhep = g.Count(x => x.NgayCong == 1.0 && x.LoaiNgayCong == "Nghỉ phép"),
+                    NghiKhongLuong = g.Count(x => x.NgayCong == 0.0 && x.LoaiNgayCong == "Nghỉ không lương"),
+                    NghiKhongPhep = g.Count(x => x.NgayCong == 0.0 && (string.IsNullOrEmpty(x.GhiChu) || !x.GhiChu.ToLower().Contains("không lương")) && x.LoaiNgayCong != "Làm việc"),
+                    LamNuaNgay = g.Count(x => x.NgayCong == 0.5)
+                });
 
                 var otSummary = await _context.DangKyOTs
                     .Where(ot => ot.NgayLamThem.Year == year && ot.NgayLamThem.Month == month && ot.TrangThai == "Đã duyệt")
@@ -188,23 +253,18 @@ namespace HRApi.Controllers
 
                 var fullList = new List<BangLuong>();
 
-                // 4. MERGE DỮ LIỆU 
                 foreach (var emp in employees)
                 {
                     var savedRecord = savedPayrolls.FirstOrDefault(p => p.MaNhanVien == emp.MaNhanVien);
-
-                    double tongCong = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].TongCong : 0;
-                    int nghiCoPhep = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].NghiCoPhep : 0;
-                    int nghiKP = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].NghiKhongPhep : 0;
-                    int lamNua = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].LamNuaNgay : 0;
-                    double tongGioOT = otSummary.ContainsKey(emp.MaNhanVien) ? otSummary[emp.MaNhanVien] : 0;
-
                     if (savedRecord != null)
                     {
                         savedRecord.NhanVien = emp;
-                        savedRecord.NghiCoPhep = nghiCoPhep;
-                        savedRecord.NghiKhongPhep = nghiKP;
-                        savedRecord.LamNuaNgay = lamNua;
+                        savedRecord.NghiCoPhep = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].NghiCoPhep : 0;
+                        savedRecord.NghiKhongLuong = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].NghiKhongLuong : 0;
+                        savedRecord.NghiKhongPhep = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].NghiKhongPhep : 0;
+                        savedRecord.LamNuaNgay = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].LamNuaNgay : 0;
+
+                        if (savedRecord.SoCongChuanTrongThang == 0) savedRecord.SoCongChuanTrongThang = GetStandardWorkDays(year, month);
                         fullList.Add(savedRecord);
                     }
                     else
@@ -217,82 +277,48 @@ namespace HRApi.Controllers
                             Nam = year,
                             LuongCoBan = emp.LuongCoBan,
                             TongPhuCap = emp.LuongTroCap,
-                            TongNgayCong = tongCong,
-                            TongGioOT = tongGioOT,
-                            NghiCoPhep = nghiCoPhep,
-                            NghiKhongPhep = nghiKP,
-                            LamNuaNgay = lamNua,
+                            SoCongChuanTrongThang = GetStandardWorkDays(year, month),
+                            TongNgayCong = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].TongCong : 0,
+                            TongGioOT = otSummary.ContainsKey(emp.MaNhanVien) ? otSummary[emp.MaNhanVien] : 0,
+                            NghiCoPhep = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].NghiCoPhep : 0,
+                            NghiKhongLuong = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].NghiKhongLuong : 0,
+                            NghiKhongPhep = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].NghiKhongPhep : 0,
+                            LamNuaNgay = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].LamNuaNgay : 0,
                             DaChot = false,
                             ThucLanh = 0
                         });
                     }
                 }
 
-                // 5. --- PHÂN QUYỀN LỌC DỮ LIỆU ---
                 IEnumerable<BangLuong> finalData = fullList;
-
-                if (role == "Kế toán trưởng" || role == "Giám đốc" || role == "Nhân sự trưởng")
+                if (role != "Kế toán trưởng" && role != "Giám đốc" && role != "Nhân sự trưởng")
                 {
-                    // Được xem tất cả, kể cả lúc chưa chốt
-                }
-                else
-                {
-                    // Những người khác chỉ xem bảng lương ĐÃ CHỐT
                     finalData = finalData.Where(x => x.DaChot == true);
-
-                    if (role == "Trưởng phòng")
-                    {
-                        // Trưởng phòng xem phòng mình
-                        finalData = finalData.Where(x => x.NhanVien.MaPhongBan == deptId);
-                    }
-                    else // Nhân viên thường
-                    {
-                        if (!string.IsNullOrEmpty(currentEmpId))
-                        {
-                            // Lọc chính xác ID của nhân viên đó
-                            finalData = finalData.Where(x =>
-                                x.MaNhanVien.Trim().Equals(currentEmpId.Trim(), StringComparison.OrdinalIgnoreCase));
-                        }
-                        else
-                        {
-                            // Nếu token lỗi không đọc được ID, trả về rỗng để bảo mật
-                            finalData = Enumerable.Empty<BangLuong>();
-                        }
-                    }
+                    if (role == "Trưởng phòng") finalData = finalData.Where(x => x.NhanVien.MaPhongBan == deptId);
+                    else finalData = finalData.Where(x => !string.IsNullOrEmpty(currentEmpId) && x.MaNhanVien.Trim().Equals(currentEmpId.Trim(), StringComparison.OrdinalIgnoreCase));
                 }
 
                 var isPublished = savedPayrolls.Any(p => p.DaChot);
                 decimal departmentTotal = role == "Trưởng phòng" ? finalData.Sum(x => x.ThucLanh) : 0;
 
-                return Ok(new
-                {
-                    Data = finalData.OrderBy(x => x.MaNhanVien).ToList(),
-                    IsPublished = isPublished,
-                    DepartmentTotal = departmentTotal
-                });
+                return Ok(new { Data = finalData.OrderBy(x => x.MaNhanVien).ToList(), IsPublished = isPublished, DepartmentTotal = departmentTotal });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, "Lỗi tính lương: " + ex.Message);
-            }
+            catch (Exception ex) { return StatusCode(500, "Lỗi lấy bảng lương: " + ex.Message); }
         }
 
-        // --- 3. LƯU (Chỉ Kế toán & Giám đốc) ---
+        // ==============================================================
+        // 3. LƯU CÁC KHOẢN TRỪ KHÁC
+        // ==============================================================
         [HttpPost("save")]
         public async Task<IActionResult> SavePayroll([FromBody] List<BangLuong> payrollData)
         {
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
-            if (role != "Kế toán trưởng" && role != "Giám đốc")
-                return StatusCode(403, "Bạn không có quyền sửa bảng lương.");
-
+            if (role != "Kế toán trưởng" && role != "Giám đốc") return StatusCode(403, "Bạn không có quyền sửa bảng lương.");
             if (payrollData == null || !payrollData.Any()) return BadRequest("Không có dữ liệu.");
 
             var firstId = payrollData.First().Id;
             var isLocked = await _context.BangLuongs.AnyAsync(b => b.Id == firstId && b.DaChot);
-
-            // Nếu đã chốt, chỉ Giám đốc sửa
-            if (isLocked && role != "Giám đốc")
-                return BadRequest("Bảng lương đã chốt. Chỉ Kế toán trưởng và Giám đốc mới được sửa.");
+            if (isLocked && role != "Giám đốc") return BadRequest("Bảng lương đã chốt. Chỉ Giám đốc mới được sửa.");
 
             foreach (var item in payrollData)
             {
@@ -308,18 +334,16 @@ namespace HRApi.Controllers
             return Ok(new { message = "Lưu thành công." });
         }
 
-        // --- 4. CHỐT SỔ (Chỉ Kế toán & Giám đốc) ---
+        // ==============================================================
+        // 4. CHỐT SỔ LƯƠNG
+        // ==============================================================
         [HttpPost("publish")]
         public async Task<IActionResult> PublishSalary([FromBody] SalaryCalcDto dto, [FromQuery] bool status)
         {
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
-            if (role != "Kế toán trưởng" && role != "Giám đốc")
-                return StatusCode(403, "Bạn không có quyền chốt lương.");
+            if (role != "Kế toán trưởng" && role != "Giám đốc") return StatusCode(403, "Bạn không có quyền chốt lương.");
 
-            var records = await _context.BangLuongs
-                .Where(b => b.Nam == dto.Year && b.Thang == dto.Month)
-                .ToListAsync();
-
+            var records = await _context.BangLuongs.Where(b => b.Nam == dto.Year && b.Thang == dto.Month).ToListAsync();
             if (!records.Any()) return BadRequest("Không có dữ liệu.");
 
             foreach (var r in records) r.DaChot = status;

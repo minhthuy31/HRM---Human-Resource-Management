@@ -27,6 +27,9 @@ namespace HRApi.Models
         public double PhanTramBHXHEmployee { get; set; }
         public decimal GiamTruGiaCanh { get; set; }
         public decimal GiamTruPhuThuoc { get; set; }
+        public double HeSoOTNgayThuong { get; set; } = 1.5;
+        public double HeSoOTCuoiTuan { get; set; } = 2.0;
+        public double HeSoOTNgayLe { get; set; } = 3.0;
 
         // Email
         public string? SmtpServer { get; set; }

@@ -23,15 +23,16 @@ namespace HRApi.Controllers
         }
 
         // GET: api/HopDong
-        // Ai cũng xem được (nhưng có logic lọc dữ liệu bên trong hàm)
         [HttpGet]
         public async Task<ActionResult<IEnumerable<object>>> GetHopDongs(
             [FromQuery] string? search,
-            [FromQuery] string? trangThai
+            [FromQuery] string? trangThai,
+            [FromQuery] bool? sapHetHan // THÊM MỚI 1: Tham số lọc hợp đồng sắp hết hạn
         )
         {
             var userRole = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role")?.Value;
             var userDept = User.Claims.FirstOrDefault(c => c.Type == "MaPhongBan")?.Value;
+            var now = DateTime.Now; // Biến thời gian hiện tại
 
             var query = _context.HopDongs
                 .Include(h => h.NhanVien).ThenInclude(nv => nv.PhongBan)
@@ -63,9 +64,17 @@ namespace HRApi.Controllers
             {
                 query = query.Where(h => h.TrangThai == trangThai);
             }
-            else if (string.IsNullOrEmpty(trangThai))
+            else if (string.IsNullOrEmpty(trangThai) && !sapHetHan.HasValue) // Nếu đang lọc sắp hết hạn thì ko gò bó TrangThai = HieuLuc
             {
                 query = query.Where(h => h.TrangThai == "HieuLuc");
+            }
+
+            // --- THÊM MỚI 2: LOGIC LỌC CHỈ LẤY CÁC HỢP ĐỒNG SẮP HẾT HẠN <= 30 NGÀY ---
+            if (sapHetHan.HasValue && sapHetHan.Value)
+            {
+                query = query.Where(h => h.NgayKetThuc.HasValue
+                                      && h.NgayKetThuc.Value.Date >= now.Date
+                                      && h.NgayKetThuc.Value.Date <= now.AddDays(30).Date);
             }
 
             var result = await query.OrderByDescending(h => h.NgayBatDau)
@@ -80,10 +89,7 @@ namespace HRApi.Controllers
                     CCCD = h.NhanVien != null ? h.NhanVien.CCCD : "",
                     DiaChi = h.NhanVien != null ? h.NhanVien.DiaChiThuongTru : "",
                     SoDienThoai = h.NhanVien != null ? h.NhanVien.sdt_NhanVien : "",
-
-                    // --- QUAN TRỌNG: Lấy thêm trường chữ ký ---
                     ChuKy = h.NhanVien != null ? h.NhanVien.ChuKy : null,
-                    // ------------------------------------------
 
                     h.LoaiHopDong,
                     h.NgayBatDau,
@@ -91,7 +97,12 @@ namespace HRApi.Controllers
                     h.LuongCoBan,
                     h.TrangThai,
                     h.TepDinhKem,
-                    h.GhiChu
+                    h.GhiChu,
+
+                    // --- THÊM MỚI 3: CỜ (FLAG) ĐỂ FRONTEND HIỂN THỊ CẢNH BÁO MÀU ĐỎ ---
+                    IsExpiringSoon = h.NgayKetThuc.HasValue
+                                     && h.NgayKetThuc.Value.Date >= now.Date
+                                     && h.NgayKetThuc.Value.Date <= now.AddDays(30).Date
                 })
                 .ToListAsync();
 
@@ -130,6 +141,7 @@ namespace HRApi.Controllers
                 NgayBatDau = dto.NgayBatDau,
                 NgayKetThuc = dto.NgayKetThuc,
                 LuongCoBan = dto.LuongCoBan,
+                LuongDongBaoHiem = dto.LuongDongBaoHiem,
                 TepDinhKem = filePath,
                 TrangThai = dto.TrangThai,
                 GhiChu = dto.GhiChu,
@@ -170,6 +182,7 @@ namespace HRApi.Controllers
             hopDong.NgayBatDau = dto.NgayBatDau;
             hopDong.NgayKetThuc = dto.NgayKetThuc;
             hopDong.LuongCoBan = dto.LuongCoBan;
+            hopDong.LuongDongBaoHiem = dto.LuongDongBaoHiem;
             hopDong.TrangThai = dto.TrangThai;
             hopDong.GhiChu = dto.GhiChu;
 

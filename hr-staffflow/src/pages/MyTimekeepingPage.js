@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaFileAlt } from "react-icons/fa";
 import "../styles/MyTimekeepingPage.css";
+import RequestDetailModal from "../components/modals/RequestDetailModal";
 
 const getDayOfWeek = (year, month, day) => {
   const date = new Date(year, month, day);
@@ -21,11 +22,11 @@ const getDayOfWeek = (year, month, day) => {
 const MyTimekeepingPage = () => {
   const { employeeId } = useParams();
   const [currentDate, setCurrentDate] = useState(new Date());
-
   const [summary, setSummary] = useState(null);
   const [recordsMap, setRecordsMap] = useState(new Map());
-  const [pendingRequestsMap, setPendingRequestsMap] = useState(new Map());
   const [loading, setLoading] = useState(true);
+  const [requestsMap, setRequestsMap] = useState(new Map());
+  const [viewingRequest, setViewingRequest] = useState(null);
 
   const fetchData = useCallback(
     async (date) => {
@@ -41,7 +42,7 @@ const MyTimekeepingPage = () => {
         const {
           dailyRecords = [],
           summaries = {},
-          pendingRequests = [],
+          requests = [],
         } = response.data;
         setSummary(summaries[employeeId] || null);
 
@@ -52,12 +53,11 @@ const MyTimekeepingPage = () => {
         });
         setRecordsMap(records);
 
-        const pending = new Map();
-        pendingRequests.forEach((req) => {
-          const day = new Date(req.ngayNghi).getUTCDate();
-          pending.set(day, req);
+        const reqMap = new Map();
+        requests.forEach((req) => {
+          reqMap.set(req.day, req);
         });
-        setPendingRequestsMap(pending);
+        setRequestsMap(reqMap);
       } catch (error) {
         console.error("Lỗi tải dữ liệu chấm công:", error);
       } finally {
@@ -84,14 +84,12 @@ const MyTimekeepingPage = () => {
   ).getDate();
   const allDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  // --- HÀM XỬ LÝ GIAO DIỆN HIỂN THỊ CHẤM CÔNG ---
   const getWorkDayStyleAndStatus = (day) => {
     if (recordsMap.has(day)) {
       const record = recordsMap.get(day);
       const ngayCong = record?.ngayCong;
       let className = "";
 
-      // Xác định class màu cho số ngày công
       if (ngayCong === 1.0)
         className =
           record.ghiChu && !record.ghiChu.includes("Đi muộn")
@@ -100,7 +98,6 @@ const MyTimekeepingPage = () => {
       else if (ngayCong === 0.5) className = "status-half-day";
       else if (ngayCong === 0.0) className = "status-absent";
 
-      // Hàm format giờ
       const formatTime = (timeStr) => {
         if (!timeStr) return "--:--";
         const date = new Date(timeStr);
@@ -111,42 +108,30 @@ const MyTimekeepingPage = () => {
         });
       };
 
-      // Xử lý làm sạch ghi chú (Lọc bỏ đoạn text do C# tự sinh)
       let cleanNote = record.ghiChu || "";
       let isLate = false;
+      let isEarly = false; // THÊM BIẾN NÀY ĐỂ BẮT VỀ SỚM
 
       if (cleanNote) {
-        if (cleanNote.includes("Đi muộn")) {
-          isLate = true;
-        }
+        if (cleanNote.includes("Đi muộn")) isLate = true;
+        if (cleanNote.includes("Về sớm")) isEarly = true; // BẮT TỪ KHÓA
 
-        // Cắt bỏ phần dư thừa
         cleanNote = cleanNote
           .replace(/Face Check-in/g, "")
           .replace(/\|? *Face Check-out: \d{2}:\d{2}/g, "")
-          .replace(/\(Đi muộn\)/g, "") // Xóa chữ đi muộn mặc định để ta tự render
+          .replace(/\(Đi muộn\)/g, "")
+          .replace(/\(Về sớm\)/g, "") // LÀM SẠCH ĐỂ KHÔNG HIỆN CHỮ THỪA
           .trim();
       }
 
       return {
-        ngayCong: ngayCong, // Số công (0, 0.5, 1)
-        className: className, // Class màu cho số công
+        ngayCong: ngayCong,
+        className: className,
         inTime: record.gioCheckIn ? formatTime(record.gioCheckIn) : null,
         outTime: record.gioCheckOut ? formatTime(record.gioCheckOut) : null,
-        isLate: isLate, // Biến kiểm tra xem có đi muộn không
-        note: cleanNote, // Ghi chú còn lại (ví dụ: Nghỉ ốm)
-      };
-    }
-
-    if (pendingRequestsMap.has(day)) {
-      const request = pendingRequestsMap.get(day);
-      return {
-        ngayCong: "Chờ duyệt",
-        className: "status-pending",
-        inTime: null,
-        outTime: null,
-        isLate: false,
-        note: request.lyDo,
+        isLate: isLate,
+        isEarly: isEarly, // TRẢ VỀ RENDER
+        note: cleanNote,
       };
     }
 
@@ -156,6 +141,7 @@ const MyTimekeepingPage = () => {
       inTime: null,
       outTime: null,
       isLate: false,
+      isEarly: false,
       note: "",
     };
   };
@@ -167,9 +153,7 @@ const MyTimekeepingPage = () => {
           <button onClick={() => changeMonth(-1)}>
             <FaChevronLeft />
           </button>
-          <h2>{`Tháng ${
-            currentDate.getMonth() + 1
-          }, ${currentDate.getFullYear()}`}</h2>
+          <h2>{`Tháng ${currentDate.getMonth() + 1}, ${currentDate.getFullYear()}`}</h2>
           <button onClick={() => changeMonth(1)}>
             <FaChevronRight />
           </button>
@@ -185,14 +169,21 @@ const MyTimekeepingPage = () => {
           <div className="loading-text">Đang tải dữ liệu...</div>
         ) : (
           allDays.map((day) => {
-            const { ngayCong, className, inTime, outTime, isLate, note } =
-              getWorkDayStyleAndStatus(day);
+            const {
+              ngayCong,
+              className,
+              inTime,
+              outTime,
+              isLate,
+              isEarly,
+              note,
+            } = getWorkDayStyleAndStatus(day);
+            const request = requestsMap.get(day);
+
             return (
               <div className="day-row" key={day}>
                 <div className="date-col">
-                  <span className="date-text">{`${day}/${
-                    currentDate.getMonth() + 1
-                  }/${currentDate.getFullYear()}`}</span>
+                  <span className="date-text">{`${day}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`}</span>
                   <span className="day-of-week-text">
                     {getDayOfWeek(
                       currentDate.getFullYear(),
@@ -202,7 +193,6 @@ const MyTimekeepingPage = () => {
                   </span>
                 </div>
 
-                {/* --- CỘT TRẠNG THÁI --- */}
                 <div
                   className="status-col"
                   style={{
@@ -211,7 +201,6 @@ const MyTimekeepingPage = () => {
                     alignItems: "flex-start",
                   }}
                 >
-                  {/* 1. HIỂN THỊ SỐ CÔNG (Có màu) */}
                   {ngayCong !== "" && (
                     <span
                       className={className}
@@ -225,7 +214,6 @@ const MyTimekeepingPage = () => {
                     </span>
                   )}
 
-                  {/* 2. HIỂN THỊ GIỜ VÀO - RA */}
                   {(inTime || outTime) && (
                     <div
                       style={{
@@ -246,7 +234,6 @@ const MyTimekeepingPage = () => {
                     </div>
                   )}
 
-                  {/* 3. HIỂN THỊ CẢNH BÁO ĐI MUỘN */}
                   {isLate && (
                     <span
                       style={{
@@ -261,7 +248,21 @@ const MyTimekeepingPage = () => {
                     </span>
                   )}
 
-                  {/* 4. HIỂN THỊ GHI CHÚ KHÁC (Nếu có) */}
+                  {/* --- HIỂN THỊ CẢNH BÁO VỀ SỚM --- */}
+                  {isEarly && (
+                    <span
+                      style={{
+                        color: "#f59e0b",
+                        fontSize: "13px",
+                        fontStyle: "italic",
+                        marginTop: "4px",
+                        fontWeight: "500",
+                      }}
+                    >
+                      ⚠️ Về sớm
+                    </span>
+                  )}
+
                   {note && (
                     <span
                       className="reason-note"
@@ -273,6 +274,28 @@ const MyTimekeepingPage = () => {
                     >
                       {note}
                     </span>
+                  )}
+
+                  {request && (
+                    <div
+                      onClick={() => setViewingRequest(request)}
+                      style={{
+                        marginTop: "8px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "4px 8px",
+                        background: "#eff6ff",
+                        color: "#2563eb",
+                        borderRadius: "4px",
+                        fontSize: "12px",
+                        cursor: "pointer",
+                        border: "1px dashed #93c5fd",
+                      }}
+                      title="Bấm để xem chi tiết đơn"
+                    >
+                      <FaFileAlt /> {request.loaiDon} ({request.trangThai})
+                    </div>
                   )}
                 </div>
               </div>
@@ -320,6 +343,13 @@ const MyTimekeepingPage = () => {
           <p>Chưa có dữ liệu chấm công cho tháng này.</p>
         )}
       </div>
+
+      {viewingRequest && (
+        <RequestDetailModal
+          request={viewingRequest}
+          onClose={() => setViewingRequest(null)}
+        />
+      )}
     </div>
   );
 };

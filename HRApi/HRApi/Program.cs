@@ -137,7 +137,7 @@ using (var scope = app.Services.CreateScope())
                 Username = "admin",
                 Email = "admin@gmail.com",
                 Password = BCrypt.Net.BCrypt.HashPassword("admin123"),
-                Role = "Admin",
+                Role = "Giám đốc",
                 CreatedAt = DateTime.UtcNow
             };
 
