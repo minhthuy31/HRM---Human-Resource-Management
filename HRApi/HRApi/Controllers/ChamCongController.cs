@@ -1,4 +1,4 @@
-﻿using HRApi.Data;
+using HRApi.Data;
 using HRApi.DTOs;
 using HRApi.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -195,11 +195,8 @@ namespace HRApi.Controllers
                     // NẾU DATABASE BẠN CHƯA THÊM CỘT VeSom THÌ CỨ ĐỂ COMMENT DÒNG NÀY LẠI
                     // existing.VeSom = vnTime.TimeOfDay < EARLY_GRACE;
 
-                    // TÍNH PHÚT LÀM VIỆC (15 phút = 1 công) 
-                    double totalMinutes = (existing.GioCheckOut.Value - existing.GioCheckIn.Value).TotalMinutes;
-                    if (totalMinutes >= 15.0) existing.NgayCong = 1.0;
-                    else if (totalMinutes >= 7.0) existing.NgayCong = 0.5;
-                    else existing.NgayCong = 0.0;
+                    // TÍNH PHÚT LÀM VIỆC 
+                    existing.NgayCong = CalculateWorkDay(existing.GioCheckIn.Value, existing.GioCheckOut.Value);
 
                     string note = $"Check-in: {existing.GioCheckIn:HH:mm} | Check-out: {existing.GioCheckOut:HH:mm}";
                     if (existing.DiMuon) note += " (Đi muộn)";

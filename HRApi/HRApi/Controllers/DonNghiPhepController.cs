@@ -1,4 +1,4 @@
-﻿using HRApi.Data;
+using HRApi.Data;
 using HRApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -64,6 +64,13 @@ namespace HRApi.Controllers
 
             if (dto.NgayBatDau.Date < DateTime.Today) return BadRequest(new { message = "Không thể đăng ký nghỉ cho ngày quá khứ." });
             if (dto.NgayKetThuc < dto.NgayBatDau) return BadRequest(new { message = "Ngày kết thúc không hợp lệ." });
+
+            // Kiểm tra bảng công đã khóa chưa
+            var isLocked = await _context.KhoaCongs.AnyAsync(k =>
+                k.Nam == dto.NgayBatDau.Year &&
+                k.Thang == dto.NgayBatDau.Month &&
+                k.IsLocked);
+            if (isLocked) return BadRequest(new { message = $"Bảng công tháng {dto.NgayBatDau.Month}/{dto.NgayBatDau.Year} đã bị khóa, không thể tạo đơn nghỉ phép." });
 
             // Logic check sơ bộ (chỉ mang tính cảnh báo, việc trừ chính xác sẽ nằm ở bước Duyệt)
             if (dto.LyDo.Contains("Nghỉ phép năm"))
@@ -203,11 +210,18 @@ namespace HRApi.Controllers
 
         // --- DUYỆT ĐƠN (LOGIC QUAN TRỌNG: TRỪ PHÉP 12 NGÀY) ---
         [HttpPost("approve/{id}")]
-        [Authorize(Roles = "Trưởng phòng,Giám đốc,Tổng giám đốc")]
+        [Authorize(Roles = "Nhân sự trưởng,Trưởng phòng,Giám đốc,Tổng giám đốc")]
         public async Task<IActionResult> ApproveRequest(int id)
         {
             var request = await _context.DonNghiPheps.Include(d => d.NhanVien).FirstOrDefaultAsync(d => d.Id == id);
             if (request == null || request.TrangThai != LeaveRequestStatus.Pending) return NotFound("Lỗi trạng thái.");
+
+            // Kiểm tra bảng công đã bị khóa chưa
+            var isLocked = await _context.KhoaCongs.AnyAsync(k =>
+                k.Nam == request.NgayBatDau.Year &&
+                k.Thang == request.NgayBatDau.Month &&
+                k.IsLocked);
+            if (isLocked) return BadRequest(new { message = "Bảng công tháng đó đã bị khóa, không thể duyệt đơn." });
 
             var currentUserRole = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role")?.Value;
             var currentUserMaPhongBan = User.Claims.FirstOrDefault(c => c.Type == "MaPhongBan")?.Value;
@@ -277,7 +291,7 @@ namespace HRApi.Controllers
 
         // --- TỪ CHỐI ĐƠN ---
         [HttpPost("reject/{id}")]
-        [Authorize(Roles = "Trưởng phòng,Giám đốc,Tổng giám đốc")]
+        [Authorize(Roles = "Nhân sự trưởng,Trưởng phòng,Giám đốc,Tổng giám đốc")]
         public async Task<IActionResult> RejectRequest(int id)
         {
             var request = await _context.DonNghiPheps.Include(d => d.NhanVien).FirstOrDefaultAsync(d => d.Id == id);

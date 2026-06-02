@@ -82,12 +82,32 @@ const EmployeeHomePage = () => {
   const [chatMessages, setChatMessages] = useState([
     {
       sender: "bot",
-      text: "Xin chào! Mình là Trợ lý AI nhân sự. Bạn muốn xin nghỉ phép, tăng ca hay đi công tác?",
+      text: "Xin chào! Mình là Trợ lý AI nhân sự. Bạn muốn xin nghỉ phép, tăng ca, đi công tác hay tra cứu hồ sơ?",
     },
   ]);
   const [chatInput, setChatInput] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const [isChatHistoryLoaded, setIsChatHistoryLoaded] = useState(false);
   const chatBodyRef = useRef(null);
+
+  // Tải lịch sử chat
+  useEffect(() => {
+    if (isChatOpen && !isChatHistoryLoaded) {
+      const fetchChatHistory = async () => {
+        try {
+          const res = await api.get('/Chatbot/history');
+          if (res.data && res.data.length > 0) {
+            setChatMessages(res.data);
+          }
+        } catch (error) {
+          console.error("Lỗi tải lịch sử chat:", error);
+        } finally {
+          setIsChatHistoryLoaded(true);
+        }
+      };
+      fetchChatHistory();
+    }
+  }, [isChatOpen, isChatHistoryLoaded]);
 
   // Tự động cuộn xuống tin nhắn mới nhất
   useEffect(() => {
@@ -113,7 +133,7 @@ const EmployeeHomePage = () => {
       // 3. Thêm phản hồi của Bot vào UI
       setChatMessages((prev) => [
         ...prev,
-        { sender: "bot", text: res.data.reply },
+        { sender: "bot", text: res.data.reply, tableData: res.data.tableData },
       ]);
     } catch (error) {
       console.error("Lỗi chatbot:", error);
@@ -547,11 +567,32 @@ const EmployeeHomePage = () => {
                   )}
                   <div className={`chat-bubble ${msg.sender}`}>
                     {/* Render text, hỗ trợ bôi đậm từ Markdown */}
-                    {msg.text
-                      .split("**")
-                      .map((part, i) =>
-                        i % 2 === 1 ? <strong key={i}>{part}</strong> : part,
-                      )}
+                    <div className="chat-text">
+                      {msg.text
+                        .split("**")
+                        .map((part, i) =>
+                          i % 2 === 1 ? <strong key={i}>{part}</strong> : part,
+                        )}
+                    </div>
+                    {/* Render TableData nếu có */}
+                    {msg.tableData && (
+                      <table className="chat-table">
+                        <thead>
+                          <tr>
+                            <th>Thông tin</th>
+                            <th>Giá trị</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {msg.tableData.map((row, idx) => (
+                            <tr key={idx}>
+                              <td>{row.thongTin}</td>
+                              <td>{row.giaTri}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 </div>
               ))}

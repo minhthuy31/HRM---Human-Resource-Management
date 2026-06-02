@@ -1,4 +1,4 @@
-﻿version: "3.8"
+version: "3.8"
 
 services:
   # 1. DATABASE (Bản nhẹ cho AWS 1GB RAM)
@@ -24,7 +24,9 @@ services:
     ports:
       - "5260:8080" 
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Jwt__Key=THIS_IS_A_DEV_SECRET_CHANGE_ME_TO_LONG_RANDOM_BUT_NOW_IN_ENV
+      - Smtp__Pass=htmvviguqmiejkwe
     volumes:
       - ./HRApi/HRApi/wwwroot:/app/wwwroot
       - ./HRApi/EmailTemplates:/app/EmailTemplates

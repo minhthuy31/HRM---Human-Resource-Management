@@ -1,4 +1,4 @@
-﻿using HRApi.Models;
+using HRApi.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace HRApi.Data
@@ -26,5 +26,6 @@ namespace HRApi.Data
         public DbSet<ThongBao> ThongBaos { get; set; }
         public DbSet<SystemSetting> SystemSettings { get; set; }
         public DbSet<NgayLe> NgayLes { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
     }
 }

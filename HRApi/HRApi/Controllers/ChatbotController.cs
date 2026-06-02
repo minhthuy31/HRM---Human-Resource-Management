@@ -1,7 +1,8 @@
-﻿using HRApi.Data;
+using HRApi.Data;
 using HRApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 
@@ -24,6 +25,42 @@ namespace HRApi.Controllers
             public string Message { get; set; }
         }
 
+        [HttpGet("history")]
+        public async Task<IActionResult> GetHistory()
+        {
+            var maNhanVien = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(maNhanVien)) return Unauthorized();
+
+            var messages = await _context.ChatMessages
+                .Where(m => m.MaNhanVien == maNhanVien)
+                .OrderBy(m => m.CreatedAt)
+                .Select(m => new
+                {
+                    sender = m.Sender,
+                    text = m.Text,
+                    tableData = string.IsNullOrEmpty(m.TableDataJson) ? null : System.Text.Json.JsonSerializer.Deserialize<object>(m.TableDataJson, (System.Text.Json.JsonSerializerOptions)null)
+                })
+                .ToListAsync();
+
+            return Ok(messages);
+        }
+
+        private async Task<IActionResult> SendReply(string maNhanVien, string text, object tableData = null)
+        {
+            var msg = new ChatMessage
+            {
+                MaNhanVien = maNhanVien,
+                Sender = "bot",
+                Text = text,
+                TableDataJson = tableData != null ? System.Text.Json.JsonSerializer.Serialize(tableData) : null,
+                CreatedAt = DateTime.Now
+            };
+            _context.ChatMessages.Add(msg);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { reply = text, tableData = tableData });
+        }
+
         [HttpPost]
         public async Task<IActionResult> HandleChat([FromBody] ChatRequestDto request)
         {
@@ -33,6 +70,47 @@ namespace HRApi.Controllers
 
             string text = request.Message.ToLower().Trim();
 
+            // Lưu tin nhắn user
+            _context.ChatMessages.Add(new ChatMessage
+            {
+                MaNhanVien = maNhanVien,
+                Sender = "user",
+                Text = request.Message,
+                CreatedAt = DateTime.Now
+            });
+            await _context.SaveChangesAsync();
+
+            // ==========================================
+            // 0. LUỒNG TRA CỨU THÔNG TIN CÁ NHÂN
+            // ==========================================
+            if (text.Contains("thông tin") || text.Contains("hồ sơ") || text.Contains("vợ") || text.Contains("chồng") || text.Contains("hôn nhân") || text.Contains("hợp đồng"))
+            {
+                var nv = await _context.NhanViens
+                    .Include(n => n.PhongBan)
+                    .Include(n => n.ChucVuNhanVien)
+                    .FirstOrDefaultAsync(n => n.MaNhanVien == maNhanVien);
+
+                var userAcc = await _context.Users.FirstOrDefaultAsync(u => u.Email == nv.Email);
+                var hd = await _context.HopDongs.OrderByDescending(h => h.NgayBatDau).FirstOrDefaultAsync(h => h.MaNhanVien == maNhanVien);
+
+                var tableData = new List<object>
+                {
+                    new { thongTin = "👤 Họ tên", giaTri = nv?.HoTen ?? "N/A" },
+                    new { thongTin = "🔑 Username", giaTri = userAcc?.Username ?? "N/A" },
+                    new { thongTin = "📧 Email", giaTri = nv?.Email ?? "N/A" },
+                    new { thongTin = "📞 Số điện thoại", giaTri = nv?.sdt_NhanVien ?? "N/A" },
+                    new { thongTin = "🆔 Mã nhân viên", giaTri = nv?.MaNhanVien ?? "N/A" },
+                    new { thongTin = "⚧ Giới tính", giaTri = nv?.GioiTinh == 1 ? "Nam" : (nv?.GioiTinh == 0 ? "Nữ" : "N/A") },
+                    new { thongTin = "🎂 Năm sinh", giaTri = nv?.NgaySinh?.Year.ToString() ?? "N/A" },
+                    new { thongTin = "🏢 Phòng ban", giaTri = nv?.PhongBan?.TenPhongBan ?? "N/A" },
+                    new { thongTin = "💼 Vị trí / Chức vụ", giaTri = nv?.ChucVuNhanVien?.TenChucVu ?? "N/A" },
+                    new { thongTin = "📝 Hợp đồng", giaTri = hd?.LoaiHopDong ?? "Chưa có hợp đồng" },
+                    new { thongTin = "💍 Hôn nhân", giaTri = string.IsNullOrEmpty(nv?.TinhTrangHonNhan) ? "Chưa cập nhật" : nv?.TinhTrangHonNhan },
+                };
+
+                return await SendReply(maNhanVien, "Sóc đã kiểm tra hồ sơ nhân sự của bạn trên hệ thống rồi nha. 🐿️\nDưới đây là các thông tin chi tiết trong hồ sơ của bạn:", tableData);
+            }
+
             // ==========================================
             // 1. LUỒNG ĐĂNG KÝ NGHỈ PHÉP
             // ==========================================
@@ -41,10 +119,17 @@ namespace HRApi.Controllers
                 var info = ExtractLeaveInfo(text, request.Message); // Truyền thêm chuỗi gốc để giữ viết hoa lý do
 
                 if (info.Date == null)
-                    return Ok(new { reply = "Bạn muốn xin nghỉ vào ngày nào vậy? (Ví dụ: 'ngày mai', 'ngày 18/4')" });
+                    return await SendReply(maNhanVien, "Bạn muốn xin nghỉ vào ngày nào vậy? (Ví dụ: 'ngày mai', 'ngày 18/4')");
 
                 if (string.IsNullOrEmpty(info.Reason))
-                    return Ok(new { reply = $"Bạn xin nghỉ ngày {info.Date.Value:dd/MM/yyyy}. Cho mình xin lý do cụ thể nhé (Ví dụ: 'vì bị ốm')!" });
+                    return await SendReply(maNhanVien, $"Bạn xin nghỉ ngày {info.Date.Value:dd/MM/yyyy}. Cho mình xin lý do cụ thể nhé (Ví dụ: 'vì bị ốm')!");
+
+                var isLocked = await _context.KhoaCongs.AnyAsync(k =>
+                    k.Nam == info.Date.Value.Year &&
+                    k.Thang == info.Date.Value.Month &&
+                    k.IsLocked);
+                if (isLocked)
+                    return await SendReply(maNhanVien, $"Bảng công tháng {info.Date.Value.Month}/{info.Date.Value.Year} đã bị khóa. Bạn không thể xin nghỉ phép vào tháng này nữa nhé.");
 
                 var donNghi = new DonNghiPhep
                 {
@@ -60,7 +145,7 @@ namespace HRApi.Controllers
                 _context.DonNghiPheps.Add(donNghi);
                 await _context.SaveChangesAsync();
 
-                return Ok(new { reply = $"✅ Mình đã tạo đơn **Xin nghỉ phép** ngày {info.Date.Value:dd/MM/yyyy} với lý do: '{info.Reason}'. Đơn đang chờ duyệt nhé!" });
+                return await SendReply(maNhanVien, $"✅ Mình đã tạo đơn **Xin nghỉ phép** ngày {info.Date.Value:dd/MM/yyyy} với lý do: '{info.Reason}'. Đơn đang chờ duyệt nhé!");
             }
 
             // ==========================================
@@ -71,13 +156,20 @@ namespace HRApi.Controllers
                 var info = ExtractOTInfo(text, request.Message);
 
                 if (info.Date == null)
-                    return Ok(new { reply = "Bạn muốn đăng ký OT vào ngày nào?" });
+                    return await SendReply(maNhanVien, "Bạn muốn đăng ký OT vào ngày nào?");
 
                 if (info.Start == null || info.End == null)
-                    return Ok(new { reply = "Bạn vui lòng nhập rõ giờ OT nhé (Ví dụ: 'từ 18h đến 20h30')." });
+                    return await SendReply(maNhanVien, "Bạn vui lòng nhập rõ giờ OT nhé (Ví dụ: 'từ 18h đến 20h30').");
 
                 if (info.End <= info.Start)
-                    return Ok(new { reply = "Giờ kết thúc OT phải lớn hơn giờ bắt đầu bạn nhé!" });
+                    return await SendReply(maNhanVien, "Giờ kết thúc OT phải lớn hơn giờ bắt đầu bạn nhé!");
+
+                var isLocked = await _context.KhoaCongs.AnyAsync(k =>
+                    k.Nam == info.Date.Value.Year &&
+                    k.Thang == info.Date.Value.Month &&
+                    k.IsLocked);
+                if (isLocked)
+                    return await SendReply(maNhanVien, $"Bảng công tháng {info.Date.Value.Month}/{info.Date.Value.Year} đã bị khóa. Bạn không thể đăng ký OT vào tháng này nữa nhé.");
 
                 var donOT = new DangKyOT
                 {
@@ -94,7 +186,7 @@ namespace HRApi.Controllers
                 _context.DangKyOTs.Add(donOT);
                 await _context.SaveChangesAsync();
 
-                return Ok(new { reply = $"✅ Đã ghi nhận lịch **Tăng ca (OT)** ngày {info.Date.Value:dd/MM/yyyy} từ {info.Start.Value:hh\\:mm} đến {info.End.Value:hh\\:mm}. Tổng cộng {donOT.SoGio} tiếng. Cố gắng lên nhé!" });
+                return await SendReply(maNhanVien, $"✅ Đã ghi nhận lịch **Tăng ca (OT)** ngày {info.Date.Value:dd/MM/yyyy} từ {info.Start.Value:hh\\:mm} đến {info.End.Value:hh\\:mm}. Tổng cộng {donOT.SoGio} tiếng. Cố gắng lên nhé!");
             }
 
             // ==========================================
@@ -105,10 +197,17 @@ namespace HRApi.Controllers
                 var info = ExtractTripInfo(text, request.Message);
 
                 if (info.Date == null)
-                    return Ok(new { reply = "Bạn đi công tác vào ngày nào?" });
+                    return await SendReply(maNhanVien, "Bạn đi công tác vào ngày nào?");
 
                 if (string.IsNullOrEmpty(info.Location))
-                    return Ok(new { reply = "Bạn đi công tác ở đâu? (Gợi ý: nhập 'tại Hà Nội' hoặc 'đi Đà Nẵng')" });
+                    return await SendReply(maNhanVien, "Bạn đi công tác ở đâu? (Gợi ý: nhập 'tại Hà Nội' hoặc 'đi Đà Nẵng')");
+
+                var isLocked = await _context.KhoaCongs.AnyAsync(k =>
+                    k.Nam == info.Date.Value.Year &&
+                    k.Thang == info.Date.Value.Month &&
+                    k.IsLocked);
+                if (isLocked)
+                    return await SendReply(maNhanVien, $"Bảng công tháng {info.Date.Value.Month}/{info.Date.Value.Year} đã bị khóa. Bạn không thể đăng ký công tác vào tháng này nữa nhé.");
 
                 var donCongTac = new DangKyCongTac
                 {
@@ -126,13 +225,13 @@ namespace HRApi.Controllers
                 _context.DangKyCongTacs.Add(donCongTac);
                 await _context.SaveChangesAsync();
 
-                return Ok(new { reply = $"✅ Đã tạo đơn **Công tác** tại '{info.Location}' vào ngày {info.Date.Value:dd/MM/yyyy}. Chúc bạn chuyến đi thuận lợi!" });
+                return await SendReply(maNhanVien, $"✅ Đã tạo đơn **Công tác** tại '{info.Location}' vào ngày {info.Date.Value:dd/MM/yyyy}. Chúc bạn chuyến đi thuận lợi!");
             }
 
             // ==========================================
             // 4. FALLBACK (Không hiểu ý định)
             // ==========================================
-            return Ok(new { reply = "Xin lỗi, hiện tại mình hỗ trợ 3 tính năng nhanh qua chat:\n- **Xin nghỉ phép** (vd: 'Cho mình nghỉ phép ngày mai vì nhà có việc')\n- **Đăng ký OT** (vd: 'Mai mình OT từ 18h đến 21h do dự án gấp')\n- **Đăng ký công tác** (vd: 'Ngày mốt mình đi công tác tại Hải Phòng để gặp khách hàng')\nBạn hãy thử lại nhé!" });
+            return await SendReply(maNhanVien, "Xin lỗi, hiện tại mình hỗ trợ 3 tính năng nhanh qua chat:\n- **Xin nghỉ phép** (vd: 'Cho mình nghỉ phép ngày mai vì nhà có việc')\n- **Đăng ký OT** (vd: 'Mai mình OT từ 18h đến 21h do dự án gấp')\n- **Đăng ký công tác** (vd: 'Ngày mốt mình đi công tác tại Hải Phòng để gặp khách hàng')\nBạn hãy thử lại nhé!");
         }
 
 

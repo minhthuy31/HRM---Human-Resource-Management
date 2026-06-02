@@ -360,3 +360,44 @@ body.dark-mode {
   0%, 80%, 100% { transform: translateY(0); }
   40% { transform: translateY(-4px); }
 }
+
+/* Styling for Table Data in Chatbot */
+.chat-text {
+  margin-bottom: 8px;
+}
+.chat-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 0.85rem;
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.chat-table th, .chat-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--separator-color);
+  text-align: left;
+}
+.chat-table th {
+  background-color: var(--hover-bg);
+  font-weight: 600;
+  color: var(--sidebar-text);
+}
+.chat-table tr:last-child td {
+  border-bottom: none;
+}
+.chat-table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+body.dark-mode .chat-table {
+  background-color: var(--card-bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+body.dark-mode .chat-table th {
+  background-color: var(--hover-bg);
+}
+body.dark-mode .chat-table tbody tr:nth-child(even) {
+  background-color: #16204a;
+}

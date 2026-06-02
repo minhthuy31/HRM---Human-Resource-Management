@@ -1,4 +1,4 @@
-﻿using HRApi.Data;
+using HRApi.Data;
 using HRApi.Models;
 using HRApi.Services;
 using Login.Services;
@@ -12,8 +12,6 @@ var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
 // Thêm dịch vụ Controllers
-builder.Services.AddControllers();
-
 builder.Services.AddControllers();
 //.AddJsonOptions(options =>
 //{
@@ -126,6 +124,22 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<AppDbContext>();
         context.Database.EnsureCreated();
+
+        // Tự động tạo bảng ChatMessages nếu DB đã tồn tại trước đó
+        var createTableSql = @"
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='ChatMessages' AND xtype='U')
+            BEGIN
+                CREATE TABLE ChatMessages (
+                    Id INT IDENTITY(1,1) PRIMARY KEY,
+                    MaNhanVien NVARCHAR(MAX) NOT NULL,
+                    Sender NVARCHAR(50) NOT NULL,
+                    Text NVARCHAR(MAX) NOT NULL,
+                    TableDataJson NVARCHAR(MAX) NULL,
+                    CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+                )
+            END
+        ";
+        context.Database.ExecuteSqlRaw(createTableSql);
 
         // Kiểm tra xem bảng Users có tồn tại và có dữ liệu không
         if (context.Users != null && !context.Users.Any())
