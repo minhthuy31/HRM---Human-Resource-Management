@@ -41,7 +41,7 @@ services:
       dockerfile: Dockerfile
     container_name: hr-staffflow
     ports:
-      - "443:443" 
+      - "443:80" 
     depends_on:
       - backend
     restart: always

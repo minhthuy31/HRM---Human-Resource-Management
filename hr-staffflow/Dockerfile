@@ -16,26 +16,30 @@ FROM nginx:alpine
 RUN rm -rf /usr/share/nginx/html/*
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Ghi đè cấu hình Nginx: Mở cổng 443 và bẻ lái API sang Backend
+# # Ghi đè cấu hình Nginx: Mở cổng 443 và bẻ lái API sang Backend
 RUN echo 'server { \
-    listen 443; \
+    listen 80; \
     server_name _; \
+    \
     location / { \
     root /usr/share/nginx/html; \
     index index.html; \
     try_files $uri $uri/ /index.html; \
     } \
+    \
     location /api/ { \
-    proxy_pass http://hr-backend:8080; \
+    proxy_pass http://hr-backend:8080/api/; \
     proxy_http_version 1.1; \
     proxy_set_header Upgrade $http_upgrade; \
     proxy_set_header Connection "keep-alive"; \
     proxy_set_header Host $host; \
     proxy_cache_bypass $http_upgrade; \
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
-    proxy_set_header X-Forwarded-Proto $scheme; \
+    } \
+    \
+    location /images/ { \
+    proxy_pass http://hr-backend:8080/images/; \
     } \
     }' > /etc/nginx/conf.d/default.conf
 
-EXPOSE 443
+EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
