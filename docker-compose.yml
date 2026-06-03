@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  # 1. DATABASE (Bản nhẹ cho AWS 1GB RAM)
+  # 1. DATABASE
   sqlserver:
     image: mcr.microsoft.com/azure-sql-edge:latest
     container_name: hr-sqlserver
@@ -9,7 +9,7 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "MatKhauManh123!"
     ports:
-      - "1434:1433" # Mở cổng 1434 để bạn có thể dùng SSMS từ nhà soi vào DB trên AWS
+      - "1434:1433"
     volumes:
       - sql_data:/var/opt/mssql
       - ./HRApi.bak:/var/opt/mssql/HRApi.bak
@@ -24,7 +24,7 @@ services:
     ports:
       - "5260:8080" 
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - Jwt__Key=THIS_IS_A_DEV_SECRET_CHANGE_ME_TO_LONG_RANDOM_BUT_NOW_IN_ENV
       - Smtp__Pass=htmvviguqmiejkwe
     volumes:
@@ -34,16 +34,17 @@ services:
       - sqlserver
     restart: on-failure
 
-  # 3. FRONTEND
+  # 3. FRONTEND (Đã khớp chuẩn cổng 443:443 theo lời admin)
   frontend:
     build:
       context: ./hr-staffflow
       dockerfile: Dockerfile
     container_name: hr-staffflow
     ports:
-      - "80:80" # Map ra cổng 80 để vào web không cần gõ :3000
+      - "443:443" 
     depends_on:
       - backend
+    restart: always
 
 volumes:
   sql_data:

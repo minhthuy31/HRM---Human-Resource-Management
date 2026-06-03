@@ -1,39 +1,41 @@
 # ==========================================
-# GIAI ĐOẠN 1: Nấu code (Build)
+# STAGE 1: Build React
 # ==========================================
 FROM node:18-alpine AS build
 WORKDIR /app
-
-# Copy các file quản lý thư viện vào trước
 COPY package*.json ./
-
-# Cài đặt thư viện (Chạy npm install)
 RUN npm install
-
-# Copy toàn bộ source code của bạn vào
 COPY . .
-# tối ưu ram: RUN NODE_OPTIONS="--max-old-space-size=2048" npm run build
-# Chạy lệnh build để đóng gói React/Vue thành HTML/CSS/JS thuần
-RUN npm run build
-# (Lưu ý: Nếu bạn dùng Vite, có thể nó sinh ra thư mục 'dist' thay vì 'build'. Mình đang lấy chuẩn là 'build').
+# Giới hạn RAM khi build để server không bị chết
+RUN NODE_OPTIONS="--max-old-space-size=1536" npm run build
 
 # ==========================================
-# GIAI ĐOẠN 2: Bưng ra đĩa (Chạy bằng Nginx)
+# STAGE 2: Nginx (Lắng nghe cổng 443)
 # ==========================================
 FROM nginx:alpine
-
-# Xóa cái web mặc định tẻ nhạt của Nginx đi
 RUN rm -rf /usr/share/nginx/html/*
+COPY --from=build /app/dist /usr/share/nginx/html
 
-# Lấy "món ăn" đã nấu xong ở Giai đoạn 1 xếp vào Nginx
-# Nếu dự án của bạn dùng Vite (thư mục xuất ra là dist), hãy đổi /app/build thành /app/dist nhé!
-COPY --from=build /app/build /usr/share/nginx/html
+# Ghi đè cấu hình Nginx: Mở cổng 443 và bẻ lái API sang Backend
+RUN echo 'server { \
+    listen 443; \
+    server_name _; \
+    location / { \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    try_files $uri $uri/ /index.html; \
+    } \
+    location /api/ { \
+    proxy_pass http://hr-backend:8080; \
+    proxy_http_version 1.1; \
+    proxy_set_header Upgrade $http_upgrade; \
+    proxy_set_header Connection "keep-alive"; \
+    proxy_set_header Host $host; \
+    proxy_cache_bypass $http_upgrade; \
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+    proxy_set_header X-Forwarded-Proto $scheme; \
+    } \
+    }' > /etc/nginx/conf.d/default.conf
 
-# GIA VỊ BÍ MẬT: Cấu hình này giúp React/Vue không bị lỗi 404 khi bạn F5 trang
-RUN echo 'server { listen 80; location / { root /usr/share/nginx/html; index index.html; try_files $uri $uri/ /index.html; } }' > /etc/nginx/conf.d/default.conf
-
-# Mở cửa số 80 (để file docker-compose.yml nối vào cổng 3000 của bạn)
-EXPOSE 80
-
-# Khởi động Nginx
+EXPOSE 443
 CMD ["nginx", "-g", "daemon off;"]
