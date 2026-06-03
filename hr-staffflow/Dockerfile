@@ -14,7 +14,7 @@ RUN NODE_OPTIONS="--max-old-space-size=1536" npm run build
 # ==========================================
 FROM nginx:alpine
 RUN rm -rf /usr/share/nginx/html/*
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/build /usr/share/nginx/html
 
 # Ghi đè cấu hình Nginx: Mở cổng 443 và bẻ lái API sang Backend
 RUN echo 'server { \
