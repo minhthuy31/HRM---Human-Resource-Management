@@ -32,7 +32,7 @@ import "../styles/CheckInScanner.css";
 const getImageUrl = (path) => {
   if (!path) return null;
   if (path.startsWith("blob:")) return path;
-  return `http://localhost:5260${path}`;
+  return path;
 };
 
 const EmployeeHomePage = () => {
@@ -95,7 +95,7 @@ const EmployeeHomePage = () => {
     if (isChatOpen && !isChatHistoryLoaded) {
       const fetchChatHistory = async () => {
         try {
-          const res = await api.get('/Chatbot/history');
+          const res = await api.get("/Chatbot/history");
           if (res.data && res.data.length > 0) {
             setChatMessages(res.data);
           }
