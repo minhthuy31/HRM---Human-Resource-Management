@@ -20,6 +20,7 @@ COPY --from=build /app/build /usr/share/nginx/html
 RUN echo 'server { \
     listen 80; \
     server_name _; \
+    client_max_body_size 20M; \
     \
     location / { \
     root /usr/share/nginx/html; \
