@@ -151,10 +151,12 @@ namespace HRApi.Controllers
         [HttpPost("check-in-face")]
         public async Task<IActionResult> CheckInWithFace([FromBody] CheckInFaceDto dto)
         {
-            if (!IsCompanyNetwork(out string detectedIp))
-            {
-                return BadRequest(new { success = false, message = $"Bạn đang dùng mạng ngoài (IP: {detectedIp}). Chỉ được chấm công bằng Wifi công ty!" });
-            }
+
+            //Check địa chỉ IP 
+            // if (!IsCompanyNetwork(out string detectedIp))
+            // {
+            //     return BadRequest(new { success = false, message = $"Bạn đang dùng mạng ngoài (IP: {detectedIp}). Chỉ được chấm công bằng Wifi công ty!" });
+            // }
 
             var currentUserId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(currentUserId)) return Unauthorized(new { success = false, message = "Phiên đăng nhập không hợp lệ." });
