@@ -237,17 +237,22 @@ namespace HRApi.Controllers
 
                 var attendanceData = await _context.ChamCongs.Where(c => c.NgayChamCong.Year == year && c.NgayChamCong.Month == month).ToListAsync();
 
-                var attendanceSummary = attendanceData.GroupBy(c => c.MaNhanVien).ToDictionary(g => g.Key, g => new
+                // FIX LỖI 500 (Số 1): Lọc bỏ các bản ghi mất mã nhân viên để tránh crash Dictionary
+                var validAttendance = attendanceData.Where(c => !string.IsNullOrEmpty(c.MaNhanVien)).ToList();
+
+                var attendanceSummary = validAttendance.GroupBy(c => c.MaNhanVien).ToDictionary(g => g.Key, g => new
                 {
                     TongCong = g.Sum(x => x.NgayCong),
                     NghiCoPhep = g.Count(x => x.NgayCong == 1.0 && x.LoaiNgayCong == "Nghỉ phép"),
                     NghiKhongLuong = g.Count(x => x.NgayCong == 0.0 && x.LoaiNgayCong == "Nghỉ không lương"),
+                    // Kiểm tra an toàn x.GhiChu tránh NullReferenceException
                     NghiKhongPhep = g.Count(x => x.NgayCong == 0.0 && (string.IsNullOrEmpty(x.GhiChu) || !x.GhiChu.ToLower().Contains("không lương")) && x.LoaiNgayCong != "Làm việc"),
                     LamNuaNgay = g.Count(x => x.NgayCong == 0.5)
                 });
 
+                // FIX LỖI 500 (Số 1): Lọc bỏ Null cho OT
                 var otSummary = await _context.DangKyOTs
-                    .Where(ot => ot.NgayLamThem.Year == year && ot.NgayLamThem.Month == month && ot.TrangThai == "Đã duyệt")
+                    .Where(ot => ot.NgayLamThem.Year == year && ot.NgayLamThem.Month == month && ot.TrangThai == "Đã duyệt" && !string.IsNullOrEmpty(ot.MaNhanVien))
                     .GroupBy(ot => ot.MaNhanVien)
                     .ToDictionaryAsync(k => k.Key, v => v.Sum(x => x.SoGio));
 
@@ -301,9 +306,42 @@ namespace HRApi.Controllers
                 var isPublished = savedPayrolls.Any(p => p.DaChot);
                 decimal departmentTotal = role == "Trưởng phòng" ? finalData.Sum(x => x.ThucLanh) : 0;
 
-                return Ok(new { Data = finalData.OrderBy(x => x.MaNhanVien).ToList(), IsPublished = isPublished, DepartmentTotal = departmentTotal });
+                // FIX LỖI 500 (Số 2): Đóng gói dữ liệu thành Anonymous Object để tránh JSON Cycle
+                var resultData = finalData.OrderBy(x => x.MaNhanVien).Select(x => new
+                {
+                    x.Id,
+                    x.MaNhanVien,
+                    NhanVien = new { HoTen = x.NhanVien?.HoTen }, // React đang gọi: p.nhanVien?.hoTen
+                    x.Thang,
+                    x.Nam,
+                    x.LuongCoBan,
+                    x.LuongDongBaoHiem,
+                    x.TongPhuCap,
+                    x.SoCongChuanTrongThang,
+                    x.TongNgayCong,
+                    x.TongGioOT,
+                    x.NghiCoPhep,
+                    x.NghiKhongLuong,
+                    x.NghiKhongPhep,
+                    x.LamNuaNgay,
+                    x.LuongChinh,
+                    x.LuongOT,
+                    x.KhauTruBHXH,
+                    x.KhauTruBHYT,
+                    x.KhauTruBHTN,
+                    x.ThueTNCN,
+                    x.KhoanTruKhac,
+                    x.TongThuNhap,
+                    x.ThucLanh,
+                    x.DaChot
+                }).ToList();
+
+                return Ok(new { Data = resultData, IsPublished = isPublished, DepartmentTotal = departmentTotal });
             }
-            catch (Exception ex) { return StatusCode(500, "Lỗi lấy bảng lương: " + ex.Message); }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Lỗi lấy bảng lương: " + ex.Message);
+            }
         }
 
         // ==============================================================
