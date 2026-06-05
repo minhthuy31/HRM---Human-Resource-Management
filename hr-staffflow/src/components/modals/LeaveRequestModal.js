@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { api } from "../../api"; // Đảm bảo import đúng đường dẫn api của bạn
+import { api } from "../../api";
 import "../../styles/Modal.css";
 
 const LeaveRequestModal = ({ onSave, onCancel }) => {

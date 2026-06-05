@@ -6,7 +6,7 @@ import "../../styles/EmployeePage.css";
 const getImageUrl = (path) => {
   if (!path) return null;
   if (path.startsWith("blob:")) return path;
-  return `http://localhost:5260${path}`;
+  return path;
 };
 
 const EmployeeListModal = ({ phongBan, onCancel }) => {
@@ -20,7 +20,7 @@ const EmployeeListModal = ({ phongBan, onCancel }) => {
       try {
         // gọi api để lấy tên tên nhân viên trong phòng ban ấy
         const response = await api.get(
-          `/NhanVien?maPhongBan=${phongBan.maPhongBan}`
+          `/NhanVien?maPhongBan=${phongBan.maPhongBan}`,
         );
         setEmployees(response.data);
       } catch (error) {

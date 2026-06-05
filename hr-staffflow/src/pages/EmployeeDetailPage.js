@@ -7,7 +7,7 @@ import "../styles/EmployeeDetailPage.css";
 
 const getImageUrl = (path) => {
   if (!path) return null;
-  return `http://localhost:5260${path}`;
+  return path;
 };
 
 const EmployeeDetailPage = () => {
@@ -96,8 +96,8 @@ const EmployeeDetailPage = () => {
           employee.gioiTinh === 1
             ? "Nam"
             : employee.gioiTinh === 0
-            ? "Nữ"
-            : "Khác"
+              ? "Nữ"
+              : "Khác",
         )}
         {renderField("Hôn nhân", employee.tinhTrangHonNhan)}
         {renderField("Dân tộc", employee.danToc)}

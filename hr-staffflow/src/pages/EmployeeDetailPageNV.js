@@ -8,13 +8,13 @@ import ContractTemplate from "../components/templates/ContractTemplate";
 
 const getImageUrl = (path) => {
   if (!path) return null;
-  return `http://localhost:5260${path}`;
+  return path;
 };
 
 const getFileUrl = (path) => {
   if (!path) return null;
   if (path.startsWith("data:image")) return path;
-  return `http://localhost:5260${path}`;
+  return path;
 };
 
 const EmployeeDetailPageNV = () => {

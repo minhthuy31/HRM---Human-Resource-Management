@@ -8,7 +8,7 @@ const getImageUrl = (path) => {
   if (!path) return null;
   if (path.startsWith("data:image")) return path; // Support Base64 (Chữ ký)
   if (path.startsWith("blob:")) return path;
-  return `http://localhost:5260${path}`;
+  return path;
 };
 
 const EmployeeModal = ({
