@@ -12,5 +12,6 @@
         public IFormFile? FileDinhKem { get; set; }
         public string? GhiChu { get; set; }
         public string TrangThai { get; set; } = "HieuLuc";
+        public string? ChuKyBase64 { get; set; }
     }
 }
