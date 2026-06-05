@@ -57,3 +57,7 @@ Thumbs.db
 # Environment variables
 .env
 .env.local
+
+sql_data/
+HRApi/HRApi/wwwroot/images
+HRApi/HRApi/wwwroot/contracts

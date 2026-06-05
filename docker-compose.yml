@@ -11,9 +11,11 @@ services:
     ports:
       - "1434:1433"
     volumes:
-      - sql_data:/var/opt/mssql
+      - ./sql_data:/var/opt/mssql:rw
       - ./HRApi.bak:/var/opt/mssql/HRApi.bak
     restart: always
+    networks:
+      - hrm-network
 
   # 2. BACKEND API
   backend:
@@ -22,7 +24,7 @@ services:
       dockerfile: Dockerfile
     container_name: hr-backend
     ports:
-      - "5260:8080" 
+      - "5260:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - Jwt__Key=THIS_IS_A_DEV_SECRET_CHANGE_ME_TO_LONG_RANDOM_BUT_NOW_IN_ENV
@@ -33,6 +35,8 @@ services:
     depends_on:
       - sqlserver
     restart: on-failure
+    networks:
+      - hrm-network
 
   # 3. FRONTEND (Đã khớp chuẩn cổng 443:443 theo lời admin)
   frontend:
@@ -41,10 +45,13 @@ services:
       dockerfile: Dockerfile
     container_name: hr-staffflow
     ports:
-      - "443:80" 
+      - "3000:80"
     depends_on:
       - backend
     restart: always
+    networks:
+      - hrm-network
 
-volumes:
-  sql_data:
+networks:
+  hrm-network:
+    external: true

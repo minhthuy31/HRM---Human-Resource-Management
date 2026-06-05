@@ -128,7 +128,7 @@ const Dashboard = () => {
     <DashboardLayout>
       <div className="dash-page-container">
         <h2 className="dash-welcome-text">
-          {isTruongPhong ? "Tổng quan Phòng" : "Tổng quan Hệ thống"}
+          {isTruongPhong ? "TỔNG QUAN PHÒNG" : "TỔNG QUAN HỆ THỐNG"}
         </h2>
 
         {/* HÀNG 1: 4 THẺ CHỈ SỐ NHANH */}
