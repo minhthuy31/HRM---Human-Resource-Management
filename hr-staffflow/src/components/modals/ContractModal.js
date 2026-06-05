@@ -2,18 +2,11 @@ import React, { useState, useEffect } from "react";
 import { FaFileContract } from "react-icons/fa";
 import "../../styles/Modal.css";
 
-// 📝 BƯỚC 1: Nhận thêm prop signatureBase64 từ component cha truyền vào
-const ContractModal = ({
-  contract,
-  employees,
-  onSave,
-  onCancel,
-  signatureBase64,
-}) => {
+const ContractModal = ({ contract, employees, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     soHopDong: "",
     maNhanVien: "",
-    loaiHopDong: "Chính thức",
+    loaiHopDong: "Chính thức", // Mặc định là Chính thức
     ngayBatDau: new Date().toISOString().split("T")[0],
     ngayKetThuc: "",
     luongCoBan: "",
@@ -21,8 +14,6 @@ const ContractModal = ({
     trangThai: "HieuLuc",
   });
   const [file, setFile] = useState(null);
-
-  // ❌ ĐÃ XÓA: Đoạn khai báo FormData bị thừa và lỗi cú pháp ở đây
 
   useEffect(() => {
     if (contract) {
@@ -80,11 +71,6 @@ const ContractModal = ({
     payload.append("ghiChu", formData.ghiChu || "");
 
     if (file) payload.append("fileDinhKem", file);
-
-    // 📝 BƯỚC 2: Kiểm tra và append chuỗi chữ ký số vào FormData gửi lên API
-    if (signatureBase64) {
-      payload.append("chuKyBase64", signatureBase64);
-    }
 
     onSave(payload, !!contract);
   };
@@ -144,6 +130,7 @@ const ContractModal = ({
                 value={formData.loaiHopDong}
                 onChange={handleChange}
               >
+                {/* CHỈ CÒN 2 LOẠI HỢP ĐỒNG */}
                 <option value="Chính thức">Hợp đồng Chính thức</option>
                 <option value="Thử việc">Hợp đồng Thử việc</option>
               </select>
@@ -199,29 +186,6 @@ const ContractModal = ({
               style={{ fontWeight: "bold", color: "#16a34a", fontSize: "16px" }}
             />
           </div>
-
-          {/* 📝 KHU VỰC HIỂN THỊ TRẠNG THÁI CHỮ KÝ SỐ NẾU CÓ */}
-          {signatureBase64 && (
-            <div
-              className="form-group"
-              style={{
-                backgroundColor: "#f0fdf4",
-                padding: "10px",
-                borderRadius: "6px",
-                border: "1px dashed #16a34a",
-              }}
-            >
-              <span
-                style={{
-                  color: "#16a34a",
-                  fontWeight: "600",
-                  fontSize: "14px",
-                }}
-              >
-                ✓ Đã đính kèm chữ ký điện tử thành công
-              </span>
-            </div>
-          )}
 
           <div className="form-group">
             <label>Tệp đính kèm (PDF/Ảnh)</label>

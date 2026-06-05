@@ -27,12 +27,12 @@ namespace HRApi.Controllers
         public async Task<ActionResult<IEnumerable<object>>> GetHopDongs(
             [FromQuery] string? search,
             [FromQuery] string? trangThai,
-            [FromQuery] bool? sapHetHan
+            [FromQuery] bool? sapHetHan // THÊM MỚI 1: Tham số lọc hợp đồng sắp hết hạn
         )
         {
             var userRole = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role")?.Value;
             var userDept = User.Claims.FirstOrDefault(c => c.Type == "MaPhongBan")?.Value;
-            var now = DateTime.Now;
+            var now = DateTime.Now; // Biến thời gian hiện tại
 
             var query = _context.HopDongs
                 .Include(h => h.NhanVien).ThenInclude(nv => nv.PhongBan)
@@ -149,10 +149,6 @@ namespace HRApi.Controllers
             };
 
             _context.HopDongs.Add(hopDong);
-            if (!string.IsNullOrEmpty(dto.ChuKyBase64))
-            {
-                nhanVien.ChuKy = dto.ChuKyBase64;
-            }
 
             nhanVien.LuongCoBan = dto.LuongCoBan;
             nhanVien.SoHopDong = dto.SoHopDong;

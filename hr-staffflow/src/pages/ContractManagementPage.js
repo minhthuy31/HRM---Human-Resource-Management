@@ -13,7 +13,6 @@ import {
 } from "react-icons/fa";
 import ContractModal from "../components/modals/ContractModal";
 import ContractTemplate from "../components/templates/ContractTemplate";
-import SignatureModal from "../components/modals/SignatureModal"; // 📝 Đảm bảo bạn đã import modal chữ ký
 import "../styles/ContractPage.css";
 
 const ContractManagementPage = () => {
@@ -25,9 +24,6 @@ const ContractManagementPage = () => {
   const [statusFilter, setStatusFilter] = useState("HieuLuc");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false); // 📝 Quản lý ẩn hiện modal ký
-  const [currentSignature, setCurrentSignature] = useState(null); // 1️⃣ SỬA VỊ TRÍ 1: State lưu chuỗi chữ ký số
-
   const [editingContract, setEditingContract] = useState(null);
   const [printingContract, setPrintingContract] = useState(null);
   const [directorInfo, setDirectorInfo] = useState(null);
@@ -42,6 +38,7 @@ const ContractManagementPage = () => {
     setLoading(true);
     try {
       let url = `/HopDong?search=${searchTerm}`;
+      // Nếu chọn bộ lọc sắp hết hạn, gọi params sapHetHan
       if (statusFilter === "SapHetHan") {
         url += `&sapHetHan=true`;
       } else {
@@ -118,7 +115,6 @@ const ContractManagementPage = () => {
       alert(isUpdate ? "Cập nhật thành công!" : "Tạo hợp đồng mới thành công!");
       setIsModalOpen(false);
       setEditingContract(null);
-      setCurrentSignature(null); // 📝 Xóa chữ ký cũ sau khi lưu thành công
       fetchContracts();
     } catch (err) {
       const msg = err.response?.data?.message || "Có lỗi xảy ra.";
@@ -126,13 +122,15 @@ const ContractManagementPage = () => {
     }
   };
 
+  // --- HÀM XÓA ĐƯỢC THÊM VÀO TẠI ĐÂY ---
   const handleDelete = async (soHopDong) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa hợp đồng này không?")) {
       try {
+        // Gọi API xóa, bạn có thể chỉnh lại URL tùy theo thiết kế API backend của bạn
         const id = encodeURIComponent(soHopDong);
         await api.delete(`/HopDong?id=${id}`);
         alert("Xóa hợp đồng thành công!");
-        fetchContracts();
+        fetchContracts(); // Load lại danh sách sau khi xóa
       } catch (err) {
         const msg = err.response?.data?.message || "Có lỗi xảy ra khi xóa.";
         alert("Lỗi: " + msg);
@@ -177,26 +175,15 @@ const ContractManagementPage = () => {
             </h1>
           </div>
           {canModify && (
-            <div style={{ display: "flex", gap: "10px" }}>
-              {/* Nút mở nhanh bảng vẽ chữ ký */}
-              <button
-                className="btn-add"
-                style={{ backgroundColor: "#f59e0b" }}
-                onClick={() => setIsSignatureModalOpen(true)}
-              >
-                ✍️ Ký số nhân viên
-              </button>
-              <button
-                className="btn-add"
-                onClick={() => {
-                  setEditingContract(null);
-                  setCurrentSignature(null); // Clear chữ ký khi tạo mới hoàn toàn
-                  setIsModalOpen(true);
-                }}
-              >
-                <FaPlus /> Tạo mới hợp đồng
-              </button>
-            </div>
+            <button
+              className="btn-add"
+              onClick={() => {
+                setEditingContract(null);
+                setIsModalOpen(true);
+              }}
+            >
+              <FaPlus /> Tạo mới
+            </button>
           )}
         </div>
 
@@ -319,28 +306,12 @@ const ContractManagementPage = () => {
           )}
         </div>
 
-        {/* 3️⃣ SỬA VỊ TRÍ 3: Truyền state currentSignature vào ContractModal qua prop signatureBase64 */}
         {isModalOpen && (
           <ContractModal
             contract={editingContract}
             employees={employees}
             onSave={handleSave}
             onCancel={() => setIsModalOpen(false)}
-            signatureBase64={currentSignature}
-          />
-        )}
-
-        {/* 2️⃣ SỬA VỊ TRÍ 2: Hứng dữ liệu chuỗi Base64 từ SignatureModal trả về */}
-        {isSignatureModalOpen && (
-          <SignatureModal
-            onCancel={() => setIsSignatureModalOpen(false)}
-            onSave={(base64Data) => {
-              setCurrentSignature(base64Data); // Lưu chuỗi chữ ký vào State
-              setIsSignatureModalOpen(false); // Đóng modal vẽ
-              alert(
-                "✓ Đã ghi nhận chữ ký! Bây giờ bạn hãy bấm nút 'Tạo mới hợp đồng' hoặc 'Chỉnh sửa' để lưu kèm chữ ký này.",
-              );
-            }}
           />
         )}
       </div>
