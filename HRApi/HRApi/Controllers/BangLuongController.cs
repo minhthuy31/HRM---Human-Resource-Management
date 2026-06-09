@@ -69,9 +69,9 @@ namespace HRApi.Controllers
 
             // Kéo cấu hình từ Cài đặt hệ thống
             var sysSettings = await _context.SystemSettings.FirstOrDefaultAsync();
-            decimal giamTruBanThanBase = sysSettings?.GiamTruGiaCanh ?? 11000000m;
-            decimal giamTruPhuThuocBase = sysSettings?.GiamTruPhuThuoc ?? 4400000m;
-            decimal phanTramBHXH = (decimal)(sysSettings?.PhanTramBHXHEmployee ?? 10.5) / 100m;
+            decimal giamTruBanThanBase = sysSettings != null && sysSettings.GiamTruGiaCanh > 0 ? sysSettings.GiamTruGiaCanh : 11000000m;
+            decimal giamTruPhuThuocBase = sysSettings != null && sysSettings.GiamTruPhuThuoc > 0 ? sysSettings.GiamTruPhuThuoc : 4400000m;
+            decimal phanTramBHXH = (decimal)(sysSettings != null && sysSettings.PhanTramBHXHEmployee > 0 ? sysSettings.PhanTramBHXHEmployee : 10.5) / 100m;
 
             decimal heSoOtThuong = (decimal)(sysSettings?.HeSoOTNgayThuong ?? 1.5);
             decimal heSoOtCuoiTuan = (decimal)(sysSettings?.HeSoOTCuoiTuan ?? 2.0);
