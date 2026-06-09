@@ -297,7 +297,7 @@ const PayrollPage = () => {
                     <th className="sticky-col first-col" rowSpan={2}>
                       Nhân viên
                     </th>
-                    <th colSpan={3} className="group-header bg-gray">
+                    <th colSpan={2} className="group-header bg-gray">
                       Cố định
                     </th>
                     {/* SỬA colSpan={5} THÀNH colSpan={7} CHO CHẤM CÔNG */}
@@ -316,7 +316,6 @@ const PayrollPage = () => {
                   </tr>
                   <tr>
                     <th className="sub-th">Lương CB</th>
-                    <th className="sub-th">Lương BH</th>
                     <th className="sub-th">Phụ Cấp</th>
 
                     {/* THÊM CỘT CÔNG CHUẨN & NGHỈ KL */}
@@ -364,9 +363,6 @@ const PayrollPage = () => {
                         </td>
                         <td className="text-right">
                           {formatMoney(p.luongCoBan)}
-                        </td>
-                        <td className="text-right">
-                          {formatMoney(p.luongDongBaoHiem)}
                         </td>
                         <td className="text-right">
                           {formatMoney(p.tongPhuCap)}

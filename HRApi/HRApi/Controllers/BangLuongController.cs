@@ -163,13 +163,14 @@ namespace HRApi.Controllers
 
                         // --- 4. TÍNH BẢO HIỂM ---
                         bool isThuViec = contract.LoaiHopDong != null && contract.LoaiHopDong.ToLower().Contains("thử việc");
+                        // Tính bảo hiểm dựa trên Lương Cơ Bản thay vì Lương Đóng Bảo Hiểm
                         if (!isThuViec)
                         {
-                            totalLuongDongBH += (contract.LuongDongBaoHiem / standardWorkDays) * (decimal)(normalNgayCong + holidaysInPeriod);
+                            totalLuongDongBH += (contract.LuongCoBan / standardWorkDays) * (decimal)(normalNgayCong + holidaysInPeriod);
                         }
 
                         finalLuongCoBanDisplay = contract.LuongCoBan;
-                        finalLuongDongBHDisplay = contract.LuongDongBaoHiem;
+                        finalLuongDongBHDisplay = contract.LuongCoBan;
                     }
                 }
                 else
