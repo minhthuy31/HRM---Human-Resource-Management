@@ -181,7 +181,16 @@ namespace HRApi.Controllers
                 }
 
                 decimal phuCap = Math.Round((emp.LuongTroCap / standardWorkDays) * (decimal)totalWorkDays, 0);
-                decimal tongBaoHiem = totalLuongDongBH * phanTramBHXH;
+                
+                decimal tyLeBHXH = (8m / 10.5m) * phanTramBHXH;
+                decimal tyLeBHYT = (1.5m / 10.5m) * phanTramBHXH;
+                decimal tyLeBHTN = (1m / 10.5m) * phanTramBHXH;
+
+                decimal khauTruBHXH_val = totalLuongDongBH * tyLeBHXH;
+                decimal khauTruBHYT_val = totalLuongDongBH * tyLeBHYT;
+                decimal khauTruBHTN_val = totalLuongDongBH * tyLeBHTN;
+                
+                decimal tongBaoHiem = khauTruBHXH_val + khauTruBHYT_val + khauTruBHTN_val;
                 decimal tongThuNhap = totalLuongChinh + totalLuongOT + phuCap;
 
                 int soNguoiPhuThuoc = emp.SoNguoiPhuThuoc;
@@ -203,9 +212,9 @@ namespace HRApi.Controllers
                     TongGioOT = totalOTHours,
                     LuongOT = Math.Round(totalLuongOT, 0),
                     LuongChinh = Math.Round(totalLuongChinh, 0),
-                    KhauTruBHXH = Math.Round(tongBaoHiem, 0),
-                    KhauTruBHYT = 0,
-                    KhauTruBHTN = 0,
+                    KhauTruBHXH = Math.Round(khauTruBHXH_val, 0),
+                    KhauTruBHYT = Math.Round(khauTruBHYT_val, 0),
+                    KhauTruBHTN = Math.Round(khauTruBHTN_val, 0),
                     ThueTNCN = Math.Round(thueTNCN, 0),
                     KhoanTruKhac = 0,
                     TongThuNhap = Math.Round(tongThuNhap, 0),
