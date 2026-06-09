@@ -1,4 +1,4 @@
-﻿using HRApi.Data;
+using HRApi.Data;
 using HRApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -274,6 +274,10 @@ namespace HRApi.Controllers
                     }
                     else
                     {
+                        decimal soCongChuan = GetStandardWorkDays(year, month);
+                        double tongCong = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].TongCong : 0;
+                        decimal phuCapTheoNgay = Math.Round((emp.LuongTroCap / soCongChuan) * (decimal)tongCong, 0);
+
                         fullList.Add(new BangLuong
                         {
                             MaNhanVien = emp.MaNhanVien,
@@ -281,9 +285,9 @@ namespace HRApi.Controllers
                             Thang = month,
                             Nam = year,
                             LuongCoBan = emp.LuongCoBan,
-                            TongPhuCap = emp.LuongTroCap,
-                            SoCongChuanTrongThang = GetStandardWorkDays(year, month),
-                            TongNgayCong = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].TongCong : 0,
+                            TongPhuCap = phuCapTheoNgay,
+                            SoCongChuanTrongThang = soCongChuan,
+                            TongNgayCong = tongCong,
                             TongGioOT = otSummary.ContainsKey(emp.MaNhanVien) ? otSummary[emp.MaNhanVien] : 0,
                             NghiCoPhep = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].NghiCoPhep : 0,
                             NghiKhongLuong = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].NghiKhongLuong : 0,
