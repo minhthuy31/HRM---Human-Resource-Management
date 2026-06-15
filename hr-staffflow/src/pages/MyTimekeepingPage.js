@@ -90,13 +90,18 @@ const MyTimekeepingPage = () => {
       const ngayCong = record?.ngayCong;
       let className = "";
 
-      if (ngayCong === 1.0)
+      if (ngayCong >= 1.0) {
         className =
           record.ghiChu && !record.ghiChu.includes("Đi muộn")
             ? "status-leave"
             : "status-present";
-      else if (ngayCong === 0.5) className = "status-half-day";
-      else if (ngayCong === 0.0) className = "status-absent";
+      } else if (ngayCong > 0 && ngayCong < 1.0) {
+        className = "status-half-day";
+      } else if (ngayCong === 0.0 && record.gioCheckIn) {
+        className = "status-present";
+      } else if (ngayCong === 0.0) {
+        className = "status-absent";
+      }
 
       const formatTime = (timeStr) => {
         if (!timeStr) return "--:--";
@@ -110,17 +115,17 @@ const MyTimekeepingPage = () => {
 
       let cleanNote = record.ghiChu || "";
       let isLate = false;
-      let isEarly = false; // THÊM BIẾN NÀY ĐỂ BẮT VỀ SỚM
+      let isEarly = false; 
 
       if (cleanNote) {
         if (cleanNote.includes("Đi muộn")) isLate = true;
-        if (cleanNote.includes("Về sớm")) isEarly = true; // BẮT TỪ KHÓA
+        if (cleanNote.includes("Về sớm")) isEarly = true; 
 
         cleanNote = cleanNote
           .replace(/Face Check-in/g, "")
           .replace(/\|? *Face Check-out: \d{2}:\d{2}/g, "")
           .replace(/\(Đi muộn\)/g, "")
-          .replace(/\(Về sớm\)/g, "") // LÀM SẠCH ĐỂ KHÔNG HIỆN CHỮ THỪA
+          .replace(/\(Về sớm\)/g, "") 
           .trim();
       }
 
@@ -130,7 +135,7 @@ const MyTimekeepingPage = () => {
         inTime: record.gioCheckIn ? formatTime(record.gioCheckIn) : null,
         outTime: record.gioCheckOut ? formatTime(record.gioCheckOut) : null,
         isLate: isLate,
-        isEarly: isEarly, // TRẢ VỀ RENDER
+        isEarly: isEarly, 
         note: cleanNote,
       };
     }
@@ -248,7 +253,6 @@ const MyTimekeepingPage = () => {
                     </span>
                   )}
 
-                  {/* --- HIỂN THỊ CẢNH BÁO VỀ SỚM --- */}
                   {isEarly && (
                     <span
                       style={{
@@ -310,7 +314,7 @@ const MyTimekeepingPage = () => {
           <div className="summary-grid">
             <div className="summary-item">
               <span className="summary-value">
-                {summary.tongCong?.toFixed(1) || "0.0"}
+                {summary.tongCong?.toFixed(2) || "0.00"}
               </span>
               <span className="summary-label">Tổng công</span>
             </div>

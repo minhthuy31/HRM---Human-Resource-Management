@@ -188,17 +188,20 @@ const TimekeepingPage = () => {
     const ngayCong = record.ngayCong;
     let className = "";
 
-    if (ngayCong === 1.0) {
+    if (ngayCong >= 1.0) {
       className =
         record.ghiChu &&
         !record.ghiChu.includes("Đi muộn") &&
         !record.ghiChu.includes("Check-in")
           ? "status-leave"
           : "status-present";
-    } else if (ngayCong === 0.5) className = "status-half-day";
-    else if (ngayCong === 0.0 && record.gioCheckIn)
+    } else if (ngayCong > 0 && ngayCong < 1.0) {
+      className = "status-half-day";
+    } else if (ngayCong === 0.0 && record.gioCheckIn) {
       className = "status-present";
-    else if (ngayCong === 0.0) className = "status-absent";
+    } else if (ngayCong === 0.0) {
+      className = "status-absent";
+    }
 
     const formatTime = (timeStr) => {
       if (!timeStr) return null;
@@ -215,11 +218,11 @@ const TimekeepingPage = () => {
 
     let cleanNote = record.ghiChu || "";
     let isLate = false;
-    let isEarly = false; // THÊM BIẾN BẮT VỀ SỚM
+    let isEarly = false; 
 
     if (cleanNote) {
       if (cleanNote.includes("Đi muộn")) isLate = true;
-      if (cleanNote.includes("Về sớm")) isEarly = true; // BẮT KEYWORD TỪ C#
+      if (cleanNote.includes("Về sớm")) isEarly = true; 
 
       cleanNote = cleanNote
         .replace(/Check-in qua QR/gi, "")
@@ -227,7 +230,7 @@ const TimekeepingPage = () => {
         .replace(/\|? *Face Check-out: \d{2}:\d{2}/gi, "")
         .replace(/Check-in: \d{2}:\d{2} \| Check-out: \d{2}:\d{2}/gi, "")
         .replace(/\(Đi muộn\)/gi, "")
-        .replace(/\(Về sớm\)/gi, "") // LÀM SẠCH CHỮ VỀ SỚM ĐỂ HIỂN THỊ ICON THAY THẾ
+        .replace(/\(Về sớm\)/gi, "") 
         .trim();
 
       if (cleanNote.startsWith("|")) cleanNote = cleanNote.substring(1).trim();
@@ -240,7 +243,7 @@ const TimekeepingPage = () => {
       inTime: formatTime(record.gioCheckIn),
       outTime: formatTime(record.gioCheckOut),
       isLate: isLate,
-      isEarly: isEarly, // TRẢ VỀ CHO RENDER
+      isEarly: isEarly, 
       note: cleanNote,
     };
   };
@@ -708,7 +711,6 @@ const TimekeepingPage = () => {
                                     ⚠️ Muộn
                                   </span>
                                 )}
-                                {/* --- HIỂN THỊ VỀ SỚM --- */}
                                 {isEarly && (
                                   <span
                                     style={{
@@ -740,8 +742,8 @@ const TimekeepingPage = () => {
                         <td className="summary-col">
                           <strong>
                             {summary?.tongCong !== undefined
-                              ? summary.tongCong.toFixed(1)
-                              : "0.0"}
+                              ? summary.tongCong.toFixed(2)
+                              : "0.00"}
                           </strong>
                         </td>
                       </tr>
