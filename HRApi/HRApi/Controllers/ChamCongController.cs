@@ -47,7 +47,7 @@ namespace HRApi.Controllers
         // ==============================================================
         private bool IsCompanyNetwork(out string detectedIp)
         {
-            string[] companyIPs = { "58.187.57.2", "172.19.0.1", "127.0.0.1", "::1", "103.139.103.90" };
+            string[] companyIPs = { "58.187.57.2", "172.19.0.1", "127.0.0.1", "::1", "103.139.103.90" ,"222.252.107.200"};
 
             var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString();
 
