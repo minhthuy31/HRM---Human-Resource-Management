@@ -1,4 +1,4 @@
-﻿using HRApi.Data;
+using HRApi.Data;
 using HRApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -87,6 +87,62 @@ namespace HRApi.Controllers
             existing.TrangThai = false; // Chuyển trạng thái thành Ẩn thay vì xóa hẳn khỏi DB
             await _context.SaveChangesAsync();
             return Ok(new { message = "Đã ẩn thông báo." });
+        }
+
+        // 6. API Lấy số lượng đơn từ chờ duyệt (Cho Notification Bell)
+        [HttpGet("unread-requests-count")]
+        public async Task<IActionResult> GetUnreadRequestsCount()
+        {
+            var role = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role")?.Value;
+            var userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            var maPhongBan = User.Claims.FirstOrDefault(c => c.Type == "MaPhongBan")?.Value;
+
+            // Nhân viên thường không có quyền duyệt, trả về 0 luôn
+            if (role == "Nhân viên")
+            {
+                return Ok(new { total = 0, nghiPhep = 0, ot = 0, congTac = 0 });
+            }
+
+            // Khởi tạo truy vấn
+            var queryNghiPhep = _context.DonNghiPheps.Include(d => d.NhanVien).Where(d => d.TrangThai == "Chờ duyệt");
+            var queryOT = _context.DangKyOTs.Include(d => d.NhanVien).Where(d => d.TrangThai == "Chờ duyệt");
+            var queryCongTac = _context.DangKyCongTacs.Include(d => d.NhanVien).Where(d => d.TrangThai == "Chờ duyệt");
+
+            // Phân quyền: Trưởng phòng chỉ xem đơn của phòng mình
+            if (role == "Trưởng phòng")
+            {
+                // Phòng hờ nếu token cũ chưa có mã phòng ban
+                if (string.IsNullOrEmpty(maPhongBan) && !string.IsNullOrEmpty(userId))
+                {
+                    var me = await _context.NhanViens.AsNoTracking().FirstOrDefaultAsync(x => x.MaNhanVien == userId);
+                    maPhongBan = me?.MaPhongBan;
+                }
+
+                if (!string.IsNullOrEmpty(maPhongBan))
+                {
+                    queryNghiPhep = queryNghiPhep.Where(d => d.NhanVien != null && d.NhanVien.MaPhongBan == maPhongBan);
+                    queryOT = queryOT.Where(d => d.NhanVien != null && d.NhanVien.MaPhongBan == maPhongBan);
+                    queryCongTac = queryCongTac.Where(d => d.NhanVien != null && d.NhanVien.MaPhongBan == maPhongBan);
+                }
+                else
+                {
+                    return Ok(new { total = 0, nghiPhep = 0, ot = 0, congTac = 0 });
+                }
+            }
+            // Admin, HR, Kế toán, Giám đốc xem được tất cả đơn chờ duyệt
+
+            int countNghiPhep = await queryNghiPhep.CountAsync();
+            int countOT = await queryOT.CountAsync();
+            int countCongTac = await queryCongTac.CountAsync();
+            int total = countNghiPhep + countOT + countCongTac;
+
+            return Ok(new
+            {
+                total = total,
+                nghiPhep = countNghiPhep,
+                ot = countOT,
+                congTac = countCongTac
+            });
         }
     }
 }

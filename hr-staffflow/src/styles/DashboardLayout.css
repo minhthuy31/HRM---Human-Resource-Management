@@ -264,3 +264,116 @@ li a:hover {
   font-size: 13px;
   color: var(--toggle-icon-color);
 }
+
+/* ================== NOTIFICATION BELL ================== */
+.notification-container {
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--hover-bg);
+  color: var(--toggle-icon-color);
+  transition: all 0.2s ease;
+}
+
+.notification-container:hover {
+  background-color: var(--avatar-bg);
+  color: var(--logo-text-color);
+}
+
+.notification-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background-color: #ef4444; /* Đỏ báo hiệu */
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 10px;
+  border: 2px solid var(--card-bg); /* Viền tiệp màu nền để tách khối */
+  min-width: 14px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Dropdown riêng cho Notification */
+.notification-hover-zone {
+  position: absolute;
+  top: 36px;
+  right: -10px;
+  height: 20px;
+  width: 250px;
+  background: transparent;
+  z-index: 1000;
+}
+
+.notification-dropdown {
+  display: none;
+  position: absolute;
+  top: 46px; /* Dưới bell 1 chút */
+  right: -10px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--sidebar-border);
+  box-shadow: 0 4px 12px var(--shadow-color);
+  border-radius: 8px;
+  width: 280px;
+  z-index: 1001;
+  overflow: hidden;
+}
+
+.notification-container:hover .notification-dropdown,
+.notification-container:hover .notification-hover-zone {
+  display: block;
+}
+
+.notification-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--sidebar-border);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--main-text);
+  background-color: var(--hover-bg);
+}
+
+.notification-item {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--main-text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--separator-color);
+  transition: background-color 0.2s ease;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-item:hover {
+  background-color: var(--hover-bg);
+}
+
+.notification-title {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.notification-desc {
+  font-size: 12px;
+  color: var(--toggle-icon-color);
+}
+
+.notification-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--toggle-icon-color);
+  font-size: 13px;
+}

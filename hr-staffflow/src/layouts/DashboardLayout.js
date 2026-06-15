@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiLogOut, FiSun, FiMoon } from "react-icons/fi";
+import { FiLogOut, FiSun, FiMoon, FiBell } from "react-icons/fi";
 import { api } from "../api";
 import "../styles/DashboardLayout.css";
 import logo from "../assets/logo.png";
@@ -14,6 +14,7 @@ const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
   const [nhanVien, setNhanVien] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [unreadData, setUnreadData] = useState({ total: 0, nghiPhep: 0, ot: 0, congTac: 0 });
 
   useEffect(() => {
     if (isDarkMode) {
@@ -29,6 +30,27 @@ const DashboardLayout = ({ children }) => {
       setCurrentTime(new Date());
     }, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  const fetchUnreadRequests = async () => {
+    try {
+      const response = await api.get("/ThongBao/unread-requests-count");
+      if (response.data) {
+        setUnreadData(response.data);
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy số đơn chờ duyệt:", error);
+    }
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetchUnreadRequests();
+      // Tự động làm mới mỗi 60 giây
+      const intervalId = setInterval(fetchUnreadRequests, 60000);
+      return () => clearInterval(intervalId);
+    }
   }, []);
 
   const handleLogout = () => {
@@ -186,6 +208,41 @@ const DashboardLayout = ({ children }) => {
 
           <div className="dark-mode-toggle" onClick={handleToggleDarkMode}>
             {isDarkMode ? <FiSun size={20} /> : <FiMoon size={20} />}
+          </div>
+
+          <div className="notification-container">
+            <FiBell size={20} />
+            {unreadData.total > 0 && (
+              <div className="notification-badge">{unreadData.total > 99 ? '99+' : unreadData.total}</div>
+            )}
+            <div className="notification-hover-zone"></div>
+            <div className="notification-dropdown">
+              <div className="notification-header">Thông báo đơn từ</div>
+              {unreadData.total > 0 ? (
+                <>
+                  {unreadData.nghiPhep > 0 && (
+                    <Link to="/nghi-phep" className="notification-item">
+                      <span className="notification-title">Đơn xin nghỉ phép</span>
+                      <span className="notification-desc">Có {unreadData.nghiPhep} đơn chờ duyệt</span>
+                    </Link>
+                  )}
+                  {unreadData.ot > 0 && (
+                    <Link to="/nghi-phep" className="notification-item">
+                      <span className="notification-title">Đơn đăng ký OT</span>
+                      <span className="notification-desc">Có {unreadData.ot} đơn chờ duyệt</span>
+                    </Link>
+                  )}
+                  {unreadData.congTac > 0 && (
+                    <Link to="/nghi-phep" className="notification-item">
+                      <span className="notification-title">Đơn đăng ký công tác</span>
+                      <span className="notification-desc">Có {unreadData.congTac} đơn chờ duyệt</span>
+                    </Link>
+                  )}
+                </>
+              ) : (
+                <div className="notification-empty">Không có đơn từ chờ duyệt</div>
+              )}
+            </div>
           </div>
 
           <div className="avatar-container">
