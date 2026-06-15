@@ -96,6 +96,17 @@ const EmployeeModal = ({
     e.preventDefault();
     const dataToSubmit = { ...formData };
 
+    // Validate số điện thoại
+    const phoneRegex = /^(0[35789])[0-9]{8}$/;
+    if (dataToSubmit.sdt_NhanVien && !phoneRegex.test(dataToSubmit.sdt_NhanVien)) {
+      alert("Số điện thoại nhân viên không hợp lệ. Phải là 10 số và bắt đầu bằng 03, 05, 07, 08 hoặc 09.");
+      return;
+    }
+    if (dataToSubmit.sdtKhanCap && !phoneRegex.test(dataToSubmit.sdtKhanCap)) {
+      alert("Số điện thoại khẩn cấp không hợp lệ. Phải là 10 số và bắt đầu bằng 03, 05, 07, 08 hoặc 09.");
+      return;
+    }
+
     if (dataToSubmit.luongCoBan !== "" && dataToSubmit.luongCoBan !== null) {
       dataToSubmit.luongCoBan = parseFloat(dataToSubmit.luongCoBan);
     } else {

@@ -1,4 +1,6 @@
-﻿namespace HRApi.DTOs
+using System.ComponentModel.DataAnnotations;
+
+namespace HRApi.DTOs
 {
     public class NhanVienCreateUpdateDto
     {
@@ -31,9 +33,11 @@
 
         // 4. Liên hệ
         public string? Email { get; set; }
+        [RegularExpression(@"^(0[35789])[0-9]{8}$", ErrorMessage = "Số điện thoại không hợp lệ. Phải là 10 số và bắt đầu bằng 03, 05, 07, 08 hoặc 09.")]
         public string? sdt_NhanVien { get; set; }
 
         public string? NguoiLienHeKhanCap { get; set; }
+        [RegularExpression(@"^(0[35789])[0-9]{8}$", ErrorMessage = "Số điện thoại khẩn cấp không hợp lệ.")]
         public string? SdtKhanCap { get; set; }
         public string? QuanHeKhanCap { get; set; }
         public string? DiaChiKhanCap { get; set; }

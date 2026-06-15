@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace HRApi.Models
@@ -55,10 +55,12 @@ namespace HRApi.Models
         // 4. THÔNG TIN LIÊN HỆ (Contact)
         // ========================================================================
         public string? Email { get; set; } // Email cá nhân/công ty
+        [RegularExpression(@"^(0[35789])[0-9]{8}$", ErrorMessage = "Số điện thoại không hợp lệ. Phải là 10 số và bắt đầu bằng 03, 05, 07, 08 hoặc 09.")]
         public string? sdt_NhanVien { get; set; } // SĐT chính
 
         // --- Liên hệ khẩn cấp ---
         public string? NguoiLienHeKhanCap { get; set; } // Tên người thân
+        [RegularExpression(@"^(0[35789])[0-9]{8}$", ErrorMessage = "Số điện thoại khẩn cấp không hợp lệ.")]
         public string? SdtKhanCap { get; set; } // SĐT người thân
         public string? QuanHeKhanCap { get; set; } // Mối quan hệ (Bố, Mẹ, Vợ...)
         public string? DiaChiKhanCap { get; set; }

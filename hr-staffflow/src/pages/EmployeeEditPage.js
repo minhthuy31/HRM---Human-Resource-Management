@@ -110,6 +110,17 @@ const EmployeeEditPage = () => {
     if (!employee) return;
     let dataToSave = { ...employee };
 
+    // Validate số điện thoại
+    const phoneRegex = /^(0[35789])[0-9]{8}$/;
+    if (dataToSave.sdt_NhanVien && !phoneRegex.test(dataToSave.sdt_NhanVien)) {
+      alert("Số điện thoại nhân viên không hợp lệ. Phải là 10 số và bắt đầu bằng 03, 05, 07, 08 hoặc 09.");
+      return;
+    }
+    if (dataToSave.sdtKhanCap && !phoneRegex.test(dataToSave.sdtKhanCap)) {
+      alert("Số điện thoại khẩn cấp không hợp lệ. Phải là 10 số và bắt đầu bằng 03, 05, 07, 08 hoặc 09.");
+      return;
+    }
+
     // Đảm bảo luongCoBan là số khi gửi đi
     if (dataToSave.luongCoBan !== "" && dataToSave.luongCoBan !== null) {
       dataToSave.luongCoBan = parseFloat(dataToSave.luongCoBan);
