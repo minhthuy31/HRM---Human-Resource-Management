@@ -3,6 +3,7 @@ using HRApi.Models;
 using HRApi.Services;
 using Login.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -97,6 +98,17 @@ builder.Services.AddSwaggerGen(c =>
 
 
 var app = builder.Build();
+//CẤU HÌNH ĐỌC IP TỪ PROXY 
+
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
+// Xóa giới hạn IP mặc định để nhận diện diện đúng từ mọi Proxy bên ngoài
+forwardedHeadersOptions.KnownNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+
+app.UseForwardedHeaders(forwardedHeadersOptions);
 
 // Sử dụng CORS (Giữ nguyên của bạn)
 app.UseCors("AllowReactApp");

@@ -65,7 +65,7 @@ namespace HRApi.Controllers
             Console.WriteLine($"[DEBUG] Đang kiểm tra IP: {ipToCheck}");
 
             // 3. Sử dụng biến cục bộ 'ipToCheck' trong Lambda (KHÔNG dùng 'detectedIp')
-            return companyIPs.Any(allowedIp => ipToCheck.Contains(allowedIp));
+            return companyIPs.Any(allowedIp => ipToCheck == allowedIp);
         }
 
         // ==============================================================
@@ -152,11 +152,11 @@ namespace HRApi.Controllers
         public async Task<IActionResult> CheckInWithFace([FromBody] CheckInFaceDto dto)
         {
 
-            //Check địa chỉ IP 
-            // if (!IsCompanyNetwork(out string detectedIp))
-            // {
-            //     return BadRequest(new { success = false, message = $"Bạn đang dùng mạng ngoài (IP: {detectedIp}). Chỉ được chấm công bằng Wifi công ty!" });
-            // }
+            //Check địa chỉ IP
+            if (!IsCompanyNetwork(out string detectedIp))
+            {
+                return BadRequest(new { success = false, message = $"Bạn đang dùng mạng ngoài (IP: {detectedIp}). Chỉ được chấm công bằng Wifi công ty!" });
+            }
 
             var currentUserId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(currentUserId)) return Unauthorized(new { success = false, message = "Phiên đăng nhập không hợp lệ." });
