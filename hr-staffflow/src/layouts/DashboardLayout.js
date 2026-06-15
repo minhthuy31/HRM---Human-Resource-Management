@@ -166,12 +166,12 @@ const DashboardLayout = ({ children }) => {
               <span className="text">Quản lý hợp đồng</span>
             </Link>
           </li>
-          <li>
+          {/*<li>
             <Link to="/khen-thuong">
               <span className="icon">🏅</span>
               <span className="text">Khen thưởng / Kỷ luật</span>
             </Link>
-          </li>
+          </li>*/}
           <li>
             <Link to="/thong-bao">
               <span className="icon">📚</span>
@@ -190,12 +190,12 @@ const DashboardLayout = ({ children }) => {
               <span className="text">Cài đặt hệ thống</span>
             </Link>
           </li>
-          <li>
+          {/*<li>
             <Link to="/nguoi-dung">
               <span className="icon">👤</span>
               <span className="text">Người dùng</span>
             </Link>
-          </li>
+          </li>*/}
         </ul>
       </aside>
 
