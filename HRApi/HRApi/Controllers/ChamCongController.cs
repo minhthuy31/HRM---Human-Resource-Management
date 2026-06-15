@@ -25,13 +25,11 @@ namespace HRApi.Controllers
         // CẤU HÌNH CA LÀM VIÊC CHUẨN (SHIFT SETTINGS)
         // ==============================================================
         private readonly TimeSpan SHIFT_START = new TimeSpan(8, 0, 0);       // Bắt đầu ca: 08:00
-        private readonly TimeSpan SHIFT_END = new TimeSpan(17, 0, 0);        // Kết thúc ca: 17:00
-        private readonly TimeSpan LATE_GRACE = new TimeSpan(8, 15, 0);       // Cho phép muộn đến: 08:15
-        private readonly TimeSpan EARLY_GRACE = new TimeSpan(16, 55, 0);     // Cho phép về sớm từ: 16:55
-        private readonly TimeSpan LUNCH_START = new TimeSpan(12, 0, 0);      // Bắt đầu nghỉ trưa: 12:00
-        private readonly TimeSpan LUNCH_END = new TimeSpan(13, 0, 0);        // Kết thúc nghỉ trưa: 13:00
-        private const double CONG_FULL = 7.5;  // Mức giờ để đạt 1 công
-        private const double CONG_NUA = 3.5;   // Mức giờ để đạt 0.5 công
+private readonly TimeSpan SHIFT_END = new TimeSpan(17, 30, 0);       // Kết thúc ca: 17:30
+private readonly TimeSpan LATE_GRACE = new TimeSpan(8, 0, 0);        // Sau 08:00 là tính đi muộn
+private readonly TimeSpan EARLY_GRACE = new TimeSpan(17, 30, 0);     // Trước 17:30 là tính về sớm
+private readonly TimeSpan LUNCH_START = new TimeSpan(12, 0, 0);      // Bắt đầu nghỉ trưa: 12:00
+private readonly TimeSpan LUNCH_END = new TimeSpan(13, 30, 0);       // Kết thúc nghỉ trưa: 13:30
 
         // HELPER: Đồng bộ múi giờ UTC+7
         private DateTime GetVnTime() => DateTime.UtcNow.AddHours(7);
@@ -68,82 +66,83 @@ namespace HRApi.Controllers
             return companyIPs.Any(allowedIp => ipToCheck == allowedIp);
         }
 
-        // ==============================================================
-        // 1. CHECK-IN / CHECK-OUT BẰNG MÃ QR
-        // ==============================================================
-        [HttpPost("check-in-qr")]
-        public async Task<IActionResult> CheckInWithQr([FromBody] CheckInQRDto dto)
-        {
-            if (!IsCompanyNetwork(out string detectedIp))
-            {
-                return BadRequest(new { message = $"Bạn đang dùng mạng ngoài (IP: {detectedIp}). Chỉ được chấm công khi kết nối Wifi công ty!" });
-            }
+        // // ==============================================================
+        // // 1. CHECK-IN / CHECK-OUT BẰNG MÃ QR
+        // // ==============================================================
+        // [HttpPost("check-in-qr")]
+        // public async Task<IActionResult> CheckInWithQr([FromBody] CheckInQRDto dto)
+        // {
+        //     if (!IsCompanyNetwork(out string detectedIp))
+        //     {
+        //         return BadRequest(new { message = $"Bạn đang dùng mạng ngoài (IP: {detectedIp}). Chỉ được chấm công khi kết nối Wifi công ty!" });
+        //     }
 
-            var maNhanVien = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-            if (maNhanVien == null) return Unauthorized();
+        //     var maNhanVien = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+        //     if (maNhanVien == null) return Unauthorized();
 
-            var qrToken = await _context.ActiveQRTokens.FirstOrDefaultAsync(t => t.Token == dto.QrToken);
-            if (qrToken == null || qrToken.IsUsed || qrToken.ExpiresAt < DateTime.UtcNow)
-                return BadRequest(new { message = "Mã QR không hợp lệ hoặc đã hết hạn." });
+        //     var qrToken = await _context.ActiveQRTokens.FirstOrDefaultAsync(t => t.Token == dto.QrToken);
+        //     if (qrToken == null || qrToken.IsUsed || qrToken.ExpiresAt < DateTime.UtcNow)
+        //         return BadRequest(new { message = "Mã QR không hợp lệ hoặc đã hết hạn." });
 
-            qrToken.IsUsed = true;
+        //     qrToken.IsUsed = true;
 
-            DateTime vnTime = GetVnTime();
-            DateTime today = vnTime.Date;
+        //     DateTime vnTime = GetVnTime();
+        //     DateTime today = vnTime.Date;
 
-            var existing = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == maNhanVien && c.NgayChamCong.Date == today);
+        //     var existing = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == maNhanVien && c.NgayChamCong.Date == today);
 
-            if (existing != null)
-            {
-                if (existing.GioCheckIn == null)
-                {
-                    existing.GioCheckIn = vnTime;
-                    existing.DiMuon = vnTime.TimeOfDay > LATE_GRACE;
-                    existing.GhiChu = existing.DiMuon ? "Check-in qua QR (Đi muộn)" : "Check-in qua QR";
+        //     if (existing != null)
+        //     {
+        //         if (existing.GioCheckIn == null)
+        //         {
+        //             existing.GioCheckIn = vnTime;
+        //             existing.DiMuon = vnTime.TimeOfDay > LATE_GRACE;
+        //             existing.GhiChu = existing.DiMuon ? "Check-in qua QR (Đi muộn)" : "Check-in qua QR";
 
-                    _context.ChamCongs.Update(existing);
-                    await _context.SaveChangesAsync();
-                    return Ok(new { message = "Check-in thành công!", time = existing.GioCheckIn });
-                }
-                else
-                {
-                    if (existing.GioCheckOut != null) return BadRequest(new { message = "Bạn đã check-out rồi." });
+        //             _context.ChamCongs.Update(existing);
+        //             await _context.SaveChangesAsync();
+        //             return Ok(new { message = "Check-in thành công!", time = existing.GioCheckIn });
+        //         }
+        //         else
+        //         {
+        //             if (existing.GioCheckOut != null) return BadRequest(new { message = "Bạn đã check-out rồi." });
 
-                    existing.GioCheckOut = vnTime;
+        //             existing.GioCheckOut = vnTime;
 
-                    // NẾU DATABASE BẠN CHƯA THÊM CỘT VeSom THÌ CỨ ĐỂ COMMENT DÒNG NÀY LẠI
-                    // existing.VeSom = vnTime.TimeOfDay < EARLY_GRACE;
+        //             // Mở comment và đổi thành biến kiểm tra về sớm thực tế
+        //             bool isEarly = vnTime.TimeOfDay < EARLY_GRACE;
 
-                    existing.NgayCong = CalculateWorkDay(existing.GioCheckIn.Value, existing.GioCheckOut.Value);
+        //             // TÍNH PHÚT LÀM VIỆC 
+        //             existing.NgayCong = CalculateWorkDay(existing.GioCheckIn.Value, existing.GioCheckOut.Value);
 
-                    string note = $"Check-in: {existing.GioCheckIn:HH:mm} | Check-out: {existing.GioCheckOut:HH:mm}";
-                    if (existing.DiMuon) note += " (Đi muộn)";
-                    // if (existing.VeSom) note += " (Về sớm)";
-                    existing.GhiChu = note;
+        //             string note = $"Check-in: {existing.GioCheckIn:HH:mm} | Check-out: {existing.GioCheckOut:HH:mm}";
+        //             if (existing.DiMuon) note += " (Đi muộn)";
+        //             if (isEarly) note += " (Về sớm)"; 
+        //             existing.GhiChu = note;
 
-                    _context.ChamCongs.Update(existing);
-                    await _context.SaveChangesAsync();
-                    return Ok(new { message = $"Check-out thành công. Công: {existing.NgayCong}" });
-                }
-            }
-            else
-            {
-                bool isLate = vnTime.TimeOfDay > LATE_GRACE;
-                var newChamCong = new ChamCong
-                {
-                    MaNhanVien = maNhanVien,
-                    NgayChamCong = today,
-                    GioCheckIn = vnTime,
-                    NgayCong = 0.0,
-                    DiMuon = isLate,
-                    LoaiNgayCong = "Làm việc",
-                    GhiChu = isLate ? "Check-in qua QR (Đi muộn)" : "Check-in qua QR"
-                };
-                _context.ChamCongs.Add(newChamCong);
-                await _context.SaveChangesAsync();
-                return Ok(new { message = "Check-in thành công!", time = newChamCong.GioCheckIn });
-            }
-        }
+        //             _context.ChamCongs.Update(existing);
+        //             await _context.SaveChangesAsync();
+        //             return Ok(new { message = $"Check-out thành công. Công: {existing.NgayCong}" });
+        //         }
+        //     }
+        //     else
+        //     {
+        //         bool isLate = vnTime.TimeOfDay > LATE_GRACE;
+        //         var newChamCong = new ChamCong
+        //         {
+        //             MaNhanVien = maNhanVien,
+        //             NgayChamCong = today,
+        //             GioCheckIn = vnTime,
+        //             NgayCong = 0.0,
+        //             DiMuon = isLate,
+        //             LoaiNgayCong = "Làm việc",
+        //             GhiChu = isLate ? "Check-in qua QR (Đi muộn)" : "Check-in qua QR"
+        //         };
+        //         _context.ChamCongs.Add(newChamCong);
+        //         await _context.SaveChangesAsync();
+        //         return Ok(new { message = "Check-in thành công!", time = newChamCong.GioCheckIn });
+        //     }
+        // }
 
         // ==============================================================
         // 2. FACE ID: CHECK-IN / CHECK-OUT
@@ -194,15 +193,15 @@ namespace HRApi.Controllers
 
                     existing.GioCheckOut = vnTime;
 
-                    // NẾU DATABASE BẠN CHƯA THÊM CỘT VeSom THÌ CỨ ĐỂ COMMENT DÒNG NÀY LẠI
-                    // existing.VeSom = vnTime.TimeOfDay < EARLY_GRACE;
+                    // Mở comment và đổi thành biến kiểm tra về sớm thực tế
+                    bool isEarly = vnTime.TimeOfDay < EARLY_GRACE;
 
                     // TÍNH PHÚT LÀM VIỆC 
                     existing.NgayCong = CalculateWorkDay(existing.GioCheckIn.Value, existing.GioCheckOut.Value);
 
                     string note = $"Check-in: {existing.GioCheckIn:HH:mm} | Check-out: {existing.GioCheckOut:HH:mm}";
                     if (existing.DiMuon) note += " (Đi muộn)";
-                    // if (existing.VeSom) note += " (Về sớm)";
+                    if (isEarly) note += " (Về sớm)"; 
                     existing.GhiChu = note;
 
                     _context.ChamCongs.Update(existing);
@@ -238,28 +237,37 @@ namespace HRApi.Controllers
         // 3. THUẬT TOÁN TÍNH CÔNG THEO GIỜ (CORE BUSINESS LOGIC)
         // ==============================================================
         private double CalculateWorkDay(DateTime checkIn, DateTime checkOut)
-        {
-            TimeSpan inTime = checkIn.TimeOfDay;
-            TimeSpan outTime = checkOut.TimeOfDay;
-
-            if (inTime < SHIFT_START) inTime = SHIFT_START;
-            if (outTime > SHIFT_END) outTime = SHIFT_END;
-            if (outTime <= inTime) return 0.0;
-
-            double totalHours = (outTime - inTime).TotalHours;
-
-            if (inTime < LUNCH_END && outTime > LUNCH_START)
             {
-                TimeSpan overlapStart = (inTime > LUNCH_START) ? inTime : LUNCH_START;
-                TimeSpan overlapEnd = (outTime < LUNCH_END) ? outTime : LUNCH_END;
-                double lunchOverlapHours = (overlapEnd - overlapStart).TotalHours;
-                if (lunchOverlapHours > 0) totalHours -= lunchOverlapHours;
-            }
+                TimeSpan inTime = checkIn.TimeOfDay;
+                TimeSpan outTime = checkOut.TimeOfDay;
 
-            if (totalHours >= CONG_FULL) return 1.0;
-            if (totalHours >= CONG_NUA) return 0.5;
-            return 0.0;
-        }
+                // 1. Cắt gọt thời gian theo ca chuẩn (08:00 - 17:30)
+                if (inTime < SHIFT_START) inTime = SHIFT_START;
+                if (outTime > SHIFT_END) outTime = SHIFT_END;
+                if (outTime <= inTime) return 0.0;
+
+                // 2. Tính tổng số giờ ở công ty
+                double totalHours = (outTime - inTime).TotalHours;
+
+                // 3. Trừ đi thời gian nghỉ trưa (12:00 - 13:30) nếu có giao thoa
+                if (inTime < LUNCH_END && outTime > LUNCH_START)
+                {
+                    TimeSpan overlapStart = (inTime > LUNCH_START) ? inTime : LUNCH_START;
+                    TimeSpan overlapEnd = (outTime < LUNCH_END) ? outTime : LUNCH_END;
+                    double lunchOverlapHours = (overlapEnd - overlapStart).TotalHours;
+                    
+                    if (lunchOverlapHours > 0) totalHours -= lunchOverlapHours;
+                }
+
+                // 4. Số giờ làm việc chuẩn để đạt 1 công là 8.0 giờ (9.5 tiếng - 1.5 tiếng nghỉ)
+                double STANDARD_SHIFT_HOURS = 8.0; 
+                
+                // 5. Tính tỷ lệ công thực tế
+                double exactCong = totalHours / STANDARD_SHIFT_HOURS;
+
+                // Làm tròn đến 3 chữ số thập phân 
+                return Math.Round(exactCong, 3); 
+            }
 
         // ==============================================================
         // 4. LẤY DỮ LIỆU BẢNG CÔNG TỔNG HỢP THÁNG
