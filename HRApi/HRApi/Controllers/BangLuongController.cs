@@ -18,6 +18,12 @@ namespace HRApi.Controllers
         public class SalaryCalcDto { public int Year { get; set; } public int Month { get; set; } }
 
         // ==============================================================
+        // CẤU HÌNH CÔNG CHUẨN
+        // ==============================================================
+        // Chốt cứng 22 công/tháng (Làm từ Thứ 2 - Thứ 6, nghỉ T7 & CN)
+        private const decimal SO_CONG_CHUAN = 22m;
+
+        // ==============================================================
         // HELPER: TÍNH THUẾ TNCN LŨY TIẾN
         // ==============================================================
         private decimal TinhThueTNCNLuyTien(decimal thuNhapTinhThue)
@@ -30,22 +36,6 @@ namespace HRApi.Controllers
             if (thuNhapTinhThue <= 52000000) return thuNhapTinhThue * 0.25m - 3250000;
             if (thuNhapTinhThue <= 80000000) return thuNhapTinhThue * 0.3m - 5850000;
             return thuNhapTinhThue * 0.35m - 9850000;
-        }
-
-        // ==============================================================
-        // HELPER: CÔNG CHUẨN (CHỈ TRỪ CHỦ NHẬT, KHÔNG TRỪ LỄ)
-        // ==============================================================
-        private int GetStandardWorkDays(int year, int month)
-        {
-            int days = DateTime.DaysInMonth(year, month);
-            int count = 0;
-            for (int i = 1; i <= days; i++)
-            {
-                var date = new DateTime(year, month, i);
-                if (date.DayOfWeek != DayOfWeek.Sunday)
-                    count++;
-            }
-            return count;
         }
 
         // ==============================================================
@@ -75,7 +65,7 @@ namespace HRApi.Controllers
 
             decimal heSoOtThuong = (decimal)(sysSettings?.HeSoOTNgayThuong ?? 1.5);
             decimal heSoOtCuoiTuan = (decimal)(sysSettings?.HeSoOTCuoiTuan ?? 2.0);
-            decimal heSoOtLe = (decimal)(sysSettings?.HeSoOTNgayLe ?? 3.0); // Mặc định x3.0
+            decimal heSoOtLe = (decimal)(sysSettings?.HeSoOTNgayLe ?? 3.0); 
 
             var employees = await _context.NhanViens.Include(n => n.HopDongs).Where(e => e.TrangThai == true).ToListAsync();
 
@@ -91,7 +81,8 @@ namespace HRApi.Controllers
                 .Select(nl => nl.Date.Date)
                 .ToListAsync();
 
-            decimal standardWorkDays = GetStandardWorkDays(dto.Year, dto.Month);
+            // Sử dụng công chuẩn 22 ngày
+            decimal standardWorkDays = SO_CONG_CHUAN;
             var newPayrolls = new List<BangLuong>();
 
             foreach (var emp in employees)
@@ -125,35 +116,34 @@ namespace HRApi.Controllers
                         var normalAtt = periodAtt.Where(c => !holidaysInMonth.Contains(c.NgayChamCong.Date)).ToList();
                         var holidayAtt = periodAtt.Where(c => holidaysInMonth.Contains(c.NgayChamCong.Date)).ToList();
 
-                        double normalNgayCong = normalAtt.Sum(c => c.NgayCong); // Tổng ngày đi làm thường
-                        double holidayWorkCong = holidayAtt.Sum(c => c.NgayCong); // TỔNG NGÀY ĐI LÀM LỄ (Chìa khóa nằm đây)
+                        double normalNgayCong = normalAtt.Sum(c => c.NgayCong); 
+                        double holidayWorkCong = holidayAtt.Sum(c => c.NgayCong); 
 
-                        // Tổng số ngày lễ trong tháng
+                        // Tổng số ngày lễ trong tháng (không rơi vào Chủ Nhật)
                         int holidaysInPeriod = holidaysInMonth.Count(h => h >= periodStart.Date && h <= periodEnd.Date && h.DayOfWeek != DayOfWeek.Sunday);
 
                         // Lễ được nghỉ ở nhà hưởng lương
                         double leNghiONha = Math.Max(0, holidaysInPeriod - holidayWorkCong);
 
-                        // Tổng công hiển thị UI
+                        // Tổng công thực tế hiển thị UI
                         double congChinh = normalNgayCong + holidayWorkCong + leNghiONha;
                         totalWorkDays += congChinh;
 
-                        // --- 2. TÍNH TIỀN LƯƠNG CHÍNH (TỰ ĐỘNG X300%) ---
-                        decimal dailyRate = contract.LuongCoBan / standardWorkDays;
+                        // --- 2. TÍNH TIỀN LƯƠNG CHÍNH ---
+                        decimal dailyRate = contract.LuongCoBan / standardWorkDays; // Chia cho 22
 
-                        decimal luongNgayThuong = dailyRate * (decimal)normalNgayCong; // Đi làm ngày thường (x1)
-                        decimal luongNghiLe = dailyRate * (decimal)leNghiONha; // Ở nhà nghỉ lễ (x1)
+                        decimal luongNgayThuong = dailyRate * (decimal)normalNgayCong; 
+                        decimal luongNghiLe = dailyRate * (decimal)leNghiONha; 
 
-                        // ĐI LÀM NGÀY LỄ -> TỰ ĐỘNG NHÂN HỆ SỐ (Ví dụ x3.0) KHÔNG CẦN ĐƠN OT
+                        // ĐI LÀM NGÀY LỄ -> TỰ ĐỘNG NHÂN HỆ SỐ KHÔNG CẦN ĐƠN OT
                         decimal luongDiLamLe = dailyRate * (decimal)holidayWorkCong * heSoOtLe;
 
                         totalLuongChinh += (luongNgayThuong + luongNghiLe + luongDiLamLe);
 
                         // --- 3. TÍNH ĐƠN OT NGÀY THƯỜNG ---
-                        decimal periodHourlyRate = dailyRate / 8m;
+                        decimal periodHourlyRate = dailyRate / 8m; // Chia 8 tiếng/ngày
                         foreach (var ot in periodOT)
                         {
-                            // BẢO VỆ KÉP: Bỏ qua các đơn xin OT nếu nó rơi vào ngày Lễ (Vì đã tự x3 ở trên rồi)
                             if (holidaysInMonth.Contains(ot.NgayLamThem.Date)) continue;
 
                             decimal multiplier = ot.NgayLamThem.DayOfWeek == DayOfWeek.Sunday ? heSoOtCuoiTuan : heSoOtThuong;
@@ -163,7 +153,6 @@ namespace HRApi.Controllers
 
                         // --- 4. TÍNH BẢO HIỂM ---
                         bool isThuViec = contract.LoaiHopDong != null && contract.LoaiHopDong.ToLower().Contains("thử việc");
-                        // Tính bảo hiểm dựa trên Lương Cơ Bản thay vì Lương Đóng Bảo Hiểm
                         if (!isThuViec)
                         {
                             totalLuongDongBH += (contract.LuongCoBan / standardWorkDays) * (decimal)(normalNgayCong + holidaysInPeriod);
@@ -181,6 +170,7 @@ namespace HRApi.Controllers
                     totalLuongDongBH = isThuViec ? 0 : (emp.LuongCoBan / standardWorkDays) * (decimal)totalWorkDays;
                 }
 
+                // TÍNH PHỤ CẤP THEO HƯỚNG 1 (Tỷ lệ thực tế trên 22 công chuẩn)
                 decimal phuCap = Math.Round((emp.LuongTroCap / standardWorkDays) * (decimal)totalWorkDays, 0);
                 
                 decimal tyLeBHXH = (8m / 10.5m) * phanTramBHXH;
@@ -247,7 +237,6 @@ namespace HRApi.Controllers
 
                 var attendanceData = await _context.ChamCongs.Where(c => c.NgayChamCong.Year == year && c.NgayChamCong.Month == month).ToListAsync();
 
-                // FIX LỖI 500 (Số 1): Lọc bỏ các bản ghi mất mã nhân viên để tránh crash Dictionary
                 var validAttendance = attendanceData.Where(c => !string.IsNullOrEmpty(c.MaNhanVien)).ToList();
 
                 var attendanceSummary = validAttendance.GroupBy(c => c.MaNhanVien).ToDictionary(g => g.Key, g => new
@@ -255,12 +244,10 @@ namespace HRApi.Controllers
                     TongCong = g.Sum(x => x.NgayCong),
                     NghiCoPhep = g.Count(x => x.NgayCong == 1.0 && x.LoaiNgayCong == "Nghỉ phép"),
                     NghiKhongLuong = g.Count(x => x.NgayCong == 0.0 && x.LoaiNgayCong == "Nghỉ không lương"),
-                    // Kiểm tra an toàn x.GhiChu tránh NullReferenceException
                     NghiKhongPhep = g.Count(x => x.NgayCong == 0.0 && (string.IsNullOrEmpty(x.GhiChu) || !x.GhiChu.ToLower().Contains("không lương")) && x.LoaiNgayCong != "Làm việc"),
                     LamNuaNgay = g.Count(x => x.NgayCong == 0.5)
                 });
 
-                // FIX LỖI 500 (Số 1): Lọc bỏ Null cho OT
                 var otSummary = await _context.DangKyOTs
                     .Where(ot => ot.NgayLamThem.Year == year && ot.NgayLamThem.Month == month && ot.TrangThai == "Đã duyệt" && !string.IsNullOrEmpty(ot.MaNhanVien))
                     .GroupBy(ot => ot.MaNhanVien)
@@ -279,13 +266,16 @@ namespace HRApi.Controllers
                         savedRecord.NghiKhongPhep = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].NghiKhongPhep : 0;
                         savedRecord.LamNuaNgay = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].LamNuaNgay : 0;
 
-                        if (savedRecord.SoCongChuanTrongThang == 0) savedRecord.SoCongChuanTrongThang = GetStandardWorkDays(year, month);
+                        if (savedRecord.SoCongChuanTrongThang == 0) savedRecord.SoCongChuanTrongThang = SO_CONG_CHUAN;
                         fullList.Add(savedRecord);
                     }
                     else
                     {
-                        decimal soCongChuan = GetStandardWorkDays(year, month);
+                        // Sử dụng công chuẩn 22 ngày
+                        decimal soCongChuan = SO_CONG_CHUAN;
                         double tongCong = attendanceSummary.ContainsKey(emp.MaNhanVien) ? attendanceSummary[emp.MaNhanVien].TongCong : 0;
+                        
+                        // TÍNH PHỤ CẤP THEO HƯỚNG 1 (Tỷ lệ thực tế trên 22 công chuẩn)
                         decimal phuCapTheoNgay = Math.Round((emp.LuongTroCap / soCongChuan) * (decimal)tongCong, 0);
 
                         fullList.Add(new BangLuong
@@ -320,12 +310,11 @@ namespace HRApi.Controllers
                 var isPublished = savedPayrolls.Any(p => p.DaChot);
                 decimal departmentTotal = role == "Trưởng phòng" ? finalData.Sum(x => x.ThucLanh) : 0;
 
-                // FIX LỖI 500 (Số 2): Đóng gói dữ liệu thành Anonymous Object để tránh JSON Cycle
                 var resultData = finalData.OrderBy(x => x.MaNhanVien).Select(x => new
                 {
                     x.Id,
                     x.MaNhanVien,
-                    NhanVien = new { HoTen = x.NhanVien?.HoTen }, // React đang gọi: p.nhanVien?.hoTen
+                    NhanVien = new { HoTen = x.NhanVien?.HoTen },
                     x.Thang,
                     x.Nam,
                     x.LuongCoBan,

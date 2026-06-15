@@ -91,7 +91,7 @@ const PayrollPage = () => {
           ...item,
           luongCoBan: item.luongCoBan || 0,
           tongPhuCap: item.tongPhuCap || 0,
-          soCongChuanTrongThang: item.soCongChuanTrongThang || 26, // Fallback
+          soCongChuanTrongThang: item.soCongChuanTrongThang || 22, // Fallback
           tongNgayCong: item.tongNgayCong || 0,
           tongGioOT: item.tongGioOT || 0,
           nghiCoPhep: item.nghiCoPhep || 0,

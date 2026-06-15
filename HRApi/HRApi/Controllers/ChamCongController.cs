@@ -22,15 +22,15 @@ namespace HRApi.Controllers
         public class LockActionDto { public int Year { get; set; } public int Month { get; set; } public bool IsLocked { get; set; } }
 
         // ==============================================================
-        // CẤU HÌNH CA LÀM VIÊC CHUẨN (SHIFT SETTINGS)
+        // CẤU HÌNH CA LÀM VIỆC CHUẨN (SHIFT SETTINGS)
         // ==============================================================
         private readonly TimeSpan SHIFT_START = new TimeSpan(8, 0, 0);       // Bắt đầu ca: 08:00
-private readonly TimeSpan SHIFT_END = new TimeSpan(17, 30, 0);       // Kết thúc ca: 17:30
-private readonly TimeSpan LATE_GRACE = new TimeSpan(8, 0, 0);        // Sau 08:00 là tính đi muộn
-private readonly TimeSpan EARLY_GRACE = new TimeSpan(17, 30, 0);     // Trước 17:30 là tính về sớm
-private readonly TimeSpan LUNCH_START = new TimeSpan(12, 0, 0);      // Bắt đầu nghỉ trưa: 12:00
-private readonly TimeSpan LUNCH_END = new TimeSpan(13, 30, 0);       // Kết thúc nghỉ trưa: 13:30
-
+        private readonly TimeSpan SHIFT_END = new TimeSpan(17, 30, 0);       // Kết thúc ca: 17:30
+        private readonly TimeSpan LATE_GRACE = new TimeSpan(8, 0, 0);        // Sau 08:00 là tính đi muộn
+        private readonly TimeSpan EARLY_GRACE = new TimeSpan(17, 30, 0);     // Trước 17:30 là tính về sớm
+        private readonly TimeSpan LUNCH_START = new TimeSpan(12, 0, 0);      // Bắt đầu nghỉ trưa: 12:00
+        private readonly TimeSpan LUNCH_END = new TimeSpan(13, 30, 0);       // Kết thúc nghỉ trưa: 13:30
+        
         // HELPER: Đồng bộ múi giờ UTC+7
         private DateTime GetVnTime() => DateTime.UtcNow.AddHours(7);
 

@@ -108,7 +108,7 @@ const MyPayslipPage = () => {
     const d = {
       luongCoBan: p.luongCoBan ?? 0,
       tongPhuCap: p.tongPhuCap ?? 0,
-      soCongChuan: p.soCongChuanTrongThang ?? 26, // LẤY CÔNG CHUẨN VÀO ĐÂY
+      soCongChuan: p.soCongChuanTrongThang ?? 22, // LẤY CÔNG CHUẨN VÀO ĐÂY
       tongNgayCong: p.tongNgayCong ?? 0,
       tongGioOT: p.tongGioOT ?? 0,
       nghiCoPhep: p.nghiCoPhep ?? 0,
