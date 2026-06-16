@@ -170,9 +170,7 @@ const ContractManagementPage = () => {
 
         <div className="page-header">
           <div className="header-title">
-            <h1>
-              <FaFileContract /> Quản lý Hợp Đồng
-            </h1>
+            <h1>Quản lý Hợp Đồng</h1>
           </div>
           {canModify && (
             <button
