@@ -27,13 +27,13 @@
 /* Header */
 .employee-modal__header {
   padding: 0 30px;
-  background-color: #0e7c7b;
+  background-color: #0d6efd;
   color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-shrink: 0;
-  height: 55px; /* Tăng nhẹ chiều cao header */
+  height: 55px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   z-index: 10;
 }
@@ -94,13 +94,13 @@
 
 .sidebar-item:hover {
   background-color: #e9ecef;
-  color: #0e7c7b;
+  color: #0d6efd;
 }
 
 .sidebar-item.active {
   background-color: #fff;
-  color: #0e7c7b;
-  border-left-color: #0e7c7b;
+  color: #0d6efd;
+  border-left-color: #0d6efd;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
@@ -115,7 +115,7 @@
 .form-section-title {
   font-size: 17px;
   font-weight: 700;
-  color: #0e7c7b;
+  color: #0d6efd;
   margin-bottom: 20px;
   border-bottom: 1px solid #eee;
   padding-bottom: 8px;
@@ -197,9 +197,9 @@
 
 .form-group input:focus,
 .form-group select:focus {
-  border-color: #0e7c7b;
+  border-color: #0d6efd;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(14, 124, 123, 0.1); /* Shadow focus dày hơn chút */
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
 }
 
 .form-group input:disabled,
@@ -237,8 +237,8 @@
 }
 
 .avatar-section:hover {
-    border-color: #0e7c7b;
-    background-color: #f0fdfd;
+    border-color: #0d6efd;
+    background-color: #eff6ff;
 }
 
 .avatar-preview img {
@@ -253,7 +253,7 @@
 
 .avatar-upload-label {
   font-size: 13.5px;
-  color: #0e7c7b;
+  color: #0d6efd;
   cursor: pointer;
   font-weight: 600;
   display: flex;
@@ -276,21 +276,21 @@
 }
 
 .btn-save {
-  background-color: #0e7c7b;
+  background-color: #0d6efd;
   color: white;
   padding: 0 30px;
-  height: 40px; /* Nút save to hơn */
+  height: 40px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   font-weight: 700;
   font-size: 14.5px;
   transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(14, 124, 123, 0.2);
+  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.2);
 }
 
 .btn-save:hover {
-  background-color: #0b6362;
+  background-color: #0b5ed7;
   transform: translateY(-1px);
 }
 

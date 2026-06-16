@@ -11,7 +11,7 @@
     flex-direction: column;
     box-sizing: border-box;
     overflow: hidden;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    font-family: var(--font-main);
     color: var(--main-text); /* ĐÃ SỬA */
 }
 
@@ -45,16 +45,17 @@
     border: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
     background-color: var(--main-bg); /* ĐÃ SỬA */
     color: var(--main-text); /* ĐÃ SỬA */
+    font-family: var(--font-main);
     font-size: 14px;
     transition: border-color 0.2s, box-shadow 0.2s, background-color 0.3s;
-    height: 36px; 
+    height: 40px; 
     box-sizing: border-box;
 }
 
 .search-box input:focus {
-    border-color: #0e7c7b;
+    border-color: #0d6efd;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(14, 124, 123, 0.15); 
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15); 
 }
 
 .search-box svg {
@@ -70,19 +71,21 @@
 /* Dropdown phòng ban */
 .filters-bar select {
     padding: 0 12px;
-    height: 36px; 
+    height: 40px; 
     border-radius: 6px;
     border: 1px solid var(--sidebar-border); /* ĐÃ SỬA */
+    font-family: var(--font-main);
     font-size: 14px;
     color: var(--main-text); /* ĐÃ SỬA */
     background-color: var(--main-bg); /* ĐÃ SỬA */
     cursor: pointer;
     min-width: 200px;
     transition: background-color 0.3s, color 0.3s;
+    box-sizing: border-box;
 }
 
 .filters-bar select:focus {
-    border-color: #0e7c7b;
+    border-color: #0d6efd;
     outline: none;
 }
 
@@ -109,13 +112,13 @@
 }
 
 .main-tabs button:hover {
-    color: #0e7c7b;
+    color: #0d6efd;
     background-color: var(--hover-bg); /* ĐÃ SỬA */
 }
 
 .main-tabs button.active {
-    color: #0e7c7b;
-    border-bottom-color: #0e7c7b;
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
 }
 
 /* --- FILTER CON (TRẠNG THÁI) --- */
@@ -143,9 +146,9 @@
 }
 
 .sub-filters button.active {
-    background-color: #0e7c7b; /* Chuyển về xanh cho hợp hệ thống */
+    background-color: #0d6efd;
     color: white;
-    border-color: #0e7c7b;
+    border-color: #0d6efd;
 }
 
 /* --- TABLE CONTAINER & TABLE --- */

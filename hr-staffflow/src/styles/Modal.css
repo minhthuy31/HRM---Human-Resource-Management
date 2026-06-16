@@ -128,8 +128,8 @@
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #0e7c7b; /* Màu chủ đạo */
-  box-shadow: 0 0 0 3px rgba(14, 124, 123, 0.15);
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
 }
 
 .form-group input[type="file"] {
@@ -188,14 +188,14 @@
 }
 
 .save-btn {
-  background-color: #0e7c7b;
+  background-color: #0d6efd;
   color: white;
-  box-shadow: 0 4px 6px rgba(14, 124, 123, 0.2);
+  box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2);
 }
 
 .save-btn:hover {
-  background-color: #0b6362;
-  box-shadow: 0 6px 8px rgba(14, 124, 123, 0.3);
+  background-color: #0b5ed7;
+  box-shadow: 0 6px 8px rgba(13, 110, 253, 0.3);
 }
 
 /* Custom Scanner Modal Style (nếu cần override) */

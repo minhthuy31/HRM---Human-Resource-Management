@@ -224,7 +224,7 @@ const RequestManagementPage = () => {
                   target="_blank"
                   rel="noreferrer"
                   style={{
-                    color: "#0e7c7b",
+                    color: "#0d6efd",
                     display: "flex",
                     alignItems: "center",
                     gap: "5px",
@@ -338,40 +338,14 @@ const RequestManagementPage = () => {
       <div className="leave-management-container">
         <h1>Quản lý Đơn từ & Yêu cầu</h1>
 
-        <div
-          className="filters-bar"
-          style={{
-            display: "flex",
-            gap: "15px",
-            marginBottom: "15px",
-            flexWrap: "wrap",
-          }}
-        >
-          <div
-            className="search-box"
-            style={{ position: "relative", flex: 1, minWidth: "250px" }}
-          >
-            <FaSearch
-              style={{
-                position: "absolute",
-                left: "10px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "#888",
-              }}
-            />
+        <div className="filters-bar">
+          <div className="search-box">
+            <FaSearch />
             <input
               type="text"
               placeholder="Tìm tên nhân viên hoặc mã NV..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "10px 10px 10px 35px",
-                borderRadius: "4px",
-                border: "1px solid #ddd",
-                height: "40px",
-              }}
             />
           </div>
 
@@ -379,13 +353,6 @@ const RequestManagementPage = () => {
             <select
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
-              style={{
-                padding: "0 10px",
-                borderRadius: "4px",
-                border: "1px solid #ddd",
-                minWidth: "200px",
-                height: "40px",
-              }}
             >
               <option value="">-- Tất cả phòng ban --</option>
               {departments.map((d) => (

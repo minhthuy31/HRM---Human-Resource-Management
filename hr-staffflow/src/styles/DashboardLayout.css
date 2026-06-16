@@ -14,6 +14,7 @@
   --shadow-color: rgba(0, 0, 0, 0.08);
   --avatar-bg: #e0f2fe;
   --avatar-text: #0c4a6e;
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
 body.dark-mode {
@@ -36,6 +37,7 @@ body.dark-mode {
 body {
   background-color: var(--main-bg);
   color: var(--main-text);
+  font-family: var(--font-main);
   transition: background-color 0.3s ease, color 0.3s ease;
   margin: 0;
   padding: 0;

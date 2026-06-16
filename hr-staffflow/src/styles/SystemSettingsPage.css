@@ -106,7 +106,7 @@
 
 .settings-menu li.active {
   background-color: #eff6ff;
-  color: #3b82f6;
+  color: #0d6efd;
   font-weight: 600;
 }
 
@@ -116,7 +116,7 @@
 }
 
 .settings-menu li.active .tab-icon {
-  color: #3b82f6;
+  color: #0d6efd;
 }
 
 /* Nội dung form bên phải */
@@ -135,7 +135,7 @@
   margin-bottom: 25px;
   color: var(--main-text);
   font-size: 1.3rem;
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid #0d6efd;
   padding-left: 10px;
 }
 
@@ -181,8 +181,8 @@
 }
 
 .form-group input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.1);
 }
 
 .form-group small {

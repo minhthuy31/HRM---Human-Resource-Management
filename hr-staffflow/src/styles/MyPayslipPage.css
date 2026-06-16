@@ -1,11 +1,12 @@
 .my-payslip-view {
-  background-color: var(--card-bg); /* ĐÃ SỬA */
+  background-color: var(--card-bg);
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 4px 12px var(--shadow-color); /* ĐÃ SỬA */
+  box-shadow: 0 4px 12px var(--shadow-color);
   max-width: 800px;
   margin: 0 auto;
   min-height: 500px;
+  font-family: var(--font-main);
 }
 
 /* --- Navigation Bar --- */
@@ -178,7 +179,6 @@
 }
 
 .detail-row .amount {
-  font-family: 'Courier New', Courier, monospace;
   font-weight: 600;
 }
 

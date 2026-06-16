@@ -32,8 +32,8 @@
 
 .emp-detail-page__back-btn:hover {
   background-color: #f9f9f9;
-  color: #0e7c7b;
-  border-color: #0e7c7b;
+  color: #0d6efd;
+  border-color: #0d6efd;
 }
 
 /* --- CONTAINER CHÍNH (Giống Modal Content) --- */
@@ -110,13 +110,13 @@
 
 .emp-sidebar-item:hover {
   background-color: #e9ecef;
-  color: #0e7c7b;
+  color: #0d6efd;
 }
 
 .emp-sidebar-item.active {
   background-color: #fff;
-  color: #0e7c7b;
-  border-left-color: #0e7c7b;
+  color: #0d6efd;
+  border-left-color: #0d6efd;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
@@ -132,7 +132,7 @@
 .form-section-title {
   font-size: 17px;
   font-weight: 700;
-  color: #0e7c7b;
+  color: #0d6efd;
   margin-bottom: 20px;
   border-bottom: 1px solid #eee;
   padding-bottom: 8px;
@@ -192,9 +192,9 @@
 
 .form-group input:focus,
 .form-group select:focus {
-  border-color: #0e7c7b;
+  border-color: #0d6efd;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(14, 124, 123, 0.1);
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
 }
 
 /* AVATAR SECTION */
@@ -222,7 +222,7 @@
 
 .avatar-upload-label {
   font-size: 13.5px;
-  color: #0e7c7b;
+  color: #0d6efd;
   cursor: pointer;
   font-weight: 600;
   display: flex;
@@ -241,7 +241,7 @@
 }
 
 .btn-save {
-  background-color: #0e7c7b;
+  background-color: #0d6efd;
   color: white;
   padding: 0 30px;
   height: 40px;
@@ -251,9 +251,9 @@
   font-weight: 700;
   font-size: 14.5px;
   transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(14, 124, 123, 0.2);
+  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.2);
 }
-.btn-save:hover { background-color: #0b6362; transform: translateY(-1px); }
+.btn-save:hover { background-color: #0b5ed7; transform: translateY(-1px); }
 
 /* Responsive */
 @media (max-width: 1200px) {
