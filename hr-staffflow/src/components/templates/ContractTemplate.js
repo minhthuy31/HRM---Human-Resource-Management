@@ -560,12 +560,31 @@ const ContractTemplate = ({ data, director, onClose }) => {
                 {isThuViec ? "Giám đốc" : "(Ký, đóng dấu, ghi rõ họ tên)"}
               </div>
 
-              {/* Chữ ký giám đốc - text */}
+              {/* Chữ ký giám đốc - ưu tiên ảnh base64, fallback sang text */}
               <div
-                className="signature-text"
-                style={{ minHeight: "100px", marginTop: "20px" }}
+                style={{
+                  minHeight: "100px",
+                  marginTop: "20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                {director ? director.hoTen : "Nguyễn Văn Giám Đốc"}
+                {director && director.chuKy ? (
+                  <img
+                    src={director.chuKy}
+                    alt="Chữ ký giám đốc"
+                    style={{
+                      maxHeight: "100px",
+                      maxWidth: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                ) : (
+                  <div className="signature-text">
+                    {director ? director.hoTen : "Nguyễn Văn Giám Đốc"}
+                  </div>
+                )}
               </div>
 
               <div style={{ fontWeight: "bold", marginTop: "10px" }}>
