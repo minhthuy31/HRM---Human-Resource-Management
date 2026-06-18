@@ -62,23 +62,24 @@ const EmployeeDetailPageNV = () => {
     // Gộp dữ liệu nhân viên + dữ liệu hợp đồng thành 1 object chuẩn cho Template
     const contractDataForTemplate = {
       // Thông tin hợp đồng
-      SoHopDong: hd.soHopDong,
-      LoaiHopDong: hd.loaiHopDong,
-      NgayBatDau: hd.ngayBatDau,
-      NgayKetThuc: hd.ngayKetThuc,
-      LuongCoBan: hd.luongCoBan,
+      soHopDong: hd.soHopDong,
+      loaiHopDong: hd.loaiHopDong,
+      ngayBatDau: hd.ngayBatDau,
+      ngayKetThuc: hd.ngayKetThuc,
+      luongCoBan: hd.luongCoBan,
 
       // Thông tin nhân viên (Lấy từ context employee)
-      HoTenNhanVien: employee.hoTen,
-      NgaySinh: employee.ngaySinh,
-      CCCD: employee.cccd,
-      DiaChi: employee.diaChiThuongTru,
-      SoDienThoai: employee.sdt_NhanVien,
-      TenPhongBan: employee.tenPhongBan,
-      TenChucVu: employee.tenChucVu, // Chức vụ của nhân viên
+      hoTenNhanVien: employee.hoTen,
+      ngaySinh: employee.ngaySinh,
+      cccd: employee.cccd,
+      diaChi: employee.diaChiThuongTru,
+      soDienThoai: employee.sdt_NhanVien,
+      tenPhongBan: employee.tenPhongBan,
+      tenChucVu: employee.tenChucVu,
+      maNhanVien: employee.maNhanVien,
 
-      // Chữ ký nhân viên
-      ChuKy: employee.chuKy,
+      // Chữ ký nhân viên (lưu base64 từ DB)
+      chuKy: employee.chuKy,
     };
 
     setViewingContract(contractDataForTemplate);

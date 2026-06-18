@@ -5,15 +5,34 @@ import "../../styles/ContractTemplate.css";
 const ContractTemplate = ({ data, director, onClose }) => {
   if (!data) return null;
 
-  const isThuViec = data.loaiHopDong === "Thử việc";
+  // Chuẩn hóa field names: hỗ trợ cả camelCase lẫn PascalCase từ nhiều nguồn
+  const d = {
+    soHopDong: data.soHopDong || data.SoHopDong,
+    loaiHopDong: data.loaiHopDong || data.LoaiHopDong,
+    ngayBatDau: data.ngayBatDau || data.NgayBatDau,
+    ngayKetThuc: data.ngayKetThuc || data.NgayKetThuc,
+    luongCoBan: data.luongCoBan || data.LuongCoBan,
+    hoTenNhanVien: data.hoTenNhanVien || data.HoTenNhanVien,
+    ngaySinh: data.ngaySinh || data.NgaySinh,
+    cccd: data.cccd || data.CCCD,
+    diaChi: data.diaChi || data.DiaChi,
+    soDienThoai: data.soDienThoai || data.SoDienThoai,
+    tenPhongBan: data.tenPhongBan || data.TenPhongBan,
+    tenChucVu: data.tenChucVu || data.TenChucVu,
+    maNhanVien: data.maNhanVien || data.MaNhanVien,
+    chuKy: data.chuKy || data.ChuKy,
+  };
+
+  const isThuViec = d.loaiHopDong === "Thử việc";
 
   const handlePrint = () => window.print();
 
-  const formatDate = (d) => {
-    if (!d) return "...../...../.......";
-    const date = new Date(d);
+  const formatDate = (dateVal) => {
+    if (!dateVal) return "...../...../.......";
+    const date = new Date(dateVal);
     return `${("0" + date.getDate()).slice(-2)}/${("0" + (date.getMonth() + 1)).slice(-2)}/${date.getFullYear()}`;
   };
+
 
   const today = new Date();
   const currentDay = ("0" + today.getDate()).slice(-2);
@@ -69,7 +88,7 @@ const ContractTemplate = ({ data, director, onClose }) => {
       <div className="preview-toolbar">
         <div className="preview-title">
           <FaFileContract style={{ marginRight: "10px" }} />
-          Hợp đồng: {data.soHopDong}
+          HỢP ĐỒNG {d.soHopDong}
         </div>
         <div className="toolbar-actions">
           <button className="btn-action btn-print" onClick={handlePrint}>
@@ -92,7 +111,7 @@ const ContractTemplate = ({ data, director, onClose }) => {
               <div>
                 Công ty: <strong>CÔNG NGHỆ XYZ</strong>
               </div>
-              <div>Mã NV: {data.maNhanVien}</div>
+              <div>Mã NV: {d.maNhanVien}</div>
             </div>
             <div style={styles.rightHeader}>
               <div style={styles.boldUpper}>
@@ -156,25 +175,24 @@ const ContractTemplate = ({ data, director, onClose }) => {
               }}
             >
               <li style={styles.listItem}>
-                - Ông/Bà: <strong>{data.hoTenNhanVien?.toUpperCase()}</strong>
+                - Ông/Bà: <strong>{d.hoTenNhanVien?.toUpperCase()}</strong>
               </li>
               <li style={styles.listItem}>
-                - Ngày sinh: {formatDate(data.ngaySinh)}
+                - Ngày sinh: {formatDate(d.ngaySinh)}
               </li>
               <li style={styles.listItem}>
                 - Số CMND/CCCD:{" "}
-                {data.cccd ||
+                {d.cccd ||
                   "......................................................"}
               </li>
               <li style={styles.listItem}>
                 - Thường trú tại:{" "}
-                {data.diaChi ||
+                {d.diaChi ||
                   "......................................................................................"}
               </li>
               <li style={styles.listItem}>
                 - Điện thoại:{" "}
-                {data.SoDienThoai ||
-                  data.soDienThoai ||
+                {d.soDienThoai ||
                   "......................................................"}
               </li>
             </ul>
@@ -202,10 +220,10 @@ const ContractTemplate = ({ data, director, onClose }) => {
               <ul style={{ ...styles.list, listStyleType: "none" }}>
                 <li style={styles.listItem}>
                   - Thời gian thử việc: Từ ngày{" "}
-                  <strong>{formatDate(data.ngayBatDau)}</strong> đến ngày{" "}
+                  <strong>{formatDate(d.ngayBatDau)}</strong> đến ngày{" "}
                   <strong>
-                    {data.ngayKetThuc
-                      ? formatDate(data.ngayKetThuc)
+                    {d.ngayKetThuc
+                      ? formatDate(d.ngayKetThuc)
                       : "...................."}
                   </strong>
                 </li>
@@ -214,7 +232,7 @@ const ContractTemplate = ({ data, director, onClose }) => {
                 </li>
                 <li style={styles.listItem}>
                   - Chức danh chuyên môn:{" "}
-                  <strong>{data.tenChucVu || "Nhân viên"}</strong>
+                  <strong>{d.tenChucVu || "Nhân viên"}</strong>
                 </li>
                 <li style={styles.listItem}>
                   - Công việc phải làm: Theo đúng công việc chuyên môn của Phòng
@@ -251,7 +269,7 @@ const ContractTemplate = ({ data, director, onClose }) => {
                   </li>
                   <li style={styles.listItem}>
                     - Lương cơ bản:{" "}
-                    <strong>{formatMoney(data.luongCoBan)} đồng</strong>.
+                    <strong>{formatMoney(d.luongCoBan)} đồng</strong>.
                   </li>
                   <li style={styles.listItem}>
                     - Hình thức trả lương: Lương thời gian/ Chuyển khoản.
@@ -359,11 +377,11 @@ const ContractTemplate = ({ data, director, onClose }) => {
                   <strong>Có xác định thời hạn</strong>
                 </li>
                 <li style={styles.listItem}>
-                  - Từ ngày <strong>{formatDate(data.ngayBatDau)}</strong> đến
+                  - Từ ngày <strong>{formatDate(d.ngayBatDau)}</strong> đến
                   ngày{" "}
                   <strong>
-                    {data.ngayKetThuc
-                      ? formatDate(data.ngayKetThuc)
+                    {d.ngayKetThuc
+                      ? formatDate(d.ngayKetThuc)
                       : "......................."}
                   </strong>
                 </li>
@@ -372,7 +390,7 @@ const ContractTemplate = ({ data, director, onClose }) => {
                 </li>
                 <li style={styles.listItem}>
                   - Chức danh chuyên môn:{" "}
-                  <strong>{data.tenChucVu || "Nhân viên"}</strong>
+                  <strong>{d.tenChucVu || "Nhân viên"}</strong>
                 </li>
                 <li style={styles.listItem}>
                   - Công việc phải làm: Theo đúng công việc chuyên môn của Phòng
@@ -505,18 +523,36 @@ const ContractTemplate = ({ data, director, onClose }) => {
                 (Ký, ghi rõ họ tên)
               </div>
 
-              {/* Chữ ký giả lập (in không bị mất font) */}
+              {/* Chữ ký thật của nhân viên - ưu tiên ảnh base64, fallback sang text */}
               <div
-                className="signature-text"
-                style={{ minHeight: "100px", marginTop: "20px" }}
+                style={{
+                  minHeight: "100px",
+                  marginTop: "20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                {data.hoTenNhanVien}
+                {d.chuKy ? (
+                  <img
+                    src={d.chuKy}
+                    alt="Chữ ký nhân viên"
+                    style={{
+                      maxHeight: "100px",
+                      maxWidth: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                ) : (
+                  <div className="signature-text">{d.hoTenNhanVien}</div>
+                )}
               </div>
 
               <div style={{ fontWeight: "bold", marginTop: "10px" }}>
-                {data.hoTenNhanVien}
+                {d.hoTenNhanVien}
               </div>
             </div>
+
 
             <div style={{ width: "45%" }}>
               <div style={{ fontWeight: "bold" }}>NGƯỜI SỬ DỤNG LAO ĐỘNG</div>
@@ -524,7 +560,7 @@ const ContractTemplate = ({ data, director, onClose }) => {
                 {isThuViec ? "Giám đốc" : "(Ký, đóng dấu, ghi rõ họ tên)"}
               </div>
 
-              {/* Chữ ký giả lập (in không bị mất font) */}
+              {/* Chữ ký giám đốc - text */}
               <div
                 className="signature-text"
                 style={{ minHeight: "100px", marginTop: "20px" }}
