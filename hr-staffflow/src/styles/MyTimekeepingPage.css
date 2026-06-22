@@ -184,13 +184,20 @@
   background: #f0fdf4;
 }
 
+/* Top row: day number + ngayCong side by side */
+.cal-cell-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
 /* Day number */
 .cal-day-number {
   font-size: 13px;
   font-weight: 700;
   color: var(--main-text);
   line-height: 1;
-  margin-bottom: 2px;
 }
 
 .cal-cell--today .cal-day-number {
@@ -198,6 +205,30 @@
 }
 
 .cal-cell--weekend .cal-day-number {
+  color: #dc2626;
+}
+
+/* Số công */
+.cal-ngay-cong {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  line-height: 1.5;
+}
+
+.cal-ngay-cong.ngc-full {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.cal-ngay-cong.ngc-half {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.cal-ngay-cong.ngc-zero {
+  background: #fee2e2;
   color: #dc2626;
 }
 

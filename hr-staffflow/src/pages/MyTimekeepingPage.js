@@ -139,23 +139,36 @@ const MyTimekeepingPage = () => {
         : "#d97706"
       : "#2563eb";
 
+    // Màu số công
+    let ngayCongClass = "cal-ngay-cong";
+    if (ngayCong === null) ngayCongClass = "";
+    else if (ngayCong >= 1) ngayCongClass += " ngc-full";
+    else if (ngayCong > 0) ngayCongClass += " ngc-half";
+    else ngayCongClass += " ngc-zero";
+
     return (
       <div key={day} className={cellClass}>
-        <div className="cal-day-number">{day}</div>
+        {/* Số ngày + số công */}
+        <div className="cal-cell-top">
+          <div className="cal-day-number">{day}</div>
+          {rec && ngayCong !== null && (
+            <span className={ngayCongClass}>{ngayCong % 1 === 0 ? ngayCong.toFixed(0) : ngayCong}</span>
+          )}
+        </div>
 
         {/* Work schedule */}
         {!isWeekend && (
           <div className="cal-schedule">HC 08:00 - 17:00</div>
         )}
 
-        {/* Check-in / Check-out */}
-        {rec && !isWeekend && (
+        {/* Check-in / Check-out (chỉ hiện nếu có giờ thực) */}
+        {rec && (inTime || outTime) && (
           <div className={`cal-times ${(isLate || isEarly) ? "cal-times--warn" : ""}`}>
             {inTime && outTime
               ? `${inTime} - ${outTime}`
               : inTime
               ? `${inTime} - ??:??`
-              : "??:?? - ??:??"}
+              : `??:?? - ${outTime}`}
           </div>
         )}
 
