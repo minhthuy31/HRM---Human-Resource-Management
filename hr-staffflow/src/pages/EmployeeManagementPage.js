@@ -847,6 +847,7 @@ const EmployeePage = () => {
           trinhDoHocVans={trinhDoHocVans}
           hopDongs={hopDongs}
           managers={managers}
+          showToast={showToast}
         />
       )}
 

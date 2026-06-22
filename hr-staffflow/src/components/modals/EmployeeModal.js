@@ -22,6 +22,7 @@ const EmployeeModal = ({
   hopDongs,
   managers,
   isViewOnly = false,
+  showToast,
 }) => {
   const [activeTab, setActiveTab] = useState("personal");
   const [formData, setFormData] = useState({});
@@ -30,7 +31,6 @@ const EmployeeModal = ({
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    // Khởi tạo dữ liệu ban đầu
     const initialData = employee
       ? {
           ...employee,
@@ -38,18 +38,15 @@ const EmployeeModal = ({
             employee.luongCoBan !== undefined && employee.luongCoBan !== null
               ? employee.luongCoBan
               : "",
-          luongTroCap:
-            employee.luongTroCap !== undefined && employee.luongTroCap !== null
-              ? employee.luongTroCap
-              : "",
+          soNguoiPhuThuoc: employee.soNguoiPhuThuoc ?? 0,
           soHopDong: employee.soHopDong || "",
-          chuKy: employee.chuKy || null, // Lấy chữ ký từ prop employee
+          chuKy: employee.chuKy || null,
         }
       : {
           trangThai: true,
           gioiTinh: 1,
           luongCoBan: "",
-          luongTroCap: "",
+          soNguoiPhuThuoc: 0,
           soHopDong: "",
           chuKy: null,
         };
@@ -96,28 +93,22 @@ const EmployeeModal = ({
     e.preventDefault();
     const dataToSubmit = { ...formData };
 
-    // Validate số điện thoại
     const phoneRegex = /^(0[35789])[0-9]{8}$/;
     if (dataToSubmit.sdt_NhanVien && !phoneRegex.test(dataToSubmit.sdt_NhanVien)) {
-      alert("Số điện thoại nhân viên không hợp lệ. Phải là 10 số và bắt đầu bằng 03, 05, 07, 08 hoặc 09.");
+      if (showToast) showToast("Số điện thoại nhân viên không hợp lệ. Phải là 10 số, bắt đầu bằng 03/05/07/08/09.", "error");
       return;
     }
     if (dataToSubmit.sdtKhanCap && !phoneRegex.test(dataToSubmit.sdtKhanCap)) {
-      alert("Số điện thoại khẩn cấp không hợp lệ. Phải là 10 số và bắt đầu bằng 03, 05, 07, 08 hoặc 09.");
+      if (showToast) showToast("Số điện thoại khẩn cấp không hợp lệ. Phải là 10 số, bắt đầu bằng 03/05/07/08/09.", "error");
       return;
     }
 
-    if (dataToSubmit.luongCoBan !== "" && dataToSubmit.luongCoBan !== null) {
-      dataToSubmit.luongCoBan = parseFloat(dataToSubmit.luongCoBan);
-    } else {
-      dataToSubmit.luongCoBan = 0;
-    }
+    dataToSubmit.luongCoBan =
+      dataToSubmit.luongCoBan !== "" && dataToSubmit.luongCoBan !== null
+        ? parseFloat(dataToSubmit.luongCoBan)
+        : 0;
 
-    if (dataToSubmit.luongTroCap !== "" && dataToSubmit.luongTroCap !== null) {
-      dataToSubmit.luongTroCap = parseFloat(dataToSubmit.luongTroCap);
-    } else {
-      dataToSubmit.luongTroCap = 0;
-    }
+    dataToSubmit.soNguoiPhuThuoc = parseInt(dataToSubmit.soNguoiPhuThuoc, 10) || 0;
 
     onSave(dataToSubmit, selectedFile);
   };
@@ -644,14 +635,16 @@ const EmployeeModal = ({
           />
         </div>
         <div className="form-group">
-          <label>Lương trợ cấp (VNĐ)</label>
+          <label>Số người phụ thuộc</label>
           <input
-            type="text"
-            name="luongTroCap"
-            value={formatCurrency(formData.luongTroCap)}
-            onChange={handleCurrencyChange}
+            type="number"
+            name="soNguoiPhuThuoc"
+            value={formData.soNguoiPhuThuoc ?? 0}
+            onChange={handleChange}
             disabled={isViewOnly}
-            placeholder="Nhập trợ cấp..."
+            min={0}
+            max={10}
+            placeholder="0"
           />
         </div>
         <div className="form-group">
