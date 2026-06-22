@@ -129,6 +129,7 @@ namespace HRApi.Controllers
                     d.SoGio,
                     d.LyDo,
                     d.TrangThai,
+                    d.LyDoTuChoi,
                     d.NgayGuiDon
                 }).ToListAsync();
 

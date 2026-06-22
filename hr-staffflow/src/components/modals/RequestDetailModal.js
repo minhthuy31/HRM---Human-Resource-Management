@@ -4,7 +4,7 @@ import "../../styles/Modal.css";
 const RequestDetailModal = ({ request, onClose }) => {
   if (!request || !request.chiTiet) return null;
 
-  const { loaiDon, trangThai, chiTiet } = request;
+  const { loaiDon, trangThai, chiTiet, lyDoTuChoi } = request;
 
   // Format ngày giờ
   const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString("vi-VN");
@@ -157,6 +157,25 @@ const RequestDetailModal = ({ request, onClose }) => {
             </>
           )}
         </div>
+
+        {trangThai === "Từ chối" && lyDoTuChoi && (
+          <div
+            style={{
+              marginTop: "15px",
+              padding: "12px",
+              background: "#fef2f2",
+              border: "1px solid #fca5a5",
+              borderRadius: "6px",
+            }}
+          >
+            <p style={{ margin: "0 0 6px 0", fontWeight: "bold", color: "#dc2626" }}>
+              Lý do từ chối:
+            </p>
+            <p style={{ margin: 0, color: "#7f1d1d", fontStyle: "italic" }}>
+              {lyDoTuChoi}
+            </p>
+          </div>
+        )}
 
         <div style={{ textAlign: "right", marginTop: "20px" }}>
           <button className="btn-cancel" onClick={onClose}>

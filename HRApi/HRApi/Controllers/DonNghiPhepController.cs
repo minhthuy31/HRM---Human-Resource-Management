@@ -194,6 +194,7 @@ namespace HRApi.Controllers
                     d.LyDo,
                     d.TepDinhKem,
                     d.TrangThai,
+                    d.LyDoTuChoi,
                     RemainingLeaveDays = remaining
                 };
             });

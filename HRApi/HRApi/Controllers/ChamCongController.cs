@@ -588,7 +588,7 @@ namespace HRApi.Controllers
                     if (d.Month == month && d.Year == year)
                     {
                         string loai = req.LyDo != null && req.LyDo.ToLower().Contains("không lương") ? "Nghỉ không lương" : "Nghỉ phép";
-                        result.Add(new { MaNhanVien = req.MaNhanVien, Day = d.Day, LoaiDon = loai, TrangThai = req.TrangThai, ChiTiet = new { req.NgayBatDau, req.NgayKetThuc, req.SoNgayNghi, req.LyDo } });
+                        result.Add(new { MaNhanVien = req.MaNhanVien, Day = d.Day, LoaiDon = loai, TrangThai = req.TrangThai, LyDoTuChoi = req.LyDoTuChoi, ChiTiet = new { req.NgayBatDau, req.NgayKetThuc, req.SoNgayNghi, req.LyDo, req.LyDoTuChoi } });
                     }
                 }
             }
@@ -597,7 +597,7 @@ namespace HRApi.Controllers
             {
                 if (req.NgayLamThem.Month == month && req.NgayLamThem.Year == year)
                 {
-                    result.Add(new { MaNhanVien = req.MaNhanVien, Day = req.NgayLamThem.Day, LoaiDon = "OT", TrangThai = req.TrangThai, ChiTiet = new { req.NgayLamThem, req.GioBatDau, req.GioKetThuc, req.SoGio, req.LyDo } });
+                    result.Add(new { MaNhanVien = req.MaNhanVien, Day = req.NgayLamThem.Day, LoaiDon = "OT", TrangThai = req.TrangThai, LyDoTuChoi = req.LyDoTuChoi, ChiTiet = new { req.NgayLamThem, req.GioBatDau, req.GioKetThuc, req.SoGio, req.LyDo, req.LyDoTuChoi } });
                 }
             }
 
@@ -607,7 +607,7 @@ namespace HRApi.Controllers
                 {
                     if (d.Month == month && d.Year == year)
                     {
-                        result.Add(new { MaNhanVien = req.MaNhanVien, Day = d.Day, LoaiDon = "Công tác", TrangThai = req.TrangThai, ChiTiet = new { req.NgayBatDau, req.NgayKetThuc, req.NoiCongTac, req.MucDich, req.PhuongTien, req.KinhPhiDuKien, req.SoTienTamUng } });
+                        result.Add(new { MaNhanVien = req.MaNhanVien, Day = d.Day, LoaiDon = "Công tác", TrangThai = req.TrangThai, LyDoTuChoi = req.LyDoTuChoi, ChiTiet = new { req.NgayBatDau, req.NgayKetThuc, req.NoiCongTac, req.MucDich, req.PhuongTien, req.KinhPhiDuKien, req.SoTienTamUng, req.LyDoTuChoi } });
                     }
                 }
             }

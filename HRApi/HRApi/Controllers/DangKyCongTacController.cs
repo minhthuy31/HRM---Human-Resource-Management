@@ -119,6 +119,7 @@ namespace HRApi.Controllers
                     d.MucDich,
                     d.PhuongTien,
                     d.TrangThai,
+                    d.LyDoTuChoi,
                     d.NgayGuiDon,
                     d.KinhPhiDuKien,
                     d.SoTienTamUng,

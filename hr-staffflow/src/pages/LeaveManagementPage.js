@@ -373,6 +373,11 @@ const RequestManagementPage = () => {
           >
             {item.trangThai}
           </span>
+          {item.trangThai === "Từ chối" && item.lyDoTuChoi && (
+            <div className="reject-reason-display" title={item.lyDoTuChoi}>
+              {item.lyDoTuChoi}
+            </div>
+          )}
         </td>
 
         {canApprove && (
