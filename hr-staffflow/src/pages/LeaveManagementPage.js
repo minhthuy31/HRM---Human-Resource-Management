@@ -35,6 +35,59 @@ const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }) => {
   );
 };
 
+// --- Reject Reason Modal ---
+const RejectModal = ({ isOpen, onConfirm, onCancel }) => {
+  const [lyDo, setLyDo] = useState("");
+  const [error, setError] = useState("");
+
+  const handleConfirm = () => {
+    if (!lyDo.trim()) {
+      setError("Vui lòng nhập lý do từ chối.");
+      return;
+    }
+    onConfirm(lyDo.trim());
+    setLyDo("");
+    setError("");
+  };
+
+  const handleCancel = () => {
+    setLyDo("");
+    setError("");
+    onCancel();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="custom-modal-overlay">
+      <div className="custom-confirm-modal reject-reason-modal">
+        <h3 className="confirm-title">Từ chối đơn</h3>
+        <p className="confirm-message">Vui lòng nhập lý do từ chối:</p>
+        <textarea
+          className={`reject-reason-input${error ? " input-error" : ""}`}
+          placeholder="Nhập lý do từ chối..."
+          value={lyDo}
+          onChange={(e) => {
+            setLyDo(e.target.value);
+            if (e.target.value.trim()) setError("");
+          }}
+          rows={4}
+          autoFocus
+        />
+        {error && <p className="reject-reason-error">{error}</p>}
+        <div className="confirm-actions">
+          <button className="btn-cancel" onClick={handleCancel}>
+            Hủy
+          </button>
+          <button className="btn-reject-confirm" onClick={handleConfirm}>
+            Xác nhận từ chối
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Helper Functions ---
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString("vi-VN") : "-");
 const formatMoney = (v) =>
@@ -80,6 +133,9 @@ const RequestManagementPage = () => {
   const closeConfirm = () => {
     setConfirmDialog({ isOpen: false, message: "", onConfirm: null });
   };
+
+  // --- REJECT MODAL STATE ---
+  const [rejectDialog, setRejectDialog] = useState({ isOpen: false, id: null });
 
   // --- USER INFO & PERMISSIONS ---
   const user = getUserFromToken();
@@ -146,35 +202,31 @@ const RequestManagementPage = () => {
   }, [fetchData]);
 
   // --- HANDLE ACTIONS (APPROVE/REJECT) ---
+  const getEndpointPrefix = () => {
+    switch (activeTab) {
+      case "LEAVE": return "/DonNghiPhep";
+      case "OT": return "/DangKyOT";
+      case "TRIP": return "/DangKyCongTac";
+      default: return "";
+    }
+  };
+
   const handleAction = (id, action) => {
-    const actionText = action === "approve" ? "DUYỆT" : "TỪ CHỐI";
+    if (action === "reject") {
+      setRejectDialog({ isOpen: true, id });
+      return;
+    }
 
     setConfirmDialog({
       isOpen: true,
-      message: `Bạn có chắc chắn muốn ${actionText} đơn này?`,
+      message: "Bạn có chắc chắn muốn DUYỆT đơn này?",
       onConfirm: async () => {
         closeConfirm();
-        let endpointPrefix = "";
-        switch (activeTab) {
-          case "LEAVE":
-            endpointPrefix = "/DonNghiPhep";
-            break;
-          case "OT":
-            endpointPrefix = "/DangKyOT";
-            break;
-          case "TRIP":
-            endpointPrefix = "/DangKyCongTac";
-            break;
-          default:
-            return;
-        }
-
+        const endpointPrefix = getEndpointPrefix();
+        if (!endpointPrefix) return;
         try {
-          await api.post(`${endpointPrefix}/${action}/${id}`);
-          showToast(
-            `Đã ${actionText.toLowerCase()} đơn thành công!`,
-            "success",
-          );
+          await api.post(`${endpointPrefix}/approve/${id}`);
+          showToast("Đã duyệt đơn thành công!", "success");
           fetchData();
         } catch (error) {
           const msg =
@@ -184,6 +236,22 @@ const RequestManagementPage = () => {
         }
       },
     });
+  };
+
+  const handleRejectConfirm = async (lyDoTuChoi) => {
+    setRejectDialog({ isOpen: false, id: null });
+    const endpointPrefix = getEndpointPrefix();
+    if (!endpointPrefix) return;
+    try {
+      await api.post(`${endpointPrefix}/reject/${rejectDialog.id}`, { lyDoTuChoi });
+      showToast("Đã từ chối đơn thành công!", "success");
+      fetchData();
+    } catch (error) {
+      const msg =
+        error.response?.data?.message ||
+        "Có lỗi xảy ra (có thể do không đủ quyền hạn).";
+      showToast(msg, "error");
+    }
   };
 
   // --- RENDER TABLE BODY ---
@@ -469,6 +537,13 @@ const RequestManagementPage = () => {
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
         onCancel={closeConfirm}
+      />
+
+      {/* --- REJECT REASON MODAL --- */}
+      <RejectModal
+        isOpen={rejectDialog.isOpen}
+        onConfirm={handleRejectConfirm}
+        onCancel={() => setRejectDialog({ isOpen: false, id: null })}
       />
 
       {/* --- TOAST COMPONENT --- */}

@@ -36,6 +36,9 @@ namespace HRApi.Models
         public string? LyDoTamUng { get; set; }
 
         public string TrangThai { get; set; } = "Chờ duyệt"; // Chờ duyệt, Đã duyệt, Từ chối
+
+        public string? LyDoTuChoi { get; set; }
+
         public DateTime NgayGuiDon { get; set; } = DateTime.Now;
     }
 }

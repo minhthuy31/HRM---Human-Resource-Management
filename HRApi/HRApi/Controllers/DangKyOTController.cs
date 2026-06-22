@@ -1,4 +1,5 @@
 ﻿using HRApi.Data;
+using HRApi.DTOs;
 using HRApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -186,8 +187,11 @@ namespace HRApi.Controllers
         // --- TỪ CHỐI OT (Chỉ Trưởng phòng & Giám đốc) ---
         [HttpPost("reject/{id}")]
         [Authorize(Roles = "Trưởng phòng,Giám đốc")]
-        public async Task<IActionResult> Reject(int id)
+        public async Task<IActionResult> Reject(int id, [FromBody] RejectDto dto)
         {
+            if (string.IsNullOrWhiteSpace(dto?.LyDoTuChoi))
+                return BadRequest(new { message = "Lý do từ chối không được để trống." });
+
             var req = await _context.DangKyOTs.Include(d => d.NhanVien).FirstOrDefaultAsync(d => d.Id == id);
             if (req == null || req.TrangThai != "Chờ duyệt") return NotFound();
 
@@ -198,6 +202,7 @@ namespace HRApi.Controllers
                 return Forbid();
 
             req.TrangThai = "Từ chối";
+            req.LyDoTuChoi = dto.LyDoTuChoi.Trim();
             await _context.SaveChangesAsync();
             return Ok(new { message = "Đã từ chối OT." });
         }

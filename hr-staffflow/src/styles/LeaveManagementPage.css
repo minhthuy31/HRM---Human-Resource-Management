@@ -361,3 +361,53 @@
 .btn-accept:hover {
   background-color: #c82333;
 }
+
+.reject-reason-modal {
+  width: 480px;
+}
+
+.reject-reason-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 14px;
+  resize: vertical;
+  box-sizing: border-box;
+  margin-bottom: 6px;
+  font-family: inherit;
+  color: var(--main-text, #333);
+  background: var(--input-bg, #fff);
+}
+
+.reject-reason-input:focus {
+  outline: none;
+  border-color: #e53935;
+  box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.15);
+}
+
+.reject-reason-input.input-error {
+  border-color: #e53935;
+}
+
+.reject-reason-error {
+  color: #e53935;
+  font-size: 13px;
+  margin: 0 0 8px 0;
+}
+
+.btn-reject-confirm {
+  background-color: #e53935;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-reject-confirm:hover {
+  background-color: #c62828;
+}
