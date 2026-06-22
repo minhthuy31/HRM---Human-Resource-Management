@@ -136,6 +136,10 @@ namespace HRApi.Controllers
                         var periodAtt = empAtt.Where(c => c.NgayChamCong.Date >= periodStart.Date && c.NgayChamCong.Date <= periodEnd.Date).ToList();
                         var periodOT  = empOT.Where(o => o.NgayLamThem.Date >= periodStart.Date && o.NgayLamThem.Date <= periodEnd.Date).ToList();
 
+                        // Xác định loại hợp đồng
+                        bool isThuViec = contract.LoaiHopDong?.Contains("thử việc", StringComparison.OrdinalIgnoreCase) == true;
+                        decimal salaryMultiplier = isThuViec ? 0.85m : 1.0m;
+
                         // Tách ngày lễ / ngày thường
                         var normalAtt  = periodAtt.Where(c => !holidaysInMonth.Contains(c.NgayChamCong.Date)).ToList();
                         var holidayAtt = periodAtt.Where(c =>  holidaysInMonth.Contains(c.NgayChamCong.Date)).ToList();
@@ -150,8 +154,8 @@ namespace HRApi.Controllers
                         double congChinh = normalNgayCong + holidayWorkCong + leNghiONha;
                         totalWorkDays += congChinh;
 
-                        // Lương chính
-                        decimal dailyRate    = contract.LuongCoBan / standardWorkDays;
+                        // Lương chính (thử việc = 85% lương cơ bản)
+                        decimal dailyRate    = contract.LuongCoBan * salaryMultiplier / standardWorkDays;
                         decimal luongThuong  = dailyRate * (decimal)normalNgayCong;
                         decimal luongNghiLe  = dailyRate * (decimal)leNghiONha;
                         decimal luongDiLamLe = dailyRate * (decimal)holidayWorkCong * heSoOtLe;
@@ -169,14 +173,13 @@ namespace HRApi.Controllers
                                                : isWeekend  ? heSoOtCuoiTuan
                                                :              heSoOtThuong;
 
-                            decimal congChuanOT = (decimal)ot.SoGio * multiplier; // VD: 2h × 1.5 = 3
+                            decimal congChuanOT = (decimal)ot.SoGio * multiplier;
                             totalCongChuanOT += congChuanOT;
                             totalLuongOT     += hourlyRate * congChuanOT;
                             totalOTHours     += ot.SoGio;
                         }
 
                         // Bảo hiểm (không tính thử việc)
-                        bool isThuViec = contract.LoaiHopDong?.ToLower().Contains("thử việc") == true;
                         if (!isThuViec)
                             totalLuongDongBH += (contract.LuongCoBan / standardWorkDays)
                                                 * (decimal)(normalNgayCong + holidaysInPeriod);
@@ -188,8 +191,9 @@ namespace HRApi.Controllers
                 {
                     // Không có hợp đồng: tính đơn giản
                     totalWorkDays    = empAtt.Sum(c => c.NgayCong);
-                    totalLuongChinh  = (emp.LuongCoBan / standardWorkDays) * (decimal)totalWorkDays;
-                    bool isThuViec   = emp.LoaiNhanVien?.ToLower().Contains("thử việc") == true;
+                    bool isThuViec   = emp.LoaiNhanVien?.Contains("thử việc", StringComparison.OrdinalIgnoreCase) == true;
+                    decimal salaryMultiplier = isThuViec ? 0.85m : 1.0m;
+                    totalLuongChinh  = (emp.LuongCoBan * salaryMultiplier / standardWorkDays) * (decimal)totalWorkDays;
                     totalLuongDongBH = isThuViec ? 0 : totalLuongChinh;
                 }
 
@@ -214,11 +218,24 @@ namespace HRApi.Controllers
                 decimal khauBHTN = luongDongBHCapped * tyLeBHTN;
                 decimal tongBH   = khauBHXH + khauBHYT + khauBHTN;
 
-                // ── THUẾ TNCN (5 bậc mới) ──
+                // ── THUẾ TNCN ──
+                bool empIsThuViec = activeContracts != null && activeContracts.Count > 0
+                    ? activeContracts.All(c => c.LoaiHopDong?.Contains("thử việc", StringComparison.OrdinalIgnoreCase) == true)
+                    : emp.LoaiNhanVien?.Contains("thử việc", StringComparison.OrdinalIgnoreCase) == true;
+
                 decimal tongThuNhap = totalLuongChinh + totalLuongOT + tongPhuCap;
-                decimal giamTruPT   = emp.SoNguoiPhuThuoc * giamTruPhuThuoc;
-                decimal thuNhapCT   = tongThuNhap - tongBH - giamTruBanThan - giamTruPT;
-                decimal thueTNCN    = TinhThueTNCNLuyTien(thuNhapCT);
+                decimal thueTNCN;
+                if (empIsThuViec)
+                {
+                    // Hợp đồng thử việc < 3 tháng: khấu trừ 10% nếu thu nhập >= 2 triệu (Điều 25 TT111)
+                    thueTNCN = tongThuNhap >= 2_000_000m ? Math.Round(tongThuNhap * 0.10m, 0) : 0m;
+                }
+                else
+                {
+                    decimal giamTruPT = emp.SoNguoiPhuThuoc * giamTruPhuThuoc;
+                    decimal thuNhapCT = tongThuNhap - tongBH - giamTruBanThan - giamTruPT;
+                    thueTNCN = TinhThueTNCNLuyTien(thuNhapCT);
+                }
 
                 newPayrolls.Add(new BangLuong
                 {
