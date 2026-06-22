@@ -76,12 +76,25 @@ const MyTimekeepingPage = () => {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
 
-  // Compute late/early counts from records
+  // Compute all summary values from raw records (không dùng API summary vì có thể null)
   let lateCount = 0;
   let earlyCount = 0;
+  let tongCongCalc = 0;
+  let diLamDuCalc = 0;
+  let lamNuaNgayCalc = 0;
+  let nghiKhongPhepCalc = 0;
   recordsMap.forEach((rec) => {
     if (rec.ghiChu?.includes("Đi muộn")) lateCount++;
     if (rec.ghiChu?.includes("Về sớm")) earlyCount++;
+    const nc = rec.ngayCong ?? 0;
+    tongCongCalc += nc;
+    if (nc >= 1.0) diLamDuCalc++;
+    else if (nc > 0) lamNuaNgayCalc++;
+    else nghiKhongPhepCalc++;
+  });
+  let nghiCoPhepCalc = 0;
+  requestsMap.forEach((req) => {
+    if (req.trangThai === "Đã duyệt" && req.loaiDon?.includes("Nghỉ")) nghiCoPhepCalc++;
   });
 
   const getDayInfo = (day) => {
@@ -139,21 +152,11 @@ const MyTimekeepingPage = () => {
         : "#d97706"
       : "#2563eb";
 
-    // Màu số công
-    let ngayCongClass = "cal-ngay-cong";
-    if (ngayCong === null) ngayCongClass = "";
-    else if (ngayCong >= 1) ngayCongClass += " ngc-full";
-    else if (ngayCong > 0) ngayCongClass += " ngc-half";
-    else ngayCongClass += " ngc-zero";
-
     return (
       <div key={day} className={cellClass}>
-        {/* Số ngày + số công */}
+        {/* Số ngày */}
         <div className="cal-cell-top">
           <div className="cal-day-number">{day}</div>
-          {rec && ngayCong !== null && (
-            <span className={ngayCongClass}>{ngayCong % 1 === 0 ? ngayCong.toFixed(0) : ngayCong}</span>
-          )}
         </div>
 
         {/* Work schedule */}
@@ -169,6 +172,14 @@ const MyTimekeepingPage = () => {
               : inTime
               ? `${inTime} - ??:??`
               : `??:?? - ${outTime}`}
+          </div>
+        )}
+
+        {/* Số công - hiển thị nổi bật dưới giờ */}
+        {rec && ngayCong !== null && (
+          <div className={`cal-cong-row ${ngayCong >= 1 ? "cong-full" : ngayCong > 0 ? "cong-half" : "cong-zero"}`}>
+            <span className="cal-cong-dot" />
+            {ngayCong % 1 === 0 ? ngayCong.toFixed(0) : ngayCong} công
           </div>
         )}
 
@@ -223,11 +234,11 @@ const MyTimekeepingPage = () => {
       {/* ── SUMMARY BAR ── */}
       <div className="cal-summary-bar">
         <div className="cal-sum-item">
-          <span className="cal-sum-value">{summary?.tongCong?.toFixed(2) ?? "0.00"}</span>
+          <span className="cal-sum-value">{tongCongCalc.toFixed(2)}</span>
           <span className="cal-sum-label">Ngày công</span>
         </div>
         <div className="cal-sum-item">
-          <span className="cal-sum-value red">{summary?.nghiKhongPhep ?? 0}</span>
+          <span className="cal-sum-value red">{nghiKhongPhepCalc}</span>
           <span className="cal-sum-label">Vắng</span>
         </div>
         <div className="cal-sum-item">
@@ -235,15 +246,15 @@ const MyTimekeepingPage = () => {
           <span className="cal-sum-label">Lần muộn/sớm</span>
         </div>
         <div className="cal-sum-item">
-          <span className="cal-sum-value green">{summary?.nghiCoPhep ?? 0}</span>
+          <span className="cal-sum-value green">{nghiCoPhepCalc}</span>
           <span className="cal-sum-label">Ngày nghỉ phép</span>
         </div>
         <div className="cal-sum-item">
-          <span className="cal-sum-value blue">{summary?.lamNuaNgay ?? 0}</span>
+          <span className="cal-sum-value blue">{lamNuaNgayCalc}</span>
           <span className="cal-sum-label">Nửa ngày</span>
         </div>
         <div className="cal-sum-item">
-          <span className="cal-sum-value green">{summary?.diLamDu ?? 0}</span>
+          <span className="cal-sum-value green">{diLamDuCalc}</span>
           <span className="cal-sum-label">Ngày đi đủ</span>
         </div>
       </div>
