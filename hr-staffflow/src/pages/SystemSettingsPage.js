@@ -54,7 +54,7 @@ const SystemSettingsPage = () => {
     thoiGianNghiTrua: "12:00 - 13:00",
     soPhutDiMuonChoPhep: 15,
     ngayPhepTieuChuan: 12,
-    mucLuongCoSo: 1800000,
+    mucLuongCoSo: 2530000,
     phanTramBHXHCompany: 21.5,
     phanTramBHXHEmployee: 10.5,
     giamTruGiaCanh: 11000000,

@@ -207,16 +207,18 @@ namespace HRApi.Controllers
                 decimal tongPhuCap = calcTienAn + calcTienXe + calcChuyenCan + phuCapNV;
 
                 // ── BẢO HIỂM ──
-                decimal tyLeBHXH = (8m  / 10.5m) * phanTramBHNLD;
-                decimal tyLeBHYT = (1.5m / 10.5m) * phanTramBHNLD;
-                decimal tyLeBHTN = (1m  / 10.5m) * phanTramBHNLD;
+                // Trần BHXH+BHYT: 20 × lương cơ sở (đọc từ settings, mặc định 2.530.000)
+                decimal luongCoSo   = sys?.MucLuongCoSo > 0 ? sys.MucLuongCoSo : 2_530_000m;
+                decimal bhXHYTCap   = luongCoSo * 20m;
+                decimal luongBHXHYT = Math.Min(totalLuongDongBH, bhXHYTCap);
+                decimal khauBHXH    = Math.Round(luongBHXHYT * 0.08m, 0);
+                decimal khauBHYT    = Math.Round(luongBHXHYT * 0.015m, 0);
 
-                // Trần đóng BH: 20 × lương cơ sở (2,340,000)
-                decimal luongDongBHCapped = Math.Min(totalLuongDongBH, 46_800_000m);
-                decimal khauBHXH = luongDongBHCapped * tyLeBHXH;
-                decimal khauBHYT = luongDongBHCapped * tyLeBHYT;
-                decimal khauBHTN = luongDongBHCapped * tyLeBHTN;
-                decimal tongBH   = khauBHXH + khauBHYT + khauBHTN;
+                // Trần BHTN: 20 × lương tối thiểu vùng I (4.960.000 × 20 = 99.200.000)
+                decimal luongBHTN = Math.Min(totalLuongDongBH, 99_200_000m);
+                decimal khauBHTN  = Math.Round(luongBHTN * 0.01m, 0);
+
+                decimal tongBH = khauBHXH + khauBHYT + khauBHTN;
 
                 // ── THUẾ TNCN ──
                 bool empIsThuViec = activeContracts != null && activeContracts.Count > 0
