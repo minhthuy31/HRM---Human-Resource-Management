@@ -31,6 +31,11 @@ namespace HRApi.Models
         public double HeSoOTCuoiTuan { get; set; } = 2.0;
         public double HeSoOTNgayLe { get; set; } = 3.0;
 
+        // Phụ cấp (cấu hình toàn công ty)
+        public decimal TienAnMoiNgay { get; set; } = 50_000m;
+        public decimal TienGuiXeThang { get; set; } = 150_000m;
+        public decimal TienChuyenCan { get; set; } = 500_000m;
+
         // Email
         public string? SmtpServer { get; set; }
         public string? SmtpPort { get; set; }

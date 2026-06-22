@@ -75,6 +75,10 @@ namespace HRApi.Controllers
                 settings.HeSoOTCuoiTuan = updatedSettings.HeSoOTCuoiTuan;
                 settings.HeSoOTNgayLe = updatedSettings.HeSoOTNgayLe;
 
+                settings.TienAnMoiNgay = updatedSettings.TienAnMoiNgay;
+                settings.TienGuiXeThang = updatedSettings.TienGuiXeThang;
+                settings.TienChuyenCan = updatedSettings.TienChuyenCan;
+
                 settings.SmtpServer = updatedSettings.SmtpServer;
                 settings.SmtpPort = updatedSettings.SmtpPort;
                 settings.EmailGuiDi = updatedSettings.EmailGuiDi;

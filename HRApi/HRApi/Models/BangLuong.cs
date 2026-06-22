@@ -27,9 +27,20 @@ namespace HRApi.Models
         public double TongNgayCong { get; set; }
         public double TongGioOT { get; set; }
 
-        // [MỚI] Lưu lại Công chuẩn của tháng đó (VD: 24, 26, 27 ngày)
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TongCongChuanOT { get; set; }   // Giờ OT × hệ số (VD: 2h×1.5=3)
+
+        // Công chuẩn tháng (T2-T6 trừ lễ, tính động)
         [Column(TypeName = "decimal(18,2)")]
         public decimal SoCongChuanTrongThang { get; set; }
+
+        // --- 3. PHÂN RÃ PHỤ CẤP ---
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TienAn { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TienGuiXe { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TienChuyenCan { get; set; }
 
         // --- CÁC THUỘC TÍNH CHỈ HIỂN THỊ (Không lưu DB) ---
         [NotMapped]

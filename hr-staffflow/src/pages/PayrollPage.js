@@ -91,15 +91,19 @@ const PayrollPage = () => {
           ...item,
           luongCoBan: item.luongCoBan || 0,
           tongPhuCap: item.tongPhuCap || 0,
-          soCongChuanTrongThang: item.soCongChuanTrongThang || 22, // Fallback
+          soCongChuanTrongThang: item.soCongChuanTrongThang || 22,
           tongNgayCong: item.tongNgayCong || 0,
           tongGioOT: item.tongGioOT || 0,
+          tongCongChuanOT: item.tongCongChuanOT || 0,
           nghiCoPhep: item.nghiCoPhep || 0,
-          nghiKhongLuong: item.nghiKhongLuong || 0, // Mới
+          nghiKhongLuong: item.nghiKhongLuong || 0,
           nghiKhongPhep: item.nghiKhongPhep || 0,
           lamNuaNgay: item.lamNuaNgay || 0,
           luongChinh: item.luongChinh || 0,
           luongOT: item.luongOT || 0,
+          tienAn: item.tienAn || 0,
+          tienGuiXe: item.tienGuiXe || 0,
+          tienChuyenCan: item.tienChuyenCan || 0,
           tongThuNhap: item.tongThuNhap || 0,
           khauTruBHXH: item.khauTruBHXH || 0,
           khauTruBHYT: item.khauTruBHYT || 0,
@@ -300,11 +304,10 @@ const PayrollPage = () => {
                     <th colSpan={2} className="group-header bg-gray">
                       Cố định
                     </th>
-                    {/* SỬA colSpan={5} THÀNH colSpan={7} CHO CHẤM CÔNG */}
-                    <th colSpan={7} className="group-header bg-blue-light">
+                    <th colSpan={8} className="group-header bg-blue-light">
                       Chấm công
                     </th>
-                    <th colSpan={3} className="group-header bg-green-light">
+                    <th colSpan={6} className="group-header bg-green-light">
                       Thu nhập
                     </th>
                     <th colSpan={5} className="group-header bg-red-light">
@@ -326,6 +329,13 @@ const PayrollPage = () => {
                     <th className="sub-th" style={{ color: "#d97706" }}>
                       OT (h)
                     </th>
+                    <th
+                      className="sub-th"
+                      style={{ color: "#9333ea" }}
+                      title="Công chuẩn OT = Giờ OT × Hệ số (1.5/2.0/3.0)"
+                    >
+                      OT CC
+                    </th>
                     <th className="sub-th">Phép</th>
                     <th
                       className="sub-th"
@@ -342,6 +352,18 @@ const PayrollPage = () => {
                     <th className="sub-th">Lương Chính</th>
                     <th className="sub-th" style={{ color: "#d97706" }}>
                       Tiền OT
+                    </th>
+                    <th className="sub-th" title="Tiền ăn (50k/ngày công)">
+                      T.Ăn
+                    </th>
+                    <th className="sub-th" title="Tiền gửi xe (theo ngày công)">
+                      T.Xe
+                    </th>
+                    <th
+                      className="sub-th"
+                      title="Tiền chuyên cần (đủ công chuẩn mới được)"
+                    >
+                      C.Cần
                     </th>
                     <th className="sub-th">Tổng TN</th>
                     <th className="sub-th">BHXH</th>
@@ -384,6 +406,12 @@ const PayrollPage = () => {
                         >
                           {p.tongGioOT > 0 ? p.tongGioOT : "-"}
                         </td>
+                        <td
+                          className="text-center font-bold"
+                          style={{ color: "#9333ea" }}
+                        >
+                          {p.tongCongChuanOT > 0 ? p.tongCongChuanOT : "-"}
+                        </td>
                         <td className="text-center">{p.nghiCoPhep}</td>
                         <td
                           className="text-center"
@@ -401,6 +429,15 @@ const PayrollPage = () => {
                         </td>
                         <td className="text-right" style={{ color: "#d97706" }}>
                           {formatMoney(p.luongOT)}
+                        </td>
+                        <td className="text-right text-sm">
+                          {p.tienAn > 0 ? formatMoney(p.tienAn) : "-"}
+                        </td>
+                        <td className="text-right text-sm">
+                          {p.tienGuiXe > 0 ? formatMoney(p.tienGuiXe) : "-"}
+                        </td>
+                        <td className="text-right text-sm">
+                          {p.tienChuyenCan > 0 ? formatMoney(p.tienChuyenCan) : "-"}
                         </td>
                         <td className="text-right font-bold text-green">
                           {formatMoney(p.tongThuNhap)}
@@ -436,7 +473,7 @@ const PayrollPage = () => {
                   ) : (
                     <tr>
                       <td
-                        colSpan="20"
+                        colSpan="23"
                         className="text-center"
                         style={{ padding: "30px 0" }}
                       >

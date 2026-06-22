@@ -61,7 +61,10 @@ const SystemSettingsPage = () => {
     giamTruPhuThuoc: 4400000,
     heSoOTNgayThuong: 1.5,
     heSoOTCuoiTuan: 2.0,
-    heSoOTNgayLe: 3.0, // <-- THÊM MẶC ĐỊNH
+    heSoOTNgayLe: 3.0,
+    tienAnMoiNgay: 50000,
+    tienGuiXeThang: 150000,
+    tienChuyenCan: 500000,
     smtpServer: "",
     smtpPort: "",
     emailGuiDi: "",
@@ -160,9 +163,12 @@ const SystemSettingsPage = () => {
             phanTramBHXHEmployee: Number(settings.phanTramBHXHEmployee) || 0,
             giamTruGiaCanh: Number(settings.giamTruGiaCanh) || 0,
             giamTruPhuThuoc: Number(settings.giamTruPhuThuoc) || 0,
-            heSoOTNgayThuong: Number(settings.heSoOTNgayThuong) || 1.5, // <-- MAP PAYLOAD
+            heSoOTNgayThuong: Number(settings.heSoOTNgayThuong) || 1.5,
             heSoOTCuoiTuan: Number(settings.heSoOTCuoiTuan) || 2.0,
             heSoOTNgayLe: Number(settings.heSoOTNgayLe) || 3.0,
+            tienAnMoiNgay: Number(settings.tienAnMoiNgay) || 50000,
+            tienGuiXeThang: Number(settings.tienGuiXeThang) || 150000,
+            tienChuyenCan: Number(settings.tienChuyenCan) || 500000,
           };
           await api.post("/SystemSettings", payload);
           showToast("Đã lưu cấu hình hệ thống thành công!", "success");
@@ -724,6 +730,71 @@ const SystemSettingsPage = () => {
                     />
                   </div>
                 </div>
+
+                <h3
+                  style={{
+                    marginTop: "30px",
+                    fontSize: "1.2rem",
+                    color: "#0369a1",
+                    borderBottom: "1px solid #e0f2fe",
+                    paddingBottom: "10px",
+                  }}
+                >
+                  Cấu hình Phụ cấp toàn công ty
+                </h3>
+                <div className="form-row-3" style={{ marginTop: "15px" }}>
+                  <div className="form-group">
+                    <label>Tiền ăn mỗi ngày công (VNĐ)</label>
+                    <input
+                      type="number"
+                      name="tienAnMoiNgay"
+                      value={
+                        settings.tienAnMoiNgay !== undefined
+                          ? settings.tienAnMoiNgay
+                          : ""
+                      }
+                      onChange={handleChange}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Tiền gửi xe / tháng (VNĐ)</label>
+                    <input
+                      type="number"
+                      name="tienGuiXeThang"
+                      value={
+                        settings.tienGuiXeThang !== undefined
+                          ? settings.tienGuiXeThang
+                          : ""
+                      }
+                      onChange={handleChange}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Tiền chuyên cần / tháng (VNĐ)</label>
+                    <input
+                      type="number"
+                      name="tienChuyenCan"
+                      value={
+                        settings.tienChuyenCan !== undefined
+                          ? settings.tienChuyenCan
+                          : ""
+                      }
+                      onChange={handleChange}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                </div>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    color: "#6b7280",
+                    marginTop: "8px",
+                  }}
+                >
+                  Tiền ăn tính theo ngày công thực tế. Tiền xe = (tiền xe tháng ÷ công chuẩn) × ngày công. Tiền chuyên cần chỉ nhận khi đạt đủ công chuẩn.
+                </p>
               </div>
             )}
 
