@@ -15,6 +15,87 @@ import AttendanceModal from "../components/modals/AttendanceModal";
 import BulkEditModal from "../components/modals/BulkEditModal";
 import RequestDetailModal from "../components/modals/RequestDetailModal";
 
+// --- Searchable combobox ---
+const SearchableSelect = ({ options, value, onChange, placeholder, labelKey = "label", valueKey = "value" }) => {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = options.filter((o) =>
+    o[labelKey]?.toLowerCase().includes(search.toLowerCase())
+  );
+  const selectedLabel = options.find((o) => o[valueKey] === value)?.[labelKey] || "";
+
+  return (
+    <div ref={ref} style={{ position: "relative", minWidth: "180px" }}>
+      <div
+        onClick={() => setOpen((p) => !p)}
+        style={{
+          border: "1px solid #d1d5db", borderRadius: "6px", padding: "7px 10px",
+          cursor: "pointer", background: "#fff", display: "flex",
+          justifyContent: "space-between", alignItems: "center",
+          fontSize: "14px", color: selectedLabel ? "#111" : "#9ca3af",
+          userSelect: "none",
+        }}
+      >
+        <span>{selectedLabel || placeholder}</span>
+        <span style={{ fontSize: "10px", color: "#6b7280" }}>▼</span>
+      </div>
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
+          background: "#fff", border: "1px solid #d1d5db", borderRadius: "6px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 1100,
+          display: "flex", flexDirection: "column", overflow: "hidden",
+        }}>
+          <input
+            autoFocus
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Tìm kiếm..."
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              border: "none", borderBottom: "1px solid #e5e7eb",
+              padding: "8px 10px", fontSize: "13px", outline: "none",
+            }}
+          />
+          <div style={{ overflowY: "auto", maxHeight: "220px" }}>
+            <div
+              onMouseDown={() => { onChange(""); setSearch(""); setOpen(false); }}
+              style={{ padding: "8px 10px", cursor: "pointer", fontSize: "13px", color: "#6b7280" }}
+            >
+              {placeholder}
+            </div>
+            {filtered.map((opt) => (
+              <div
+                key={opt[valueKey]}
+                onMouseDown={() => { onChange(opt[valueKey]); setSearch(""); setOpen(false); }}
+                style={{
+                  padding: "8px 10px", cursor: "pointer", fontSize: "13px",
+                  background: value === opt[valueKey] ? "#eff6ff" : "transparent",
+                  color: value === opt[valueKey] ? "#2563eb" : "#111",
+                }}
+              >
+                {opt[labelKey]}
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <div style={{ padding: "8px 10px", color: "#9ca3af", fontSize: "13px" }}>Không tìm thấy</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }) => {
   if (!isOpen) return null;
   return (
@@ -39,6 +120,9 @@ const TimekeepingPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const [employees, setEmployees] = useState([]);
+  const [phongBans, setPhongBans] = useState([]);
+  const [filterPhongBan, setFilterPhongBan] = useState("");
+  const [filterNhanVien, setFilterNhanVien] = useState("");
   const [attendance, setAttendance] = useState({});
   const [loading, setLoading] = useState(true);
   const [summaries, setSummaries] = useState({});
@@ -99,8 +183,12 @@ const TimekeepingPage = () => {
         const year = date.getFullYear();
         const month = date.getMonth() + 1;
 
-        const empRes = await api.get("/NhanVien?TrangThai=true");
+        const [empRes, pbRes] = await Promise.all([
+          api.get("/NhanVien?TrangThai=true"),
+          api.get("/PhongBan"),
+        ]);
         setEmployees(empRes.data || []);
+        setPhongBans(pbRes.data?.filter((pb) => pb.trangThai) || []);
 
         const attendanceRes = await api.get(
           `/ChamCong?year=${year}&month=${month}`,
@@ -171,7 +259,22 @@ const TimekeepingPage = () => {
   );
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  const employeeIds = employees.map((emp) => emp.maNhanVien);
+  // Nhân viên sau khi lọc
+  const filteredEmployees = employees.filter((emp) => {
+    if (filterPhongBan && emp.maPhongBan !== filterPhongBan) return false;
+    if (filterNhanVien && emp.maNhanVien !== filterNhanVien) return false;
+    return true;
+  });
+
+  // Danh sách NV cho dropdown lọc (nếu đã chọn phòng ban thì chỉ show NV phòng đó)
+  const nvOptions = (filterPhongBan
+    ? employees.filter((e) => e.maPhongBan === filterPhongBan)
+    : employees
+  ).map((e) => ({ value: e.maNhanVien, label: `${e.hoTen} (${e.maNhanVien})` }));
+
+  const pbOptions = phongBans.map((pb) => ({ value: pb.maPhongBan, label: pb.tenPhongBan }));
+
+  const employeeIds = filteredEmployees.map((emp) => emp.maNhanVien);
 
   const getWorkDayStyle = (record) => {
     if (!record)
@@ -554,6 +657,38 @@ const TimekeepingPage = () => {
           </div>
         </div>
 
+        {/* --- BỘ LỌC --- */}
+        <div style={{ display: "flex", gap: "12px", alignItems: "center", margin: "12px 0", flexWrap: "wrap" }}>
+          <SearchableSelect
+            options={pbOptions}
+            value={filterPhongBan}
+            onChange={(val) => { setFilterPhongBan(val); setFilterNhanVien(""); }}
+            placeholder="-- Tất cả phòng ban --"
+            valueKey="value"
+            labelKey="label"
+          />
+          <SearchableSelect
+            options={nvOptions}
+            value={filterNhanVien}
+            onChange={setFilterNhanVien}
+            placeholder="-- Tất cả nhân viên --"
+            valueKey="value"
+            labelKey="label"
+          />
+          {(filterPhongBan || filterNhanVien) && (
+            <button
+              onClick={() => { setFilterPhongBan(""); setFilterNhanVien(""); }}
+              style={{
+                padding: "7px 12px", fontSize: "13px", cursor: "pointer",
+                border: "1px solid #d1d5db", borderRadius: "6px",
+                background: "#f9fafb", color: "#6b7280",
+              }}
+            >
+              Xóa lọc
+            </button>
+          )}
+        </div>
+
         <div
           className="timekeeping-table-container"
           onMouseUp={handleMouseUp}
@@ -580,8 +715,8 @@ const TimekeepingPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {employees.length > 0 ? (
-                  employees.map((emp) => {
+                {filteredEmployees.length > 0 ? (
+                  filteredEmployees.map((emp) => {
                     const empId = emp.maNhanVien;
                     const summary = summaries[empId] || {};
                     return (
