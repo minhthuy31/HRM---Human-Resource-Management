@@ -202,9 +202,8 @@ namespace HRApi.Controllers
                 decimal calcTienAn    = Math.Round(tienAnMoiNgay   * (decimal)totalWorkDays, 0);
                 decimal calcTienXe    = Math.Round(dailyXe         * (decimal)totalWorkDays, 0);
                 decimal calcChuyenCan = totalWorkDays >= (double)standardWorkDays ? tienChuyenCanMax : 0m;
-                decimal phuCapNV      = Math.Round((emp.LuongTroCap / standardWorkDays) * (decimal)totalWorkDays, 0);
 
-                decimal tongPhuCap = calcTienAn + calcTienXe + calcChuyenCan + phuCapNV;
+                decimal tongPhuCap = calcTienAn + calcTienXe + calcChuyenCan;
 
                 // ── BẢO HIỂM ──
                 // Trần BHXH+BHYT: 20 × lương cơ sở (đọc từ settings, mặc định 2.530.000)

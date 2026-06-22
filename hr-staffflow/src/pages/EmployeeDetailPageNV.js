@@ -189,7 +189,6 @@ const EmployeeDetailPageNV = () => {
       <div className="form-grid grid-3">
         {renderField("Số HĐ hiện tại", employee.soHopDong)}
         {renderField("Lương CB", formatCurrency(employee.luongCoBan))}
-        {renderField("Lương trợ cấp", formatCurrency(employee.luongTroCap))}
       </div>
     </div>
   );

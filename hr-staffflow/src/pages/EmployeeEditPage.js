@@ -49,19 +49,12 @@ const EmployeeEditPage = () => {
             api.get("/NhanVien/managers?excludeId=" + employeeId),
           ]);
 
-        // --- CẬP NHẬT: Đảm bảo mapping đúng luongTroCap ---
         const empData = {
           ...empRes.data,
           luongCoBan:
             empRes.data.luongCoBan !== undefined &&
             empRes.data.luongCoBan !== null
               ? empRes.data.luongCoBan
-              : "",
-          // Đã sửa thành luongTroCap
-          luongTroCap:
-            empRes.data.luongTroCap !== undefined &&
-            empRes.data.luongTroCap !== null
-              ? empRes.data.luongTroCap
               : "",
           soHopDong: empRes.data.soHopDong || "",
         };
@@ -126,13 +119,6 @@ const EmployeeEditPage = () => {
       dataToSave.luongCoBan = parseFloat(dataToSave.luongCoBan);
     } else {
       dataToSave.luongCoBan = 0;
-    }
-
-    // Đảm bảo luongTroCap là số khi gửi đi
-    if (dataToSave.luongTroCap !== "" && dataToSave.luongTroCap !== null) {
-      dataToSave.luongTroCap = parseFloat(dataToSave.luongTroCap);
-    } else {
-      dataToSave.luongTroCap = 0;
     }
 
     try {
@@ -470,16 +456,6 @@ const EmployeeEditPage = () => {
             value={employee.luongCoBan}
             onChange={handleChange}
             placeholder="Nhập mức lương..."
-          />
-        </div>
-        <div className="form-group">
-          <label>Lương trợ cấp (VNĐ)</label>
-          <input
-            type="number"
-            name="luongTroCap"
-            value={employee.luongTroCap}
-            onChange={handleChange}
-            placeholder="Nhập trợ cấp..."
           />
         </div>
         <div className="form-group">

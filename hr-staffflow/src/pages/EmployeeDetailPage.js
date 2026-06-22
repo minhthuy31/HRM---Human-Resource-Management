@@ -182,8 +182,6 @@ const EmployeeDetailPage = () => {
         {/* --- HIỂN THỊ LƯƠNG & TRỢ CẤP --- */}
         {renderField("Lương CB", formatCurrency(employee.luongCoBan))}
 
-        {/* ĐÃ SỬA: Dùng luongTroCap thay vì phuCap */}
-        {renderField("Lương trợ cấp", formatCurrency(employee.luongTroCap))}
       </div>
     </div>
   );
