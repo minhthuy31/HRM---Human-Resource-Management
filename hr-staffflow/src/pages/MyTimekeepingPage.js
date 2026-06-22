@@ -5,18 +5,12 @@ import { FaChevronLeft, FaChevronRight, FaFileAlt } from "react-icons/fa";
 import "../styles/MyTimekeepingPage.css";
 import RequestDetailModal from "../components/modals/RequestDetailModal";
 
-const getDayOfWeek = (year, month, day) => {
-  const date = new Date(year, month, day);
-  const days = [
-    "Chủ Nhật",
-    "Thứ Hai",
-    "Thứ Ba",
-    "Thứ Tư",
-    "Thứ Năm",
-    "Thứ Sáu",
-    "Thứ Bảy",
-  ];
-  return days[date.getDay()];
+const WEEKDAYS = ["Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"];
+
+const formatTime = (timeStr) => {
+  if (!timeStr) return null;
+  const d = new Date(timeStr);
+  return d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", hour12: false });
 };
 
 const MyTimekeepingPage = () => {
@@ -35,15 +29,8 @@ const MyTimekeepingPage = () => {
       try {
         const year = date.getFullYear();
         const month = date.getMonth() + 1;
-        const response = await api.get(
-          `/ChamCong/${employeeId}?year=${year}&month=${month}`,
-        );
-
-        const {
-          dailyRecords = [],
-          summaries = {},
-          requests = [],
-        } = response.data;
+        const response = await api.get(`/ChamCong/${employeeId}?year=${year}&month=${month}`);
+        const { dailyRecords = [], summaries = {}, requests = [] } = response.data;
         setSummary(summaries[employeeId] || null);
 
         const records = new Map();
@@ -72,281 +59,201 @@ const MyTimekeepingPage = () => {
   }, [currentDate, fetchData]);
 
   const changeMonth = (offset) => {
-    setCurrentDate(
-      (prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1),
-    );
+    setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
   };
 
-  const daysInMonth = new Date(
-    currentDate.getFullYear(),
-    currentDate.getMonth() + 1,
-    0,
-  ).getDate();
-  const allDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  const goToday = () => setCurrentDate(new Date());
 
-  const getWorkDayStyleAndStatus = (day) => {
-    if (recordsMap.has(day)) {
-      const record = recordsMap.get(day);
-      const ngayCong = record?.ngayCong;
-      let className = "";
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth() + 1;
+  const daysInMonth = new Date(year, month, 0).getDate();
 
-      if (ngayCong >= 1.0) {
-        className =
-          record.ghiChu && !record.ghiChu.includes("Đi muộn")
-            ? "status-leave"
-            : "status-present";
-      } else if (ngayCong > 0 && ngayCong < 1.0) {
-        className = "status-half-day";
-      } else if (ngayCong === 0.0 && record.gioCheckIn) {
-        className = "status-present";
-      } else if (ngayCong === 0.0) {
-        className = "status-absent";
-      }
+  // Build calendar cells (Monday-start)
+  const firstDow = new Date(year, month - 1, 1).getDay();
+  const startOffset = (firstDow + 6) % 7;
+  const cells = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
 
-      const formatTime = (timeStr) => {
-        if (!timeStr) return "--:--";
-        const date = new Date(timeStr);
-        return date.toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        });
-      };
+  // Compute late/early counts from records
+  let lateCount = 0;
+  let earlyCount = 0;
+  recordsMap.forEach((rec) => {
+    if (rec.ghiChu?.includes("Đi muộn")) lateCount++;
+    if (rec.ghiChu?.includes("Về sớm")) earlyCount++;
+  });
 
-      let cleanNote = record.ghiChu || "";
-      let isLate = false;
-      let isEarly = false; 
+  const getDayInfo = (day) => {
+    const today = new Date();
+    const isToday = day === today.getDate() && month === today.getMonth() + 1 && year === today.getFullYear();
+    const dow = new Date(year, month - 1, day).getDay(); // 0=Sun, 6=Sat
+    const isWeekend = dow === 0 || dow === 6;
 
-      if (cleanNote) {
-        if (cleanNote.includes("Đi muộn")) isLate = true;
-        if (cleanNote.includes("Về sớm")) isEarly = true; 
+    const rec = recordsMap.get(day);
+    const request = requestsMap.get(day);
 
-        cleanNote = cleanNote
-          .replace(/Face Check-in/g, "")
-          .replace(/\|? *Face Check-out: \d{2}:\d{2}/g, "")
-          .replace(/\(Đi muộn\)/g, "")
-          .replace(/\(Về sớm\)/g, "") 
-          .trim();
-      }
+    let inTime = null, outTime = null;
+    let isLate = false, isEarly = false;
+    let ngayCong = null;
+    let missingCheckIn = false, missingCheckOut = false;
+    let note = "";
 
-      return {
-        ngayCong: ngayCong,
-        className: className,
-        inTime: record.gioCheckIn ? formatTime(record.gioCheckIn) : null,
-        outTime: record.gioCheckOut ? formatTime(record.gioCheckOut) : null,
-        isLate: isLate,
-        isEarly: isEarly, 
-        note: cleanNote,
-      };
+    if (rec) {
+      ngayCong = rec.ngayCong;
+      inTime = rec.gioCheckIn ? formatTime(rec.gioCheckIn) : null;
+      outTime = rec.gioCheckOut ? formatTime(rec.gioCheckOut) : null;
+      if (rec.ghiChu?.includes("Đi muộn")) isLate = true;
+      if (rec.ghiChu?.includes("Về sớm")) isEarly = true;
+      missingCheckIn = !rec.gioCheckIn && ngayCong !== null;
+      missingCheckOut = rec.gioCheckIn && !rec.gioCheckOut;
+
+      let cleanNote = rec.ghiChu || "";
+      cleanNote = cleanNote
+        .replace(/Face Check-in/g, "")
+        .replace(/\|? *Face Check-out: \d{2}:\d{2}/g, "")
+        .replace(/\(Đi muộn\)/g, "")
+        .replace(/\(Về sớm\)/g, "")
+        .trim();
+      note = cleanNote;
     }
 
-    return {
-      ngayCong: "",
-      className: "",
-      inTime: null,
-      outTime: null,
-      isLate: false,
-      isEarly: false,
-      note: "",
-    };
+    return { isToday, isWeekend, rec, request, inTime, outTime, isLate, isEarly, ngayCong, missingCheckIn, missingCheckOut, note };
+  };
+
+  const renderDayCell = (day, idx) => {
+    if (!day) return <div key={`empty-${idx}`} className="cal-cell cal-cell--empty" />;
+
+    const { isToday, isWeekend, rec, request, inTime, outTime, isLate, isEarly, ngayCong, missingCheckOut, note } = getDayInfo(day);
+
+    let cellClass = "cal-cell";
+    if (isToday) cellClass += " cal-cell--today";
+    if (isWeekend) cellClass += " cal-cell--weekend";
+    if (request?.trangThai === "Đã duyệt" && (request.loaiDon?.includes("Nghỉ") || request.loaiDon === "Công tác")) {
+      cellClass += " cal-cell--leave";
+    }
+
+    const requestColor = request
+      ? request.trangThai === "Đã duyệt" ? "#16a34a"
+        : request.trangThai === "Từ chối" ? "#dc2626"
+        : "#d97706"
+      : "#2563eb";
+
+    return (
+      <div key={day} className={cellClass}>
+        <div className="cal-day-number">{day}</div>
+
+        {/* Work schedule */}
+        {!isWeekend && (
+          <div className="cal-schedule">HC 08:00 - 17:00</div>
+        )}
+
+        {/* Check-in / Check-out */}
+        {rec && !isWeekend && (
+          <div className={`cal-times ${(isLate || isEarly) ? "cal-times--warn" : ""}`}>
+            {inTime && outTime
+              ? `${inTime} - ${outTime}`
+              : inTime
+              ? `${inTime} - ??:??`
+              : "??:?? - ??:??"}
+          </div>
+        )}
+
+        {/* Status badges */}
+        <div className="cal-badges">
+          {isLate && <span className="cal-badge cal-badge--late">Di muộn</span>}
+          {isEarly && <span className="cal-badge cal-badge--early">Về sớm</span>}
+          {missingCheckOut && !isLate && !isEarly && (
+            <span className="cal-badge cal-badge--missing">Thiếu out</span>
+          )}
+          {ngayCong === 0 && rec && !isWeekend && !request && (
+            <span className="cal-badge cal-badge--absent">Vắng</span>
+          )}
+          {note && !isLate && !isEarly && (
+            <span className="cal-badge cal-badge--note" title={note}>{note.length > 10 ? note.slice(0, 10) + "…" : note}</span>
+          )}
+        </div>
+
+        {/* Request badge */}
+        {request && (
+          <div
+            className="cal-request"
+            style={{ borderColor: requestColor, color: requestColor }}
+            onClick={() => setViewingRequest(request)}
+            title="Bấm để xem chi tiết đơn"
+          >
+            <FaFileAlt style={{ fontSize: "10px" }} />
+            <span>{request.loaiDon}</span>
+            {request.trangThai === "Từ chối" && (
+              <span className="cal-request--rejected">TC</span>
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
     <div className="my-timekeeping-view">
-      <div className="timekeeping-header">
-        <div className="month-navigator">
-          <button onClick={() => changeMonth(-1)}>
-            <FaChevronLeft />
-          </button>
-          <h2>{`Tháng ${currentDate.getMonth() + 1}, ${currentDate.getFullYear()}`}</h2>
-          <button onClick={() => changeMonth(1)}>
-            <FaChevronRight />
-          </button>
+      {/* ── HEADER ── */}
+      <div className="cal-header">
+        <div className="cal-nav">
+          <button onClick={() => changeMonth(-1)}><FaChevronLeft /></button>
+          <span className="cal-month-label">
+            {String(month).padStart(2, "0")}/{year}
+          </span>
+          <button onClick={() => changeMonth(1)}><FaChevronRight /></button>
+          <button className="cal-today-btn" onClick={goToday}>Hôm nay</button>
         </div>
       </div>
 
-      <div className="timekeeping-list">
-        <div className="list-header">
-          <div className="header-date">Ngày</div>
-          <div className="header-status">Trạng thái</div>
+      {/* ── SUMMARY BAR ── */}
+      <div className="cal-summary-bar">
+        <div className="cal-sum-item">
+          <span className="cal-sum-value">{summary?.tongCong?.toFixed(2) ?? "0.00"}</span>
+          <span className="cal-sum-label">Ngày công</span>
         </div>
-        {loading ? (
-          <div className="loading-text">Đang tải dữ liệu...</div>
-        ) : (
-          allDays.map((day) => {
-            const {
-              ngayCong,
-              className,
-              inTime,
-              outTime,
-              isLate,
-              isEarly,
-              note,
-            } = getWorkDayStyleAndStatus(day);
-            const request = requestsMap.get(day);
+        <div className="cal-sum-item">
+          <span className="cal-sum-value red">{summary?.nghiKhongPhep ?? 0}</span>
+          <span className="cal-sum-label">Vắng</span>
+        </div>
+        <div className="cal-sum-item">
+          <span className="cal-sum-value orange">{lateCount + earlyCount}</span>
+          <span className="cal-sum-label">Lần muộn/sớm</span>
+        </div>
+        <div className="cal-sum-item">
+          <span className="cal-sum-value green">{summary?.nghiCoPhep ?? 0}</span>
+          <span className="cal-sum-label">Ngày nghỉ phép</span>
+        </div>
+        <div className="cal-sum-item">
+          <span className="cal-sum-value blue">{summary?.lamNuaNgay ?? 0}</span>
+          <span className="cal-sum-label">Nửa ngày</span>
+        </div>
+        <div className="cal-sum-item">
+          <span className="cal-sum-value green">{summary?.diLamDu ?? 0}</span>
+          <span className="cal-sum-label">Ngày đi đủ</span>
+        </div>
+      </div>
 
-            return (
-              <div className="day-row" key={day}>
-                <div className="date-col">
-                  <span className="date-text">{`${day}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`}</span>
-                  <span className="day-of-week-text">
-                    {getDayOfWeek(
-                      currentDate.getFullYear(),
-                      currentDate.getMonth(),
-                      day,
-                    )}
-                  </span>
-                </div>
-
-                <div
-                  className="status-col"
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                  }}
-                >
-                  {ngayCong !== "" && (
-                    <span
-                      className={className}
-                      style={{
-                        fontWeight: "bold",
-                        fontSize: "16px",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      {ngayCong}
-                    </span>
-                  )}
-
-                  {(inTime || outTime) && (
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "10px",
-                        fontSize: "13px",
-                        background: "#f3f4f6",
-                        padding: "4px 8px",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      <span style={{ color: "#10b981", fontWeight: "600" }}>
-                        Vào: {inTime || "--:--"}
-                      </span>
-                      <span style={{ color: "#ef4444", fontWeight: "600" }}>
-                        Ra: {outTime || "--:--"}
-                      </span>
-                    </div>
-                  )}
-
-                  {isLate && (
-                    <span
-                      style={{
-                        color: "#ef4444",
-                        fontSize: "13px",
-                        fontStyle: "italic",
-                        marginTop: "4px",
-                        fontWeight: "500",
-                      }}
-                    >
-                      ⚠️ Đi muộn
-                    </span>
-                  )}
-
-                  {isEarly && (
-                    <span
-                      style={{
-                        color: "#f59e0b",
-                        fontSize: "13px",
-                        fontStyle: "italic",
-                        marginTop: "4px",
-                        fontWeight: "500",
-                      }}
-                    >
-                      ⚠️ Về sớm
-                    </span>
-                  )}
-
-                  {note && (
-                    <span
-                      className="reason-note"
-                      style={{
-                        marginTop: "4px",
-                        fontSize: "13px",
-                        color: "#6b7280",
-                      }}
-                    >
-                      {note}
-                    </span>
-                  )}
-
-                  {request && (
-                    <div
-                      onClick={() => setViewingRequest(request)}
-                      style={{
-                        marginTop: "8px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        padding: "4px 8px",
-                        background: "#eff6ff",
-                        color: "#2563eb",
-                        borderRadius: "4px",
-                        fontSize: "12px",
-                        cursor: "pointer",
-                        border: "1px dashed #93c5fd",
-                      }}
-                      title="Bấm để xem chi tiết đơn"
-                    >
-                      <FaFileAlt /> {request.loaiDon} ({request.trangThai})
-                    </div>
-                  )}
-                </div>
+      {/* ── CALENDAR ── */}
+      {loading ? (
+        <div className="loading-text">Đang tải dữ liệu...</div>
+      ) : (
+        <div className="cal-grid-wrap">
+          {/* Weekday header */}
+          <div className="cal-grid cal-grid--header">
+            {WEEKDAYS.map((d) => (
+              <div key={d} className={`cal-head-cell${d === "Thứ Bảy" || d === "Chủ Nhật" ? " cal-head-cell--weekend" : ""}`}>
+                {d}
               </div>
-            );
-          })
-        )}
-      </div>
-
-      <div className="summary-section">
-        <h4>Tổng kết công tháng {currentDate.getMonth() + 1}</h4>
-        {summary ? (
-          <div className="summary-grid">
-            <div className="summary-item">
-              <span className="summary-value">
-                {summary.tongCong?.toFixed(2) || "0.00"}
-              </span>
-              <span className="summary-label">Tổng công</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-value green">
-                {summary.diLamDu || 0}
-              </span>
-              <span className="summary-label">Ngày đi đủ</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-value orange">
-                {summary.nghiCoPhep || 0}
-              </span>
-              <span className="summary-label">Ngày nghỉ phép</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-value blue">
-                {summary.lamNuaNgay || 0}
-              </span>
-              <span className="summary-label">Ngày làm nửa buổi</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-value red">
-                {summary.nghiKhongPhep || 0}
-              </span>
-              <span className="summary-label">Ngày vắng</span>
-            </div>
+            ))}
           </div>
-        ) : (
-          <p>Chưa có dữ liệu chấm công cho tháng này.</p>
-        )}
-      </div>
+          {/* Day cells */}
+          <div className="cal-grid">
+            {cells.map((day, idx) => renderDayCell(day, idx))}
+          </div>
+        </div>
+      )}
 
       {viewingRequest && (
         <RequestDetailModal
