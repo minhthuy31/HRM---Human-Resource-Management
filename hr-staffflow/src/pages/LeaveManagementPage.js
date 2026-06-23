@@ -310,7 +310,14 @@ const RequestManagementPage = () => {
             <td>
               {formatDate(item.ngayBatDau)} - {formatDate(item.ngayKetThuc)}
             </td>
-            <td className="text-center font-bold">{item.soNgayNghi}</td>
+            <td className="text-center font-bold">
+              {item.soNgayNghi}
+              {item.buoiNghi && item.buoiNghi !== "ca-ngay" && (
+                <div style={{ fontSize: "11px", color: "#7c3aed", fontWeight: 400 }}>
+                  {item.buoiNghi === "sang" ? "Buổi sáng" : "Buổi chiều"}
+                </div>
+              )}
+            </td>
             <td>
               {item.tepDinhKem ? (
                 <a

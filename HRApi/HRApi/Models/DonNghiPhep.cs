@@ -33,6 +33,9 @@ namespace HRApi.Models
 
         public string? LyDoTuChoi { get; set; }
 
+        // "ca-ngay" | "sang" | "chieu" — null = ca-ngay (tương thích ngược)
+        public string? BuoiNghi { get; set; }
+
         public DateTime NgayGuiDon { get; set; } = DateTime.Now;
     }
 }

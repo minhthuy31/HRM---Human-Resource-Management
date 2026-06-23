@@ -8,6 +8,7 @@ const LeaveRequestModal = ({ onSave, onCancel }) => {
     ngayBatDau: today,
     ngayKetThuc: today,
     soNgayNghi: 1,
+    buoiNghi: "ca-ngay",
     lyDo: "",
     customReason: "",
     file: null,
@@ -58,21 +59,26 @@ const LeaveRequestModal = ({ onSave, onCancel }) => {
   };
 
   useEffect(() => {
-    const { ngayBatDau, ngayKetThuc } = formData;
-    if (ngayBatDau && ngayKetThuc) {
-      const start = new Date(ngayBatDau);
-      const end = new Date(ngayKetThuc);
+    const { ngayBatDau, ngayKetThuc, buoiNghi } = formData;
+    if (!ngayBatDau || !ngayKetThuc) return;
 
-      if (end < start) {
-        setError("Ngày kết thúc không thể trước ngày bắt đầu.");
-        setFormData((prev) => ({ ...prev, soNgayNghi: 0 }));
-      } else {
-        const days = calculateBusinessDays(start, end);
-        setFormData((prev) => ({ ...prev, soNgayNghi: days }));
-        setError("");
-      }
+    if (buoiNghi !== "ca-ngay") {
+      // Nửa ngày: luôn 0.5, khoá ngày kết thúc = ngày bắt đầu
+      setFormData((prev) => ({ ...prev, ngayKetThuc: ngayBatDau, soNgayNghi: 0.5 }));
+      setError("");
+      return;
     }
-  }, [formData.ngayBatDau, formData.ngayKetThuc]);
+
+    const start = new Date(ngayBatDau);
+    const end = new Date(ngayKetThuc);
+    if (end < start) {
+      setError("Ngày kết thúc không thể trước ngày bắt đầu.");
+      setFormData((prev) => ({ ...prev, soNgayNghi: 0 }));
+    } else {
+      setFormData((prev) => ({ ...prev, soNgayNghi: calculateBusinessDays(start, end) }));
+      setError("");
+    }
+  }, [formData.ngayBatDau, formData.ngayKetThuc, formData.buoiNghi]);
 
   // Check cảnh báo dựa trên số phép vừa lấy được
   useEffect(() => {
@@ -122,6 +128,7 @@ const LeaveRequestModal = ({ onSave, onCancel }) => {
       ngayBatDau: formData.ngayBatDau,
       ngayKetThuc: formData.ngayKetThuc,
       soNgayNghi: formData.soNgayNghi,
+      buoiNghi: formData.buoiNghi,
       lyDo: finalReason,
       file: formData.file,
     };
@@ -170,6 +177,41 @@ const LeaveRequestModal = ({ onSave, onCancel }) => {
           ngày
         </div>
 
+        {/* Chọn buổi nghỉ */}
+        <div className="form-group">
+          <label>Hình thức nghỉ (*)</label>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "6px" }}>
+            {[
+              { value: "ca-ngay", label: "Cả ngày" },
+              { value: "sang",    label: "Nửa ngày — Buổi sáng" },
+              { value: "chieu",   label: "Nửa ngày — Buổi chiều" },
+            ].map((opt) => (
+              <label
+                key={opt.value}
+                style={{
+                  display: "flex", alignItems: "center", gap: "6px",
+                  padding: "7px 14px", borderRadius: "20px", cursor: "pointer",
+                  border: `2px solid ${formData.buoiNghi === opt.value ? "#2563eb" : "#d1d5db"}`,
+                  background: formData.buoiNghi === opt.value ? "#eff6ff" : "#fff",
+                  color: formData.buoiNghi === opt.value ? "#2563eb" : "#374151",
+                  fontWeight: formData.buoiNghi === opt.value ? "600" : "400",
+                  fontSize: "13px", transition: "all 0.15s",
+                }}
+              >
+                <input
+                  type="radio"
+                  name="buoiNghi"
+                  value={opt.value}
+                  checked={formData.buoiNghi === opt.value}
+                  onChange={handleChange}
+                  style={{ display: "none" }}
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+        </div>
+
         <div className="form-group-row">
           <div className="form-group">
             <label>Từ ngày (*)</label>
@@ -189,18 +231,26 @@ const LeaveRequestModal = ({ onSave, onCancel }) => {
               value={formData.ngayKetThuc}
               onChange={handleChange}
               min={formData.ngayBatDau}
+              disabled={formData.buoiNghi !== "ca-ngay"}
             />
           </div>
         </div>
 
         <div className="form-group">
-          <label>Số ngày nghỉ (đã trừ T7/CN):</label>
-          <input
-            type="text"
-            value={formData.soNgayNghi}
-            disabled
-            style={{ backgroundColor: "#f0f0f0", fontWeight: "bold" }}
-          />
+          <label>Số ngày nghỉ:</label>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <input
+              type="text"
+              value={formData.buoiNghi !== "ca-ngay" ? "0.5 ngày" : `${formData.soNgayNghi} ngày (đã trừ T7/CN)`}
+              disabled
+              style={{ backgroundColor: "#f0f0f0", fontWeight: "bold", flex: 1 }}
+            />
+            {formData.buoiNghi !== "ca-ngay" && (
+              <span style={{ fontSize: "12px", color: "#6b7280" }}>
+                = ½ ngày công
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="form-group">

@@ -212,6 +212,7 @@ const EmployeeHomePage = () => {
     formData.append("NgayKetThuc", requestData.ngayKetThuc);
     formData.append("LyDo", requestData.lyDo);
     formData.append("SoNgayNghi", requestData.soNgayNghi);
+    formData.append("BuoiNghi", requestData.buoiNghi || "ca-ngay");
 
     if (requestData.file) {
       formData.append("File", requestData.file);

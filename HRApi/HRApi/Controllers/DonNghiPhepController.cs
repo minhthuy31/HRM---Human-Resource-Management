@@ -53,6 +53,8 @@ namespace HRApi.Controllers
             public double SoNgayNghi { get; set; }
             [Required]
             public string LyDo { get; set; }
+            // "ca-ngay" | "sang" | "chieu"
+            public string? BuoiNghi { get; set; }
             public IFormFile? File { get; set; }
         }
 
@@ -106,6 +108,13 @@ namespace HRApi.Controllers
                 filePath = $"/uploads/donnghi/{fileName}";
             }
 
+            // Validate nửa ngày: chỉ được 1 ngày
+            var buoiNghi = dto.BuoiNghi ?? "ca-ngay";
+            if (buoiNghi != "ca-ngay" && dto.NgayBatDau.Date != dto.NgayKetThuc.Date)
+                return BadRequest(new { message = "Nghỉ nửa ngày chỉ áp dụng cho 1 ngày." });
+            if (buoiNghi != "ca-ngay" && dto.SoNgayNghi != 0.5)
+                return BadRequest(new { message = "Số ngày nghỉ nửa ngày phải là 0.5." });
+
             var donNghiPhep = new DonNghiPhep
             {
                 MaNhanVien = maNhanVien,
@@ -113,6 +122,7 @@ namespace HRApi.Controllers
                 NgayKetThuc = dto.NgayKetThuc.Date,
                 SoNgayNghi = dto.SoNgayNghi,
                 LyDo = dto.LyDo,
+                BuoiNghi = buoiNghi,
                 TepDinhKem = filePath,
                 TrangThai = LeaveRequestStatus.Pending,
                 NgayGuiDon = DateTime.Now
@@ -190,6 +200,7 @@ namespace HRApi.Controllers
                     d.NgayBatDau,
                     d.NgayKetThuc,
                     d.SoNgayNghi,
+                    d.BuoiNghi,
                     d.NgayGuiDon,
                     d.LyDo,
                     d.TepDinhKem,
@@ -233,46 +244,65 @@ namespace HRApi.Controllers
                 if (request.NhanVien?.MaPhongBan != currentUserMaPhongBan) return Forbid("Không đúng phòng ban.");
             }
 
-            // 1. Đếm số ngày phép ĐÃ DÙNG trước khi duyệt đơn này
-            // Chỉ đếm "Nghỉ phép", KHÔNG đếm "Công tác"
+            // 1. Tổng phép đã dùng (dùng Sum thay Count để tính cả nửa ngày = 0.5)
             var requestYear = request.NgayBatDau.Year;
-            var currentUsedDays = await _context.ChamCongs.CountAsync(c =>
-                    c.MaNhanVien == request.MaNhanVien &&
-                    c.NgayChamCong.Year == requestYear &&
-                    c.NgayCong == 1.0 &&
-                    !string.IsNullOrEmpty(c.GhiChu) &&
-                    (c.GhiChu.Contains("Nghỉ phép") || c.GhiChu.Contains("Nghỉ có phép")));
+            var currentUsedDays = await _context.ChamCongs
+                .Where(c => c.MaNhanVien == request.MaNhanVien &&
+                            c.NgayChamCong.Year == requestYear &&
+                            !string.IsNullOrEmpty(c.GhiChu) &&
+                            (c.GhiChu.Contains("Nghỉ có phép") || c.GhiChu.Contains("Nghỉ nửa ngày")))
+                .SumAsync(c => c.NgayCong);
+
+            bool isHalfDay = request.SoNgayNghi == 0.5 && request.BuoiNghi != null && request.BuoiNghi != "ca-ngay";
+            string buoiLabel = request.BuoiNghi == "sang" ? "buổi sáng" : request.BuoiNghi == "chieu" ? "buổi chiều" : "";
 
             // 2. Duyệt từng ngày trong đơn
             for (var date = request.NgayBatDau; date.Date <= request.NgayKetThuc.Date; date = date.AddDays(1))
             {
                 if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday) continue;
 
-                double ngayCongValue = 0.0;
-                string ghiChuMoi = "";
+                double ngayCongValue;
+                string ghiChuMoi;
 
-                // CHECK QUOTA: Nếu đã dùng < 12 ngày -> Được tính phép (Công=1.0) -> Tăng biến đếm
-                if (currentUsedDays < 12)
+                if (isHalfDay)
                 {
-                    ngayCongValue = 1.0;
-                    ghiChuMoi = $"Nghỉ có phép: {request.LyDo}";
-                    currentUsedDays++; // Tăng lên để ngày tiếp theo trong vòng lặp biết là đã dùng
+                    // Nửa ngày: luôn tính 0.5 công (có hoặc không phép tùy quota)
+                    if (currentUsedDays < 12)
+                    {
+                        ngayCongValue = 0.5;
+                        ghiChuMoi = $"Nghỉ nửa ngày {buoiLabel}: {request.LyDo}";
+                        currentUsedDays += 0.5;
+                    }
+                    else
+                    {
+                        ngayCongValue = 0.5; // Vẫn ghi 0.5 công nhưng không trừ phép
+                        ghiChuMoi = $"Nghỉ nửa ngày {buoiLabel} (không phép): {request.LyDo}";
+                    }
                 }
                 else
                 {
-                    // Đã hết 12 ngày -> Tính không lương (Công=0.0)
-                    ngayCongValue = 0.0;
-                    ghiChuMoi = $"Nghỉ không phép (hết quota): {request.LyDo}";
+                    // Nguyên ngày
+                    if (currentUsedDays < 12)
+                    {
+                        ngayCongValue = 1.0;
+                        ghiChuMoi = $"Nghỉ có phép: {request.LyDo}";
+                        currentUsedDays += 1.0;
+                    }
+                    else
+                    {
+                        ngayCongValue = 0.0;
+                        ghiChuMoi = $"Nghỉ không phép (hết quota): {request.LyDo}";
+                    }
                 }
 
-                // Cập nhật vào bảng chấm công
-                var existing = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == request.MaNhanVien && c.NgayChamCong.Date == date.Date);
+                var existing = await _context.ChamCongs.FirstOrDefaultAsync(c =>
+                    c.MaNhanVien == request.MaNhanVien && c.NgayChamCong.Date == date.Date);
 
                 if (existing != null)
                 {
                     existing.NgayCong = ngayCongValue;
                     existing.GhiChu = ghiChuMoi;
-                    existing.GioCheckOut = null; // Xóa giờ check-in/out nếu có (vì đã nghỉ)
+                    existing.GioCheckOut = null;
                 }
                 else
                 {
@@ -324,13 +354,13 @@ namespace HRApi.Controllers
 
             var currentYear = DateTime.Now.Year;
 
-            // Đếm số ngày đã nghỉ phép trong năm nay (dựa vào bảng chấm công)
+            // Tổng phép đã dùng (Sum để tính đúng cả nửa ngày = 0.5)
             var paidLeaveDaysTaken = await _context.ChamCongs
-                .CountAsync(c => c.MaNhanVien == maNhanVien &&
-                                 c.NgayChamCong.Year == currentYear &&
-                                 c.NgayCong == 1.0 &&
-                                 !string.IsNullOrEmpty(c.GhiChu) &&
-                                 (c.GhiChu.Contains("Nghỉ phép") || c.GhiChu.Contains("Nghỉ có phép")));
+                .Where(c => c.MaNhanVien == maNhanVien &&
+                            c.NgayChamCong.Year == currentYear &&
+                            !string.IsNullOrEmpty(c.GhiChu) &&
+                            (c.GhiChu.Contains("Nghỉ có phép") || c.GhiChu.Contains("Nghỉ nửa ngày")))
+                .SumAsync(c => c.NgayCong);
 
             var remaining = 12 - paidLeaveDaysTaken;
 
