@@ -113,6 +113,7 @@ namespace HRApi.Controllers
                 // 2.1. Biến động nhân sự
                 var hdQuery = _context.HopDongs
                     .Include(h => h.NhanVien).ThenInclude(nv => nv.PhongBan)
+                    .Include(h => h.NhanVien).ThenInclude(nv => nv.ChucVuNhanVien)
                     .Where(h => (h.NgayBatDau.Month == month && h.NgayBatDau.Year == year) ||
                                 (h.NgayKetThuc.HasValue && h.NgayKetThuc.Value.Month == month && h.NgayKetThuc.Value.Year == year));
                 if (isTruongPhong) hdQuery = hdQuery.Where(x => x.NhanVien != null && x.NhanVien.MaPhongBan == tpMaPhongBan);
@@ -122,6 +123,8 @@ namespace HRApi.Controllers
                     maNV = h.MaNhanVien,
                     hoTen = h.NhanVien.HoTen,
                     phongBan = h.NhanVien.PhongBan != null ? h.NhanVien.PhongBan.TenPhongBan : "N/A",
+                    chucVu = h.NhanVien.ChucVuNhanVien != null ? h.NhanVien.ChucVuNhanVien.TenChucVu : "",
+                    loaiHopDong = h.LoaiHopDong,
                     maPhongBan = h.NhanVien.MaPhongBan,
                     loai = (h.NgayBatDau.Month == month && h.NgayBatDau.Year == year) ? "Tuyển mới" : "Nghỉ việc",
                     ngayHieuLuc = (h.NgayBatDau.Month == month && h.NgayBatDau.Year == year)
@@ -191,9 +194,23 @@ namespace HRApi.Controllers
                     hoTen = b.NhanVien.HoTen,
                     phongBan = b.NhanVien.PhongBan != null ? b.NhanVien.PhongBan.TenPhongBan : "N/A",
                     maPhongBan = b.NhanVien.MaPhongBan,
+                    luongCoBan = b.LuongCoBan,
+                    soCongChuan = b.SoCongChuanTrongThang,
+                    tongNgayCong = b.TongNgayCong,
+                    luongChinh = b.LuongChinh,
+                    luongOT = b.LuongOT,
+                    tienAn = b.TienAn,
+                    tienXe = b.TienGuiXe,
+                    chuyenCan = b.TienChuyenCan,
+                    tongPhuCap = b.TongPhuCap,
                     tongThuNhap = b.TongThuNhap,
+                    khauTruBHXH = b.KhauTruBHXH,
+                    khauTruBHYT = b.KhauTruBHYT,
+                    khauTruBHTN = b.KhauTruBHTN,
                     thueTNCN = b.ThueTNCN,
                     truBaoHiem = b.KhauTruBHXH + b.KhauTruBHYT + b.KhauTruBHTN,
+                    khoanTruKhac = b.KhoanTruKhac,
+                    lyDoKhac = b.LyDoKhac ?? "",
                     thucLanh = b.ThucLanh,
                     daChot = b.DaChot ? "Đã chốt" : "Chưa chốt"
                 }).ToListAsync();

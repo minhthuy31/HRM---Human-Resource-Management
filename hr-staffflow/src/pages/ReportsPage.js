@@ -137,6 +137,8 @@ const ReportsPage = () => {
         "Mã NV": item.maNV,
         "Họ Tên": item.hoTen,
         "Phòng Ban": item.phongBan,
+        "Chức Vụ": item.chucVu || "",
+        "Loại HĐ": item.loaiHopDong || "",
         "Phân Loại": item.loai,
         "Ngày Hiệu Lực": item.ngayHieuLuc,
       }));
@@ -174,8 +176,8 @@ const ReportsPage = () => {
         (item) => ({
           "Phòng Ban": item.tenPhongBan,
           "Số Nhân Viên": item.soNhanVien,
-          "Tổng Thu Nhập": item.tongThuNhap,
-          "Tổng Thực Lãnh": item.tongThucLanh,
+          "Tổng Thu Nhập (Gross)": item.tongThuNhap,
+          "Tổng Thực Lãnh (Net)": item.tongThucLanh,
         }),
       );
       XLSX.utils.book_append_sheet(
@@ -184,18 +186,27 @@ const ReportsPage = () => {
         "Tổng Hợp Phòng Ban",
       );
 
-      let dataChiTiet = filterData(data.baoCao.bangLuong.chiTiet).map(
-        (item) => ({
-          "Mã NV": item.maNV,
-          "Họ Tên": item.hoTen,
-          "Phòng Ban": item.phongBan,
-          "Tổng Thu Nhập": item.tongThuNhap,
-          "Thuế TNCN": item.thueTNCN,
-          "Trừ Bảo Hiểm": item.truBaoHiem,
-          "Thực Lãnh": item.thucLanh,
-          "Trạng Thái": item.daChot,
-        }),
-      );
+      let dataChiTiet = filterData(data.baoCao.bangLuong.chiTiet).map((item) => ({
+        "Mã NV": item.maNV,
+        "Họ Tên": item.hoTen,
+        "Phòng Ban": item.phongBan,
+        "Công chuẩn": item.soCongChuan ?? 0,
+        "Ngày công": item.tongNgayCong ?? 0,
+        "Lương chính": item.luongChinh ?? 0,
+        "Lương OT": item.luongOT ?? 0,
+        "T.Ăn": item.tienAn ?? 0,
+        "T.Xe": item.tienXe ?? 0,
+        "C.Cần": item.chuyenCan ?? 0,
+        "Tổng Thu Nhập": item.tongThuNhap,
+        "BHXH (8%)": item.khauTruBHXH ?? 0,
+        "BHYT (1.5%)": item.khauTruBHYT ?? 0,
+        "BHTN (1%)": item.khauTruBHTN ?? 0,
+        "Thuế TNCN": item.thueTNCN,
+        "Điều chỉnh (±)": item.khoanTruKhac ?? 0,
+        "Lý do điều chỉnh": item.lyDoKhac ?? "",
+        "Thực Lãnh": item.thucLanh,
+        "Trạng Thái": item.daChot,
+      }));
       XLSX.utils.book_append_sheet(
         workbook,
         XLSX.utils.json_to_sheet(dataChiTiet),
@@ -228,7 +239,7 @@ const ReportsPage = () => {
     };
 
     if (activeTab === "thongKe") {
-      const { thamNien, gioiTinh, luongQuaCacKy } = data.thongKe;
+      const { thamNien, gioiTinh, luongQuaCacKy, otTheoPhong } = data.thongKe;
       const hasThamNienData = thamNien && thamNien.some((x) => x.soLuong > 0);
 
       return (
@@ -301,6 +312,21 @@ const ReportsPage = () => {
             </ResponsiveContainer>
           </div>
 
+          {otTheoPhong && otTheoPhong.length > 0 && (
+            <div className="report-chart-box">
+              <h3>Tổng giờ OT theo Phòng ban (tháng {month}/{year})</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={otTheoPhong} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" unit="h" />
+                  <YAxis type="category" dataKey="tenPhongBan" width={110} tick={{ fontSize: 11 }} />
+                  <RechartsTooltip formatter={(v) => `${v} giờ`} />
+                  <Bar dataKey="tongSoGio" name="Tổng giờ OT" fill="#7c3aed" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
           <div className="report-chart-box full-width">
             <h3>Biến động Quỹ lương 6 kỳ gần nhất</h3>
             <ResponsiveContainer width="100%" height={280}>
@@ -337,6 +363,8 @@ const ReportsPage = () => {
                 <th>Mã NV</th>
                 <th>Họ Tên</th>
                 <th>Phòng Ban</th>
+                <th>Chức Vụ</th>
+                <th>Loại HĐ</th>
                 <th>Phân Loại</th>
                 <th>Ngày Hiệu Lực</th>
               </tr>
@@ -344,7 +372,7 @@ const ReportsPage = () => {
             <tbody>
               {displayData.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="empty-row">
+                  <td colSpan="7" className="empty-row">
                     Không có dữ liệu
                   </td>
                 </tr>
@@ -354,6 +382,8 @@ const ReportsPage = () => {
                   <td>{item.maNV}</td>
                   <td>{item.hoTen}</td>
                   <td>{item.phongBan}</td>
+                  <td>{item.chucVu || "—"}</td>
+                  <td>{item.loaiHopDong || "—"}</td>
                   <td>
                     <span
                       className={`status-badge ${item.loai === "Tuyển mới" ? "badge-success" : "badge-danger"}`}
@@ -474,7 +504,13 @@ const ReportsPage = () => {
                   <span>Nhân sự:</span> <strong>{pb.soNhanVien} người</strong>
                 </div>
                 <div className="sum-row">
-                  <span>Tổng Lương:</span>{" "}
+                  <span>Thu nhập Gross:</span>{" "}
+                  <strong style={{ color: "#0369a1" }}>
+                    {formatCurrency(pb.tongThuNhap)}
+                  </strong>
+                </div>
+                <div className="sum-row">
+                  <span>Thực lãnh (Net):</span>{" "}
                   <strong className="text-success">
                     {formatCurrency(pb.tongThucLanh)}
                   </strong>
@@ -486,43 +522,65 @@ const ReportsPage = () => {
           <h3 className="section-title-payroll">
             Bảng Lương Chi Tiết Nhân Viên
           </h3>
-          <div className="report-table-wrapper">
-            <table className="report-table">
+          <div className="report-table-wrapper wide-table-wrapper">
+            <table className="report-table excel-style-table">
               <thead>
                 <tr>
-                  <th>Mã NV</th>
-                  <th>Họ Tên</th>
-                  <th>Phòng Ban</th>
-                  <th>Tổng Thu Nhập</th>
-                  <th>Thuế / Bảo Hiểm</th>
-                  <th>Thực Lãnh</th>
+                  <th className="sticky-col first">Mã NV</th>
+                  <th className="sticky-col second">Họ Tên</th>
+                  <th className="sticky-col third">Phòng Ban</th>
+                  <th>Công chuẩn</th>
+                  <th>Ngày công</th>
+                  <th>Lương chính</th>
+                  <th>Lương OT</th>
+                  <th>T.Ăn</th>
+                  <th>T.Xe</th>
+                  <th>C.Cần</th>
+                  <th className="highlight">Tổng Thu Nhập</th>
+                  <th className="text-danger">BHXH (8%)</th>
+                  <th className="text-danger">BHYT (1.5%)</th>
+                  <th className="text-danger">BHTN (1%)</th>
+                  <th className="text-danger">Thuế TNCN</th>
+                  <th>Điều chỉnh</th>
+                  <th className="highlight">Thực Lãnh</th>
                   <th>Trạng Thái</th>
                 </tr>
               </thead>
               <tbody>
                 {displayChiTiet.length === 0 && (
                   <tr>
-                    <td colSpan="7" className="empty-row">
+                    <td colSpan="18" className="empty-row">
                       Chưa có dữ liệu bảng lương tháng này
                     </td>
                   </tr>
                 )}
                 {displayChiTiet.map((item, idx) => (
                   <tr key={idx}>
-                    <td>{item.maNV}</td>
-                    <td>{item.hoTen}</td>
-                    <td>{item.phongBan}</td>
-                    <td>{formatCurrency(item.tongThuNhap)}</td>
-                    <td className="text-danger">
-                      -{formatCurrency(item.thueTNCN + item.truBaoHiem)}
+                    <td className="sticky-col first">{item.maNV}</td>
+                    <td className="sticky-col second font-bold">{item.hoTen}</td>
+                    <td className="sticky-col third">{item.phongBan}</td>
+                    <td className="text-center">{item.soCongChuan ?? "—"}</td>
+                    <td className="text-center font-bold">{item.tongNgayCong ?? "—"}</td>
+                    <td>{formatCurrency(item.luongChinh)}</td>
+                    <td>{item.luongOT > 0 ? formatCurrency(item.luongOT) : "—"}</td>
+                    <td>{item.tienAn > 0 ? formatCurrency(item.tienAn) : "—"}</td>
+                    <td>{item.tienXe > 0 ? formatCurrency(item.tienXe) : "—"}</td>
+                    <td>{item.chuyenCan > 0 ? formatCurrency(item.chuyenCan) : "—"}</td>
+                    <td className="font-bold highlight" style={{ color: "#0369a1" }}>{formatCurrency(item.tongThuNhap)}</td>
+                    <td className="text-danger">-{formatCurrency(item.khauTruBHXH)}</td>
+                    <td className="text-danger">-{formatCurrency(item.khauTruBHYT)}</td>
+                    <td className="text-danger">-{formatCurrency(item.khauTruBHTN)}</td>
+                    <td className="text-danger">-{formatCurrency(item.thueTNCN)}</td>
+                    <td style={{ color: item.khoanTruKhac > 0 ? "#16a34a" : item.khoanTruKhac < 0 ? "#dc2626" : "#9ca3af", fontWeight: 600, textAlign: "center" }}>
+                      {item.khoanTruKhac !== 0 ? (
+                        <span title={item.lyDoKhac || ""}>
+                          {item.khoanTruKhac > 0 ? "+" : ""}{formatCurrency(item.khoanTruKhac)}
+                        </span>
+                      ) : "—"}
                     </td>
-                    <td className="font-bold text-success">
-                      {formatCurrency(item.thucLanh)}
-                    </td>
+                    <td className="font-bold text-success highlight">{formatCurrency(item.thucLanh)}</td>
                     <td>
-                      <span
-                        className={`status-badge ${item.daChot === "Đã chốt" ? "badge-success" : "badge-danger"}`}
-                      >
+                      <span className={`status-badge ${item.daChot === "Đã chốt" ? "badge-success" : "badge-danger"}`}>
                         {item.daChot}
                       </span>
                     </td>
@@ -581,9 +639,9 @@ const ReportsPage = () => {
                 onChange={(e) => setYear(e.target.value)}
                 className="report-select"
               >
-                <option value="2024">Năm 2024</option>
-                <option value="2025">Năm 2025</option>
-                <option value="2026">Năm 2026</option>
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((y) => (
+                  <option key={y} value={y}>Năm {y}</option>
+                ))}
               </select>
               <button
                 className="btn-filter"
