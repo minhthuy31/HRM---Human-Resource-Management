@@ -10,7 +10,9 @@ import {
   FaPrint,
   FaFilter,
   FaFileContract,
+  FaFileExcel,
 } from "react-icons/fa";
+import * as XLSX from "xlsx";
 import ContractModal from "../components/modals/ContractModal";
 import ContractTemplate from "../components/templates/ContractTemplate";
 import "../styles/ContractPage.css";
@@ -146,6 +148,50 @@ const ContractManagementPage = () => {
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString("vi-VN") : "---";
 
+  const statusLabel = (s) => ({
+    HieuLuc: "Đang hiệu lực",
+    HetHan: "Hết hạn",
+    DaChamDut: "Đã chấm dứt",
+  }[s] || s);
+
+  const handleExportExcel = () => {
+    const headers = [
+      "STT", "Số HĐ", "Họ tên NV", "Mã NV", "Phòng ban",
+      "Loại HĐ", "Ngày bắt đầu", "Ngày kết thúc", "Lương ký (VNĐ)", "Trạng thái",
+    ];
+
+    const rows = contracts.map((c, i) => [
+      i + 1,
+      c.soHopDong,
+      c.hoTenNhanVien || "",
+      c.maNhanVien || "",
+      c.tenPhongBan || "",
+      c.loaiHopDong || "",
+      c.ngayBatDau ? new Date(c.ngayBatDau).toLocaleDateString("vi-VN") : "",
+      c.ngayKetThuc ? new Date(c.ngayKetThuc).toLocaleDateString("vi-VN") : "Vô thời hạn",
+      Number(c.luongCoBan) || 0,
+      statusLabel(c.trangThai),
+    ]);
+
+    const wsData = [
+      [`DANH SÁCH HỢP ĐỒNG LAO ĐỘNG`],
+      [],
+      headers,
+      ...rows,
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
+    ws["!cols"] = [
+      { wch: 5 }, { wch: 16 }, { wch: 22 }, { wch: 10 }, { wch: 18 },
+      { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 16 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "HopDong");
+    XLSX.writeFile(wb, `DanhSachHopDong_${new Date().toLocaleDateString("vi-VN").replace(/\//g, "-")}.xlsx`);
+  };
+
   const getStatusBadge = (status, endDate) => {
     if (status === "DaChamDut")
       return <span className="badge badge-red">Đã chấm dứt</span>;
@@ -172,17 +218,30 @@ const ContractManagementPage = () => {
           <div className="header-title">
             <h1>Quản lý Hợp Đồng</h1>
           </div>
-          {canModify && (
+          <div style={{ display: "flex", gap: "10px" }}>
             <button
-              className="btn-add"
-              onClick={() => {
-                setEditingContract(null);
-                setIsModalOpen(true);
+              onClick={handleExportExcel}
+              style={{
+                backgroundColor: "#16a34a", color: "white",
+                padding: "8px 16px", borderRadius: "6px", border: "none",
+                display: "flex", alignItems: "center", gap: "6px",
+                cursor: "pointer", fontWeight: "500", fontSize: "14px",
               }}
             >
-              <FaPlus /> Tạo mới
+              <FaFileExcel /> Xuất Excel
             </button>
-          )}
+            {canModify && (
+              <button
+                className="btn-add"
+                onClick={() => {
+                  setEditingContract(null);
+                  setIsModalOpen(true);
+                }}
+              >
+                <FaPlus /> Tạo mới
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="toolbar">
