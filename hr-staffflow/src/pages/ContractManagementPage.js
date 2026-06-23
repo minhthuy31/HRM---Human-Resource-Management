@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../api";
+import { useToast } from "../context/ToastContext";
 import { getUserFromToken } from "../utils/auth";
 import {
   FaTrash,
@@ -18,9 +19,11 @@ import ContractTemplate from "../components/templates/ContractTemplate";
 import "../styles/ContractPage.css";
 
 const ContractManagementPage = () => {
+  const { showToast } = useToast();
   const [contracts, setContracts] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("HieuLuc");
@@ -114,29 +117,31 @@ const ContractManagementPage = () => {
       } else {
         await api.post("/HopDong", payload, config);
       }
-      alert(isUpdate ? "Cập nhật thành công!" : "Tạo hợp đồng mới thành công!");
+      showToast(isUpdate ? "Cập nhật hợp đồng thành công!" : "Tạo hợp đồng mới thành công!");
       setIsModalOpen(false);
       setEditingContract(null);
       fetchContracts();
     } catch (err) {
       const msg = err.response?.data?.message || "Có lỗi xảy ra.";
-      alert("Lỗi: " + msg);
+      showToast("Lỗi: " + msg, "error");
     }
   };
 
-  // --- HÀM XÓA ĐƯỢC THÊM VÀO TẠI ĐÂY ---
-  const handleDelete = async (soHopDong) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa hợp đồng này không?")) {
-      try {
-        // Gọi API xóa, bạn có thể chỉnh lại URL tùy theo thiết kế API backend của bạn
-        const id = encodeURIComponent(soHopDong);
-        await api.delete(`/HopDong?id=${id}`);
-        alert("Xóa hợp đồng thành công!");
-        fetchContracts(); // Load lại danh sách sau khi xóa
-      } catch (err) {
-        const msg = err.response?.data?.message || "Có lỗi xảy ra khi xóa.";
-        alert("Lỗi: " + msg);
-      }
+  const handleDelete = (soHopDong) => {
+    setConfirmDelete(soHopDong);
+  };
+
+  const handleConfirmDelete = async () => {
+    const soHopDong = confirmDelete;
+    setConfirmDelete(null);
+    try {
+      const id = encodeURIComponent(soHopDong);
+      await api.delete(`/HopDong?id=${id}`);
+      showToast("Xóa hợp đồng thành công!");
+      fetchContracts();
+    } catch (err) {
+      const msg = err.response?.data?.message || "Có lỗi xảy ra khi xóa.";
+      showToast("Lỗi: " + msg, "error");
     }
   };
 
@@ -206,6 +211,35 @@ const ContractManagementPage = () => {
   return (
     <DashboardLayout>
       <div className="contract-page">
+        {/* Confirm xóa */}
+        {confirmDelete && (
+          <div style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
+            zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <div style={{
+              background: "#fff", borderRadius: "12px", padding: "28px 32px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18)", minWidth: "320px", textAlign: "center",
+            }}>
+              <div style={{ fontSize: "40px", marginBottom: "12px" }}>🗑️</div>
+              <p style={{ fontSize: "15px", fontWeight: 600, marginBottom: "6px" }}>Xác nhận xóa hợp đồng</p>
+              <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "20px" }}>
+                Hợp đồng <strong>{confirmDelete}</strong> sẽ bị xóa vĩnh viễn.
+              </p>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+                <button onClick={() => setConfirmDelete(null)}
+                  style={{ padding: "8px 20px", borderRadius: "6px", border: "1px solid #d1d5db", cursor: "pointer", background: "#f9fafb" }}>
+                  Hủy
+                </button>
+                <button onClick={handleConfirmDelete}
+                  style={{ padding: "8px 20px", borderRadius: "6px", border: "none", background: "#dc2626", color: "#fff", cursor: "pointer", fontWeight: 600 }}>
+                  Xóa
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {printingContract && (
           <ContractTemplate
             data={printingContract}

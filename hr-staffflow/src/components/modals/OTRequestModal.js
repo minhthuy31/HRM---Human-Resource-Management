@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import "../../styles/Modal.css";
+import { useToast } from "../../context/ToastContext";
 
 const OTRequestModal = ({ onSave, onCancel }) => {
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     ngayLamThem: new Date().toISOString().split("T")[0],
     gioBatDau: "17:30",
@@ -16,11 +18,11 @@ const OTRequestModal = ({ onSave, onCancel }) => {
   const handleSubmit = () => {
     // Validate cơ bản
     if (formData.gioKetThuc <= formData.gioBatDau) {
-      alert("Giờ kết thúc phải sau giờ bắt đầu!");
+      showToast("Giờ kết thúc phải sau giờ bắt đầu!", "error");
       return;
     }
     if (!formData.lyDo) {
-      alert("Vui lòng nhập lý do làm thêm.");
+      showToast("Vui lòng nhập lý do làm thêm.", "error");
       return;
     }
     onSave(formData);

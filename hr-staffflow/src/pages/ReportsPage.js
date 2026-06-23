@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../api";
+import { useToast } from "../context/ToastContext";
 import {
   FaFileExcel,
   FaFilter,
@@ -73,6 +74,7 @@ const checkIsTruongPhong = (r) => {
 };
 
 const ReportsPage = () => {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("thongKe");
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
@@ -106,7 +108,7 @@ const ReportsPage = () => {
       setData(res.data);
     } catch (error) {
       console.error("Lỗi báo cáo:", error);
-      alert("Bạn không có quyền truy cập hoặc hệ thống bị lỗi.");
+      showToast("Bạn không có quyền truy cập hoặc hệ thống bị lỗi.", "error");
     } finally {
       setLoading(false);
     }
@@ -214,7 +216,7 @@ const ReportsPage = () => {
       );
       fileName = `BaoCaoLuong_T${month}_${year}.xlsx`;
     } else {
-      alert("Vui lòng chọn tab Bảng dữ liệu để xuất Excel.");
+      showToast("Vui lòng chọn tab Bảng dữ liệu để xuất Excel.", "warning");
       return;
     }
 

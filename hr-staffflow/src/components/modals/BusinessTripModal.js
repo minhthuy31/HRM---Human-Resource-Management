@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import "../../styles/Modal.css";
+import { useToast } from "../../context/ToastContext";
 
 const BusinessTripModal = ({ onSave, onCancel }) => {
+  const { showToast } = useToast();
   const today = new Date().toISOString().split("T")[0];
   const [formData, setFormData] = useState({
     ngayBatDau: today,
@@ -34,17 +36,17 @@ const BusinessTripModal = ({ onSave, onCancel }) => {
 
   const handleSubmit = () => {
     if (!formData.noiCongTac || !formData.mucDich || !formData.kinhPhiDuKien) {
-      alert("Vui lòng điền đầy đủ nơi công tác, mục đích và kinh phí dự kiến.");
+      showToast("Vui lòng điền đầy đủ nơi công tác, mục đích và kinh phí dự kiến.", "error");
       return;
     }
 
     if (new Date(formData.ngayKetThuc) < new Date(formData.ngayBatDau)) {
-      alert("Ngày kết thúc không thể trước ngày bắt đầu.");
+      showToast("Ngày kết thúc không thể trước ngày bắt đầu.", "error");
       return;
     }
 
     if (formData.hinhThucChiTra === "XinTamUng" && !formData.soTienTamUng) {
-      alert("Vui lòng nhập số tiền muốn tạm ứng.");
+      showToast("Vui lòng nhập số tiền muốn tạm ứng.", "error");
       return;
     }
 

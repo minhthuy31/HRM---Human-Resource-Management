@@ -1,11 +1,13 @@
 import React, { useState } from "react";
+import { useToast } from "../../context/ToastContext";
 
 const BulkEditModal = ({ onSave, onCancel }) => {
+  const { showToast } = useToast();
   const [selectedValue, setSelectedValue] = useState("");
 
   const handleSave = () => {
     if (selectedValue === "") {
-      alert("Vui lòng chọn một trạng thái để áp dụng.");
+      showToast("Vui lòng chọn một trạng thái để áp dụng.", "error");
       return;
     }
 

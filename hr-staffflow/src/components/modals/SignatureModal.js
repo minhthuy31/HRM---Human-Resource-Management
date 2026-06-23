@@ -2,8 +2,10 @@ import React, { useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { FaEraser, FaSave, FaTimes } from "react-icons/fa";
 import "../../styles/Modal.css";
+import { useToast } from "../../context/ToastContext";
 
 const SignatureModal = ({ onSave, onCancel }) => {
+  const { showToast } = useToast();
   // Khởi tạo là null để tránh lỗi undefined khi mount
   const sigCanvas = useRef(null);
 
@@ -16,7 +18,7 @@ const SignatureModal = ({ onSave, onCancel }) => {
   const handleSave = () => {
     // Kiểm tra xem người dùng đã ký chưa
     if (sigCanvas.current.isEmpty()) {
-      alert("Vui lòng ký tên trước khi lưu.");
+      showToast("Vui lòng ký tên trước khi lưu.", "error");
       return;
     }
 

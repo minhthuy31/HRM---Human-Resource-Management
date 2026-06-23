@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+import { ToastProvider } from "./context/ToastContext";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/DashBoard";
 import EmployeeManagementPage from "./pages/EmployeeManagementPage";
@@ -32,6 +33,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
+    <ToastProvider>
     <Router>
       <Routes>
         <Route path="/" element={<Navigate to="/login" />} />
@@ -69,6 +71,7 @@ function App() {
         </Route>
       </Routes>
     </Router>
+    </ToastProvider>
   );
 }
 

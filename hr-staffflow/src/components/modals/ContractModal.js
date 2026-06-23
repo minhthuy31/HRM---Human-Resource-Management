@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { FaFileContract } from "react-icons/fa";
 import "../../styles/Modal.css";
+import { useToast } from "../../context/ToastContext";
 
 const ContractModal = ({ contract, employees, onSave, onCancel }) => {
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     soHopDong: "",
     maNhanVien: "",
@@ -55,7 +57,7 @@ const ContractModal = ({ contract, employees, onSave, onCancel }) => {
 
   const handleSubmit = () => {
     if (!formData.soHopDong || !formData.maNhanVien || !formData.luongCoBan) {
-      alert("Vui lòng điền đầy đủ các trường bắt buộc (*)");
+      showToast("Vui lòng điền đầy đủ các trường bắt buộc (*)", "error");
       return;
     }
 

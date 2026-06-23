@@ -1,9 +1,11 @@
 import React, { useRef, useEffect, useState } from "react";
 import Webcam from "react-webcam";
 import * as faceapi from "face-api.js";
-import { api } from "../api"; // Sử dụng instance api đã cấu hình sẵn của bạn
+import { api } from "../api";
+import { useToast } from "../context/ToastContext";
 
 const FaceRecognition = ({ mode, onCapture, onClose }) => {
+  const { showToast } = useToast();
   const webcamRef = useRef(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -20,9 +22,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         setModelsLoaded(true);
       } catch (error) {
         console.error("Lỗi tải model AI:", error);
-        alert(
-          "Không thể tải model nhận diện khuôn mặt. Vui lòng kiểm tra lại cấu hình.",
-        );
+        showToast("Không thể tải model nhận diện khuôn mặt. Vui lòng kiểm tra lại cấu hình.", "error");
       }
     };
     loadModels();
@@ -35,7 +35,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
     try {
       const imageSrc = webcamRef.current.getScreenshot();
       if (!imageSrc) {
-        alert("Không thể chụp ảnh từ webcam.");
+        showToast("Không thể chụp ảnh từ webcam.", "error");
         setIsProcessing(false);
         return;
       }
@@ -47,9 +47,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         .withFaceDescriptor();
 
       if (!detection) {
-        alert(
-          "❌ Không phát hiện khuôn mặt nào. Vui lòng thử lại ở nơi đủ sáng.",
-        );
+        showToast("Không phát hiện khuôn mặt nào. Vui lòng thử lại ở nơi đủ sáng.", "error");
         setIsProcessing(false);
         return;
       }
@@ -61,7 +59,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       await onCapture(faceDescriptor);
     } catch (error) {
       console.error("Lỗi xử lý khuôn mặt:", error);
-      alert("Đã có lỗi xảy ra trong quá trình xử lý.");
+      showToast("Đã có lỗi xảy ra trong quá trình xử lý.", "error");
     } finally {
       setIsProcessing(false);
     }

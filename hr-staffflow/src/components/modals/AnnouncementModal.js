@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import "../../styles/Modal.css";
+import { useToast } from "../../context/ToastContext";
 
 const AnnouncementModal = ({ data, onSave, onCancel }) => {
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     tieuDe: "",
     loaiThongBao: "Thông báo chung",
@@ -30,7 +32,7 @@ const AnnouncementModal = ({ data, onSave, onCancel }) => {
 
   const handleSubmit = () => {
     if (!formData.tieuDe || !formData.noiDung) {
-      alert("Vui lòng nhập đầy đủ Tiêu đề và Nội dung.");
+      showToast("Vui lòng nhập đầy đủ Tiêu đề và Nội dung.", "error");
       return;
     }
     onSave(formData);

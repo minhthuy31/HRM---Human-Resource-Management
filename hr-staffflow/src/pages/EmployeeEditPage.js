@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../api";
+import { useToast } from "../context/ToastContext";
 import { FaArrowLeft, FaUserCircle, FaCamera } from "react-icons/fa";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -15,6 +16,7 @@ const getImageUrl = (path) => {
 };
 
 const EmployeeEditPage = () => {
+  const { showToast } = useToast();
   const { employeeId } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("personal");
@@ -106,11 +108,11 @@ const EmployeeEditPage = () => {
     // Validate số điện thoại
     const phoneRegex = /^(0[35789])[0-9]{8}$/;
     if (dataToSave.sdt_NhanVien && !phoneRegex.test(dataToSave.sdt_NhanVien)) {
-      alert("Số điện thoại nhân viên không hợp lệ. Phải là 10 số và bắt đầu bằng 03, 05, 07, 08 hoặc 09.");
+      showToast("Số điện thoại nhân viên không hợp lệ. Phải là 10 số và bắt đầu bằng 03, 05, 07, 08 hoặc 09.", "error");
       return;
     }
     if (dataToSave.sdtKhanCap && !phoneRegex.test(dataToSave.sdtKhanCap)) {
-      alert("Số điện thoại khẩn cấp không hợp lệ. Phải là 10 số và bắt đầu bằng 03, 05, 07, 08 hoặc 09.");
+      showToast("Số điện thoại khẩn cấp không hợp lệ. Phải là 10 số và bắt đầu bằng 03, 05, 07, 08 hoặc 09.", "error");
       return;
     }
 
@@ -132,11 +134,11 @@ const EmployeeEditPage = () => {
       }
 
       await api.put(`/NhanVien/${dataToSave.maNhanVien}`, dataToSave);
-      alert("Cập nhật thành công!");
+      showToast("Cập nhật thông tin nhân viên thành công!");
       navigate(`/nhan-vien/${dataToSave.maNhanVien}`);
     } catch (err) {
       console.error("Lỗi khi lưu:", err);
-      alert("Lưu thất bại: " + (err.response?.data?.message || err.message));
+      showToast("Lưu thất bại: " + (err.response?.data?.message || err.message), "error");
     }
   };
 

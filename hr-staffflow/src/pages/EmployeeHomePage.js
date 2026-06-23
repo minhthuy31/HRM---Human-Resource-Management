@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "../api";
 import { Link, useNavigate, useParams, Outlet } from "react-router-dom";
+import { useToast } from "../context/ToastContext";
 import "../styles/EmployeeHome.css";
 import {
   FiSun,
@@ -36,6 +37,7 @@ const getImageUrl = (path) => {
 };
 
 const EmployeeHomePage = () => {
+  const { showToast } = useToast();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -222,11 +224,11 @@ const EmployeeHomePage = () => {
       await api.post("/DonNghiPhep/create-with-file", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      alert("Gửi đơn xin nghỉ thành công!");
+      showToast("Gửi đơn xin nghỉ thành công!");
       setIsLeaveModalOpen(false);
     } catch (error) {
       const errorMessage = error.response?.data?.message || "Đã có lỗi xảy ra.";
-      alert(`Lỗi: ${errorMessage}`);
+      showToast(`Lỗi: ${errorMessage}`, "error");
     }
   };
 
@@ -244,12 +246,12 @@ const EmployeeHomePage = () => {
       };
 
       await api.post("/DangKyOT", payload);
-      alert("Đăng ký làm thêm giờ thành công!");
+      showToast("Đăng ký làm thêm giờ thành công!");
       setIsOTModalOpen(false);
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || "Lỗi khi đăng ký OT.";
-      alert(`Lỗi: ${errorMessage}`);
+      showToast(`Lỗi: ${errorMessage}`, "error");
     }
   };
 
@@ -257,12 +259,12 @@ const EmployeeHomePage = () => {
   const handleSaveTripRequest = async (data) => {
     try {
       await api.post("/DangKyCongTac", { ...data, MaNhanVien: employeeId });
-      alert("Đăng ký công tác thành công!");
+      showToast("Đăng ký công tác thành công!");
       setIsTripModalOpen(false);
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || "Lỗi khi đăng ký công tác.";
-      alert(`Lỗi: ${errorMessage}`);
+      showToast(`Lỗi: ${errorMessage}`, "error");
     }
   };
 
@@ -274,20 +276,16 @@ const EmployeeHomePage = () => {
           MaNhanVien: employeeId,
           FaceDescriptor: faceDescriptor,
         });
-        alert(
-          "✅ Đăng ký khuôn mặt thành công! Bạn có thể dùng khuôn mặt để chấm công từ bây giờ.",
-        );
+        showToast("Đăng ký khuôn mặt thành công! Bạn có thể dùng khuôn mặt để chấm công từ bây giờ.");
       } else {
         const res = await api.post("/ChamCong/check-in-face", {
           FaceDescriptor: faceDescriptor,
         });
 
         if (res.data.success) {
-          alert(`✅ ${res.data.message}`);
+          showToast(res.data.message);
         } else {
-          alert(
-            "❌ " + (res.data.message || "Không nhận diện được khuôn mặt."),
-          );
+          showToast(res.data.message || "Không nhận diện được khuôn mặt.", "error");
         }
       }
       setIsFaceModalOpen(false);
@@ -295,7 +293,7 @@ const EmployeeHomePage = () => {
       console.error("Lỗi API khuôn mặt:", error);
       const msg =
         error.response?.data?.message || "Đã có lỗi xảy ra khi kết nối server.";
-      alert("❌ " + msg);
+      showToast(msg, "error");
     }
   };
 
