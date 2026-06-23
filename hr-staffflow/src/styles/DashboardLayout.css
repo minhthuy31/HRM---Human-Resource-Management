@@ -73,6 +73,7 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0px;
+  padding-right: 10px;
 }
 .sidebar-header h2 {
   color: var(--logo-text-color);

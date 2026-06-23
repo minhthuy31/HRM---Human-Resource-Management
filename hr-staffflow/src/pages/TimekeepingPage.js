@@ -9,7 +9,9 @@ import {
   FaUnlock,
   FaBan,
   FaFileAlt,
+  FaFileExcel,
 } from "react-icons/fa";
+import * as XLSX from "xlsx";
 import "../styles/TimekeepingPage.css";
 import AttendanceModal from "../components/modals/AttendanceModal";
 import BulkEditModal from "../components/modals/BulkEditModal";
@@ -561,6 +563,75 @@ const TimekeepingPage = () => {
     });
   };
 
+  // Công chuẩn tháng (T2-T6, không tính ngày lễ từ backend — dùng để hiển thị)
+  const soCongChuanThang = daysArray.filter((day) => {
+    const dow = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).getDay();
+    return dow !== 0 && dow !== 6;
+  }).length;
+
+  const handleExportExcel = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
+    const dowLabels = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+
+    const headers = [
+      "STT", "Nhân viên", "Mã NV", "Phòng ban",
+      ...daysArray.map((day) => {
+        const dow = new Date(year, month - 1, day).getDay();
+        return `${day}(${dowLabels[dow]})`;
+      }),
+      "Tổng công", "Nghỉ CP", "Nghỉ KP", "OT (h)", "Đi muộn",
+    ];
+
+    const pbMap = {};
+    phongBans.forEach((pb) => (pbMap[pb.maPhongBan] = pb.tenPhongBan));
+
+    const rows = filteredEmployees.map((emp, idx) => {
+      const empId = emp.maNhanVien;
+      const summary = summaries[empId] || {};
+      let muon = 0;
+
+      const dayCells = daysArray.map((day) => {
+        const rec = attendance[empId]?.[day];
+        if (!rec) return "";
+        if (rec.ghiChu?.includes("Đi muộn")) muon++;
+        return rec.ngayCong !== undefined ? rec.ngayCong : "";
+      });
+
+      return [
+        idx + 1,
+        emp.hoTen,
+        empId,
+        pbMap[emp.maPhongBan] || emp.maPhongBan || "",
+        ...dayCells,
+        Number(summary.tongCong ?? 0).toFixed(2),
+        summary.nghiCoPhep ?? 0,
+        summary.nghiKhongPhep ?? 0,
+        Number(summary.tongGioOT ?? 0).toFixed(1),
+        muon,
+      ];
+    });
+
+    const wsData = [
+      [`BẢNG CHẤM CÔNG THÁNG ${month}/${year} (Công chuẩn: ${soCongChuanThang} ngày)`],
+      [],
+      headers,
+      ...rows,
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
+    ws["!cols"] = [
+      { wch: 5 }, { wch: 22 }, { wch: 10 }, { wch: 18 },
+      ...daysArray.map(() => ({ wch: 7 })),
+      { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `CC_T${month}_${year}`);
+    XLSX.writeFile(wb, `BangChamCong_T${String(month).padStart(2, "0")}_${year}.xlsx`);
+  };
+
   if (permissionDenied) {
     return (
       <DashboardLayout>
@@ -589,12 +660,26 @@ const TimekeepingPage = () => {
             <button onClick={() => changeMonth(-1)}>
               <FaChevronLeft />
             </button>
-            <h2>{`Tháng ${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`}</h2>
+            <div style={{ textAlign: "center" }}>
+              <h2 style={{ margin: 0 }}>{`Tháng ${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`}</h2>
+              <span style={{ fontSize: "12px", color: "#6b7280" }}>Công chuẩn: {soCongChuanThang} ngày</span>
+            </div>
             <button onClick={() => changeMonth(1)}>
               <FaChevronRight />
             </button>
           </div>
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <button
+              onClick={handleExportExcel}
+              style={{
+                backgroundColor: "#16a34a", color: "white",
+                padding: "8px 16px", borderRadius: "4px", border: "none",
+                display: "flex", alignItems: "center", gap: "6px",
+                cursor: "pointer", fontWeight: "500",
+              }}
+            >
+              <FaFileExcel /> Xuất Excel
+            </button>
             {isLocked && (
               <span
                 style={{
@@ -701,17 +786,27 @@ const TimekeepingPage = () => {
               <thead>
                 <tr>
                   <th className="employee-name-col">Nhân viên</th>
-                  {daysArray.map((day) => (
-                    <th
-                      key={day}
-                      className={`day-header ${selection.type === "column" && selection.id === day ? "selected" : ""}`}
-                      onClick={() => handleSelectColumn(day)}
-                      style={{ cursor: canEdit ? "pointer" : "default" }}
-                    >
-                      {day}
-                    </th>
-                  ))}
-                  <th className="summary-col">Tổng</th>
+                  {daysArray.map((day) => {
+                    const dow = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).getDay();
+                    const isWeekend = dow === 0 || dow === 6;
+                    const dowLabel = ["CN","T2","T3","T4","T5","T6","T7"][dow];
+                    return (
+                      <th
+                        key={day}
+                        className={`day-header ${selection.type === "column" && selection.id === day ? "selected" : ""}`}
+                        onClick={() => handleSelectColumn(day)}
+                        style={{ cursor: canEdit ? "pointer" : "default", color: isWeekend ? "#dc2626" : undefined }}
+                      >
+                        <div>{day}</div>
+                        <div style={{ fontSize: "10px", fontWeight: "normal" }}>{dowLabel}</div>
+                      </th>
+                    );
+                  })}
+                  <th className="summary-col" style={{ minWidth: "60px" }}>Tổng<br/><span style={{fontSize:"10px",fontWeight:"normal"}}>công</span></th>
+                  <th className="summary-col" style={{ minWidth: "50px" }}>Nghỉ<br/><span style={{fontSize:"10px",fontWeight:"normal",color:"#16a34a"}}>CP</span></th>
+                  <th className="summary-col" style={{ minWidth: "50px" }}>Nghỉ<br/><span style={{fontSize:"10px",fontWeight:"normal",color:"#dc2626"}}>KP</span></th>
+                  <th className="summary-col" style={{ minWidth: "50px" }}>OT<br/><span style={{fontSize:"10px",fontWeight:"normal",color:"#7c3aed"}}>(h)</span></th>
+                  <th className="summary-col" style={{ minWidth: "50px" }}>Đi<br/><span style={{fontSize:"10px",fontWeight:"normal",color:"#f59e0b"}}>muộn</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -719,6 +814,9 @@ const TimekeepingPage = () => {
                   filteredEmployees.map((emp) => {
                     const empId = emp.maNhanVien;
                     const summary = summaries[empId] || {};
+                    const muonCount = Object.values(attendance[empId] || {}).filter(
+                      (r) => r?.ghiChu?.includes("Đi muộn")
+                    ).length;
                     return (
                       <tr key={empId}>
                         <td
@@ -874,12 +972,22 @@ const TimekeepingPage = () => {
                             </td>
                           );
                         })}
-                        <td className="summary-col">
-                          <strong>
-                            {summary?.tongCong !== undefined
-                              ? summary.tongCong.toFixed(2)
-                              : "0.00"}
+                        <td className="summary-col" style={{ textAlign: "center" }}>
+                          <strong style={{ color: "#0369a1", fontSize: "15px" }}>
+                            {Number(summary?.tongCong ?? 0).toFixed(1)}
                           </strong>
+                        </td>
+                        <td className="summary-col" style={{ textAlign: "center", color: "#16a34a", fontWeight: "600" }}>
+                          {summary?.nghiCoPhep ?? 0}
+                        </td>
+                        <td className="summary-col" style={{ textAlign: "center", color: "#dc2626", fontWeight: "600" }}>
+                          {summary?.nghiKhongPhep ?? 0}
+                        </td>
+                        <td className="summary-col" style={{ textAlign: "center", color: "#7c3aed", fontWeight: "600" }}>
+                          {Number(summary?.tongGioOT ?? 0).toFixed(1)}
+                        </td>
+                        <td className="summary-col" style={{ textAlign: "center", color: muonCount > 0 ? "#f59e0b" : "#9ca3af", fontWeight: "600" }}>
+                          {muonCount > 0 ? muonCount : "—"}
                         </td>
                       </tr>
                     );
@@ -887,7 +995,7 @@ const TimekeepingPage = () => {
                 ) : (
                   <tr>
                     <td
-                      colSpan={daysInMonth + 2}
+                      colSpan={daysInMonth + 6}
                       style={{ textAlign: "center", padding: "20px" }}
                     >
                       Không có dữ liệu nhân viên.

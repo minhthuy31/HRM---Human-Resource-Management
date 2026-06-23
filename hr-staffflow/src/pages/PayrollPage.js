@@ -202,7 +202,8 @@ const PayrollPage = () => {
       prev.map((p) => {
         if (p.id !== id) return p;
         const dieu = parseFloat(value) || 0;
-        const totalDeduct = p.khauTruBHXH + p.khauTruBHYT + p.khauTruBHTN + p.thueTNCN;
+        const totalDeduct =
+          p.khauTruBHXH + p.khauTruBHYT + p.khauTruBHTN + p.thueTNCN;
         return {
           ...p,
           khoanTruKhac: value,
@@ -215,7 +216,7 @@ const PayrollPage = () => {
   const handleLyDoChange = (id, value) => {
     if (!canEdit) return;
     setPayrolls((prev) =>
-      prev.map((p) => (p.id !== id ? p : { ...p, lyDoKhac: value }))
+      prev.map((p) => (p.id !== id ? p : { ...p, lyDoKhac: value })),
     );
   };
 
@@ -373,7 +374,12 @@ const PayrollPage = () => {
                     <th className="sub-th">BHYT</th>
                     <th className="sub-th">BHTN</th>
                     <th className="sub-th">Thuế</th>
-                    <th className="sub-th bg-yellow-light" title="Dương (+) = thưởng/cộng thêm | Âm (-) = trừ lương">Điều chỉnh (±)</th>
+                    <th
+                      className="sub-th bg-yellow-light"
+                      title="Dương (+) = thưởng/cộng thêm | Âm (-) = trừ lương"
+                    >
+                      Điều chỉnh (±)
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -440,7 +446,9 @@ const PayrollPage = () => {
                           {p.tienGuiXe > 0 ? formatMoney(p.tienGuiXe) : "-"}
                         </td>
                         <td className="text-right text-sm">
-                          {p.tienChuyenCan > 0 ? formatMoney(p.tienChuyenCan) : "-"}
+                          {p.tienChuyenCan > 0
+                            ? formatMoney(p.tienChuyenCan)
+                            : "-"}
                         </td>
                         <td className="text-right font-bold text-green">
                           {formatMoney(p.tongThuNhap)}
@@ -460,40 +468,66 @@ const PayrollPage = () => {
                         </td>
                         <td style={{ minWidth: "130px" }}>
                           {canEdit ? (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "4px",
+                              }}
+                            >
                               <input
                                 type="number"
                                 className="salary-input"
                                 value={p.khoanTruKhac || ""}
-                                onChange={(e) => handleInputChange(p.id, e.target.value)}
-                                placeholder="VD: 500000"
+                                onChange={(e) =>
+                                  handleInputChange(p.id, e.target.value)
+                                }
                                 style={{
-                                  color: parseFloat(p.khoanTruKhac) > 0 ? "#16a34a"
-                                       : parseFloat(p.khoanTruKhac) < 0 ? "#dc2626" : "",
+                                  color:
+                                    parseFloat(p.khoanTruKhac) > 0
+                                      ? "#16a34a"
+                                      : parseFloat(p.khoanTruKhac) < 0
+                                        ? "#dc2626"
+                                        : "",
                                   fontWeight: "600",
                                 }}
                               />
                               <input
                                 className="salary-input"
                                 value={p.lyDoKhac || ""}
-                                onChange={(e) => handleLyDoChange(p.id, e.target.value)}
+                                onChange={(e) =>
+                                  handleLyDoChange(p.id, e.target.value)
+                                }
                                 placeholder="Lý do..."
-                                style={{ fontSize: "11px", color: "#6b7280", padding: "3px 6px" }}
+                                style={{
+                                  fontSize: "11px",
+                                  color: "#6b7280",
+                                  padding: "3px 6px",
+                                }}
                               />
                             </div>
                           ) : (
                             <div style={{ textAlign: "right" }}>
                               {parseFloat(p.khoanTruKhac) !== 0 && (
-                                <div style={{
-                                  color: parseFloat(p.khoanTruKhac) > 0 ? "#16a34a" : "#dc2626",
-                                  fontWeight: "600",
-                                }}>
+                                <div
+                                  style={{
+                                    color:
+                                      parseFloat(p.khoanTruKhac) > 0
+                                        ? "#16a34a"
+                                        : "#dc2626",
+                                    fontWeight: "600",
+                                  }}
+                                >
                                   {parseFloat(p.khoanTruKhac) > 0 ? "+" : ""}
                                   {formatMoney(p.khoanTruKhac)}
                                 </div>
                               )}
                               {p.lyDoKhac && (
-                                <div style={{ fontSize: "11px", color: "#6b7280" }}>{p.lyDoKhac}</div>
+                                <div
+                                  style={{ fontSize: "11px", color: "#6b7280" }}
+                                >
+                                  {p.lyDoKhac}
+                                </div>
                               )}
                             </div>
                           )}
