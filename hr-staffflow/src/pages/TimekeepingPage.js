@@ -193,9 +193,13 @@ const TimekeepingPage = () => {
         ]);
 
         // Chỉ hiện NV đã vào làm trong/trước tháng đang xem
-        const filteredByMonth = (empRes.data || []).filter(
-          (emp) => !emp.ngayVaoLam || new Date(emp.ngayVaoLam) < monthEnd
-        );
+        // null ngayVaoLam: không hiện ở tháng cũ, chỉ hiện tháng hiện tại trở về sau
+        const now = new Date();
+        const isViewingPastMonth = monthEnd <= new Date(now.getFullYear(), now.getMonth(), 1);
+        const filteredByMonth = (empRes.data || []).filter((emp) => {
+          if (!emp.ngayVaoLam) return !isViewingPastMonth;
+          return new Date(emp.ngayVaoLam) < monthEnd;
+        });
         setEmployees(filteredByMonth);
         setPhongBans(pbRes.data?.filter((pb) => pb.trangThai) || []);
 

@@ -371,7 +371,7 @@ namespace HRApi.Controllers
                 TinhThanhThuongTru = dto.TinhThanhThuongTru,
                 QuocGiaThuongTru = dto.QuocGiaThuongTru,
                 DiaChiTamTru = dto.DiaChiTamTru,
-                NgayVaoLam = dto.NgayVaoLam,
+                NgayVaoLam = dto.NgayVaoLam ?? DateTime.Today,
                 NgayNghiViec = dto.NgayNghiViec,
                 LoaiNhanVien = dto.LoaiNhanVien,
                 MaQuanLyTrucTiep = dto.MaQuanLyTrucTiep,

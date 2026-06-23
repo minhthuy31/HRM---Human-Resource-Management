@@ -94,12 +94,14 @@ namespace HRApi.Controllers
             var monthEnd   = monthStart.AddMonths(1);
 
             // Chỉ tính lương cho NV đã vào làm trong/trước tháng này, bỏ qua Giám đốc/Tổng GĐ
+            // NgayVaoLam == null → NV cũ chưa set, không tính cho tháng cũ
             var excludedRoles = new[] { "Giám đốc", "Tổng giám đốc", "Admin" };
             var employees  = await _context.NhanViens
                                  .Include(n => n.HopDongs)
                                  .Include(n => n.UserRole)
                                  .Where(e => e.TrangThai == true
-                                          && (e.NgayVaoLam == null || e.NgayVaoLam.Value < monthEnd)
+                                          && e.NgayVaoLam != null
+                                          && e.NgayVaoLam.Value < monthEnd
                                           && (e.UserRole == null || !excludedRoles.Contains(e.UserRole.NameRole)))
                                  .ToListAsync();
 
@@ -294,18 +296,27 @@ namespace HRApi.Controllers
                 var monthStart2    = new DateTime(year, month, 1);
                 var monthEnd2      = monthStart2.AddMonths(1);
                 var excludedRoles2 = new[] { "Giám đốc", "Tổng giám đốc", "Admin" };
-                var employees     = await _context.NhanViens
-                                        .Include(nv => nv.PhongBan)
-                                        .Include(nv => nv.ChucVuNhanVien)
-                                        .Include(nv => nv.UserRole)
-                                        .Where(nv => nv.TrangThai == true
-                                                  && (nv.NgayVaoLam == null || nv.NgayVaoLam.Value < monthEnd2)
-                                                  && (nv.UserRole == null || !excludedRoles2.Contains(nv.UserRole.NameRole)))
-                                        .ToListAsync();
+
+                // Fetch savedPayrolls trước để dùng làm fallback cho NV null NgayVaoLam
                 var savedPayrolls = await _context.BangLuongs
                                         .Include(b => b.NhanVien).ThenInclude(nv => nv.PhongBan)
                                         .Include(b => b.NhanVien).ThenInclude(nv => nv.ChucVuNhanVien)
                                         .Where(b => b.Nam == year && b.Thang == month).ToListAsync();
+
+                // NV có NgayVaoLam + chưa vượt tháng → hiển thị
+                // NV null NgayVaoLam → chỉ hiển thị nếu đã có bảng lương lưu (NV cũ)
+                var savedIds = savedPayrolls.Select(p => p.MaNhanVien).ToList();
+                var employees = await _context.NhanViens
+                                        .Include(nv => nv.PhongBan)
+                                        .Include(nv => nv.ChucVuNhanVien)
+                                        .Include(nv => nv.UserRole)
+                                        .Where(nv => nv.TrangThai == true
+                                                  && (nv.UserRole == null || !excludedRoles2.Contains(nv.UserRole.NameRole))
+                                                  && (
+                                                      (nv.NgayVaoLam != null && nv.NgayVaoLam.Value < monthEnd2)
+                                                      || savedIds.Contains(nv.MaNhanVien)
+                                                  ))
+                                        .ToListAsync();
 
                 var attendanceData = await _context.ChamCongs
                     .Where(c => c.NgayChamCong.Year == year && c.NgayChamCong.Month == month).ToListAsync();
