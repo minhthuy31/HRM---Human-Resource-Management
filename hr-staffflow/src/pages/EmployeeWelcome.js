@@ -59,17 +59,9 @@ const EmployeeWelcome = () => {
     year: "numeric",
   }).format(new Date());
 
-  // === DỮ LIỆU THẬT ===
-  // Lấy dữ liệu từ Dictionary thay vì Object nếu API trả về Dictionary
-  const currentSummary =
-    timekeepingSummary?.[employee?.maNhanVien] || timekeepingSummary;
-
-  const totalWorkDays =
-    currentSummary?.ngayCong ??
-    currentSummary?.tongNgayCong ??
-    currentSummary?.tongCong ??
-    0;
-  const totalLate = currentSummary?.diMuon ?? currentSummary?.soLanDiMuon ?? 0;
+  // timekeepingSummary là object trực tiếp: { tongCong, diLamDu, nghiCoPhep, remainingLeaveDays }
+  const totalWorkDays = timekeepingSummary?.tongCong ?? 0;
+  const nghiCoPhep = timekeepingSummary?.nghiCoPhep ?? 0;
 
   return (
     <div className="emp-welcome-container">
@@ -206,19 +198,7 @@ const EmployeeWelcome = () => {
             <h3>Nhắc nhở của bạn</h3>
           </div>
           <div className="widget-body">
-            {totalLate > 0 ? (
-              <div
-                className="alert-box warning"
-                style={{
-                  backgroundColor: "rgba(245, 158, 11, 0.1)",
-                  color: "#f59e0b",
-                  borderLeft: "4px solid #f59e0b",
-                }}
-              >
-                <strong>Chú ý:</strong> Bạn đã đi muộn {totalLate} lần trong
-                tháng này. Vui lòng đi làm đúng giờ nhé!
-              </div>
-            ) : (
+            {totalWorkDays > 0 ? (
               <div
                 className="alert-box success"
                 style={{
@@ -227,7 +207,19 @@ const EmployeeWelcome = () => {
                   borderLeft: "4px solid #10b981",
                 }}
               >
-                Tuyệt vời! Bạn chưa đi muộn lần nào trong tháng này.
+                Tháng này bạn đã chấm được <strong>{totalWorkDays} ngày công</strong>
+                {nghiCoPhep > 0 ? ` (trong đó ${nghiCoPhep} ngày nghỉ phép).` : "."}
+              </div>
+            ) : (
+              <div
+                className="alert-box warning"
+                style={{
+                  backgroundColor: "rgba(245, 158, 11, 0.1)",
+                  color: "#f59e0b",
+                  borderLeft: "4px solid #f59e0b",
+                }}
+              >
+                Chưa có dữ liệu chấm công trong tháng này.
               </div>
             )}
 

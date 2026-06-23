@@ -455,7 +455,7 @@ const EmployeeHomePage = () => {
 
           {/* NỘI DUNG CHÍNH */}
           <section className="main-feed">
-            <Outlet context={{ employee: user }} />
+            <Outlet context={{ employee: user, timekeepingSummary }} />
           </section>
 
           {/* ĐÃ XÓA RIGHT SIDEBAR ĐỂ GIAO DIỆN RỘNG RÃI HƠN */}
