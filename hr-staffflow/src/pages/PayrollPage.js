@@ -114,7 +114,12 @@ const PayrollPage = () => {
           thucLanh: item.thucLanh || 0,
         }));
 
-        setPayrolls(mappedData);
+        const sortedPayrolls = [...mappedData].sort((a, b) =>
+          (a.nhanVien?.hoTen || a.hoTen || "").localeCompare(
+            b.nhanVien?.hoTen || b.hoTen || "", "vi"
+          )
+        );
+        setPayrolls(sortedPayrolls);
         setIsPublished(status);
         setDeptTotal(departmentTotal || 0);
       } catch (err) {

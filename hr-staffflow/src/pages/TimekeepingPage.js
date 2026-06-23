@@ -185,11 +185,18 @@ const TimekeepingPage = () => {
         const year = date.getFullYear();
         const month = date.getMonth() + 1;
 
+        const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+
         const [empRes, pbRes] = await Promise.all([
           api.get("/NhanVien?TrangThai=true"),
           api.get("/PhongBan"),
         ]);
-        setEmployees(empRes.data || []);
+
+        // Chỉ hiện NV đã vào làm trong/trước tháng đang xem
+        const filteredByMonth = (empRes.data || []).filter(
+          (emp) => !emp.ngayVaoLam || new Date(emp.ngayVaoLam) < monthEnd
+        );
+        setEmployees(filteredByMonth);
         setPhongBans(pbRes.data?.filter((pb) => pb.trangThai) || []);
 
         const attendanceRes = await api.get(

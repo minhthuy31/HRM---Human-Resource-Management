@@ -51,7 +51,10 @@ const ContractManagementPage = () => {
       }
 
       const res = await api.get(url);
-      setContracts(res.data);
+      const sorted = [...(res.data || [])].sort((a, b) =>
+        (a.hoTenNhanVien || "").localeCompare(b.hoTenNhanVien || "", "vi")
+      );
+      setContracts(sorted);
     } catch (err) {
       console.error("Lỗi tải hợp đồng:", err);
     } finally {

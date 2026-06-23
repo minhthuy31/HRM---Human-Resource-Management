@@ -190,33 +190,30 @@ const MyPayslipPage = () => {
             <div className="detail-row sub-header" style={{ marginTop: "8px" }}>
               <span style={{ color: "#6b7280", fontSize: "12px" }}>Phụ cấp</span>
             </div>
-            {d.tienAn > 0 && (
-              <div className="detail-row indent">
-                <span>Tiền ăn</span>
-                <span className="amount">{formatCurrency(d.tienAn)}</span>
-              </div>
-            )}
-            {d.tienXe > 0 && (
-              <div className="detail-row indent">
-                <span>Tiền gửi xe / đi lại</span>
-                <span className="amount">{formatCurrency(d.tienXe)}</span>
-              </div>
-            )}
-            {d.tienChuyenCan > 0 && (
-              <div className="detail-row indent">
-                <span>Thưởng chuyên cần</span>
-                <span className="amount">{formatCurrency(d.tienChuyenCan)}</span>
-              </div>
-            )}
-            {d.tongPhuCap > 0 && d.tienAn === 0 && d.tienXe === 0 && d.tienChuyenCan === 0 && (
-              <div className="detail-row indent">
-                <span>Tổng phụ cấp</span>
-                <span className="amount">{formatCurrency(d.tongPhuCap)}</span>
-              </div>
-            )}
+            <div className="detail-row indent">
+              <span>Tiền ăn ca</span>
+              <span className="amount">{formatCurrency(d.tienAn)}</span>
+            </div>
+            <div className="detail-row indent">
+              <span>Tiền đi lại / gửi xe</span>
+              <span className="amount">{formatCurrency(d.tienXe)}</span>
+            </div>
+            <div className="detail-row indent">
+              <span>
+                Thưởng chuyên cần
+                {d.tienChuyenCan === 0 && (
+                  <span style={{ fontSize: "11px", color: "#f59e0b", marginLeft: "6px" }}>
+                    (chưa đủ công)
+                  </span>
+                )}
+              </span>
+              <span className="amount" style={{ color: d.tienChuyenCan > 0 ? "#16a34a" : "#9ca3af" }}>
+                {formatCurrency(d.tienChuyenCan)}
+              </span>
+            </div>
 
             <div className="detail-row total-row" style={{ marginTop: "8px" }}>
-              <span>TỔNG THU NHẬP (Gross)</span>
+              <span>TỔNG THU NHẬP</span>
               <span className="amount text-green">{formatCurrency(d.tongThuNhap)}</span>
             </div>
           </div>
@@ -308,7 +305,7 @@ const MyPayslipPage = () => {
           </div>
 
           <div className="net-salary-section">
-            <div className="net-label">THỰC LĨNH (Net Salary)</div>
+            <div className="net-label">THỰC LĨNH</div>
             <div className="net-amount">{formatCurrency(d.thucLanh)}</div>
           </div>
         </div>

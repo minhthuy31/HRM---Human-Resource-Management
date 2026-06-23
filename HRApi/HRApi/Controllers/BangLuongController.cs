@@ -90,11 +90,18 @@ namespace HRApi.Controllers
             decimal tienGuiXeThang    = sys?.TienGuiXeThang   > 0 ? sys.TienGuiXeThang   : 150_000m;
             decimal tienChuyenCanMax  = sys?.TienChuyenCan    > 0 ? sys.TienChuyenCan    : 500_000m;
 
-            var employees  = await _context.NhanViens.Include(n => n.HopDongs)
-                                 .Where(e => e.TrangThai == true).ToListAsync();
-
             var monthStart = new DateTime(dto.Year, dto.Month, 1);
             var monthEnd   = monthStart.AddMonths(1);
+
+            // Chỉ tính lương cho NV đã vào làm trong/trước tháng này, bỏ qua Giám đốc/Tổng GĐ
+            var excludedRoles = new[] { "Giám đốc", "Tổng giám đốc", "Admin" };
+            var employees  = await _context.NhanViens
+                                 .Include(n => n.HopDongs)
+                                 .Include(n => n.UserRole)
+                                 .Where(e => e.TrangThai == true
+                                          && (e.NgayVaoLam == null || e.NgayVaoLam.Value < monthEnd)
+                                          && (e.UserRole == null || !excludedRoles.Contains(e.UserRole.NameRole)))
+                                 .ToListAsync();
 
             var attendanceData = await _context.ChamCongs
                 .Where(c => c.NgayChamCong >= monthStart && c.NgayChamCong < monthEnd).ToListAsync();
@@ -284,10 +291,17 @@ namespace HRApi.Controllers
                 var deptId        = User.FindFirst("MaPhongBan")?.Value;
                 var currentEmpId  = User.FindFirst("MaNhanVien")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+                var monthStart2    = new DateTime(year, month, 1);
+                var monthEnd2      = monthStart2.AddMonths(1);
+                var excludedRoles2 = new[] { "Giám đốc", "Tổng giám đốc", "Admin" };
                 var employees     = await _context.NhanViens
                                         .Include(nv => nv.PhongBan)
                                         .Include(nv => nv.ChucVuNhanVien)
-                                        .Where(nv => nv.TrangThai == true).ToListAsync();
+                                        .Include(nv => nv.UserRole)
+                                        .Where(nv => nv.TrangThai == true
+                                                  && (nv.NgayVaoLam == null || nv.NgayVaoLam.Value < monthEnd2)
+                                                  && (nv.UserRole == null || !excludedRoles2.Contains(nv.UserRole.NameRole)))
+                                        .ToListAsync();
                 var savedPayrolls = await _context.BangLuongs
                                         .Include(b => b.NhanVien).ThenInclude(nv => nv.PhongBan)
                                         .Include(b => b.NhanVien).ThenInclude(nv => nv.ChucVuNhanVien)
