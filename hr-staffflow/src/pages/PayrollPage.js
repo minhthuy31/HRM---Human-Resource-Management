@@ -35,12 +35,19 @@ const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }) => {
   );
 };
 
+// Lấy tên (từ cuối) để sort theo chuẩn Việt Nam
+const getFirstName = (fullName) => (fullName || "").trim().split(/\s+/).pop() || "";
+
 const PayrollPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [payrolls, setPayrolls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isPublished, setIsPublished] = useState(false);
   const [deptTotal, setDeptTotal] = useState(0);
+
+  // Bộ lọc
+  const [searchName, setSearchName] = useState("");
+  const [filterDept, setFilterDept] = useState("");
 
   const user = getUserFromToken();
   const userRole = user?.role || user?.Role || "";
@@ -114,11 +121,13 @@ const PayrollPage = () => {
           thucLanh: item.thucLanh || 0,
         }));
 
-        const sortedPayrolls = [...mappedData].sort((a, b) =>
-          (a.nhanVien?.hoTen || a.hoTen || "").localeCompare(
-            b.nhanVien?.hoTen || b.hoTen || "", "vi"
-          )
-        );
+        const sortedPayrolls = [...mappedData].sort((a, b) => {
+          const nameA = a.nhanVien?.hoTen || a.hoTen || "";
+          const nameB = b.nhanVien?.hoTen || b.hoTen || "";
+          // Sort theo Tên (từ cuối) trước, nếu bằng thì sort theo toàn bộ tên
+          const cmp = getFirstName(nameA).localeCompare(getFirstName(nameB), "vi");
+          return cmp !== 0 ? cmp : nameA.localeCompare(nameB, "vi");
+        });
         setPayrolls(sortedPayrolls);
         setIsPublished(status);
         setDeptTotal(departmentTotal || 0);
@@ -227,6 +236,20 @@ const PayrollPage = () => {
 
   const formatMoney = (val) => new Intl.NumberFormat("vi-VN").format(val || 0);
 
+  // Danh sách phòng ban duy nhất từ dữ liệu đã load
+  const deptOptions = [...new Set(
+    payrolls.map((p) => p.nhanVien?.tenPhongBan || "").filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b, "vi"));
+
+  // Bảng hiển thị sau khi lọc
+  const filteredPayrolls = payrolls.filter((p) => {
+    const name = (p.nhanVien?.hoTen || p.hoTen || "").toLowerCase();
+    const dept = p.nhanVien?.tenPhongBan || "";
+    if (filterDept && dept !== filterDept) return false;
+    if (searchName && !name.includes(searchName.toLowerCase())) return false;
+    return true;
+  });
+
   const handleExportExcel = () => {
     /* ... Giữ nguyên ... */
   };
@@ -280,6 +303,53 @@ const PayrollPage = () => {
               </button>
             )}
           </div>
+        </div>
+
+        {/* Thanh tìm kiếm & lọc */}
+        <div style={{ display: "flex", gap: "10px", margin: "14px 0", flexWrap: "wrap" }}>
+          <div style={{ position: "relative", flex: "1", minWidth: "200px" }}>
+            <input
+              type="text"
+              placeholder="Tìm nhân viên..."
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              style={{
+                width: "100%", padding: "8px 12px 8px 34px",
+                border: "1px solid #d1d5db", borderRadius: "8px",
+                fontSize: "14px", outline: "none", boxSizing: "border-box",
+              }}
+            />
+            <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#9ca3af", fontSize: "14px" }}>
+              🔍
+            </span>
+          </div>
+          <select
+            value={filterDept}
+            onChange={(e) => setFilterDept(e.target.value)}
+            style={{
+              padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: "8px",
+              fontSize: "14px", background: "#fff", cursor: "pointer", minWidth: "180px",
+            }}
+          >
+            <option value="">Tất cả phòng ban</option>
+            {deptOptions.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+          {(searchName || filterDept) && (
+            <button
+              onClick={() => { setSearchName(""); setFilterDept(""); }}
+              style={{
+                padding: "8px 14px", border: "1px solid #d1d5db", borderRadius: "8px",
+                fontSize: "13px", cursor: "pointer", background: "#f9fafb", color: "#6b7280",
+              }}
+            >
+              ✕ Xóa lọc
+            </button>
+          )}
+          <span style={{ alignSelf: "center", fontSize: "13px", color: "#6b7280" }}>
+            {filteredPayrolls.length} / {payrolls.length} nhân viên
+          </span>
         </div>
 
         {isManager && isPublished && (
@@ -388,8 +458,8 @@ const PayrollPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {payrolls.length > 0 ? (
-                    payrolls.map((p) => (
+                  {filteredPayrolls.length > 0 ? (
+                    filteredPayrolls.map((p) => (
                       <tr key={p.maNhanVien}>
                         <td className="sticky-col first-col">
                           <div className="employee-info">
