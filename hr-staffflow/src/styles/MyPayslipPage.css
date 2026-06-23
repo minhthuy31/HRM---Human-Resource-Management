@@ -171,6 +171,16 @@
   border-bottom: none;
 }
 
+.detail-row.indent {
+  padding-left: 14px;
+  font-size: 0.9rem;
+}
+
+.detail-row.sub-header {
+  padding: 4px 0 2px;
+  border-bottom: none;
+}
+
 .detail-row.highlight-bg {
   background-color: var(--hover-bg); /* ĐÃ SỬA */
   padding-left: 5px;

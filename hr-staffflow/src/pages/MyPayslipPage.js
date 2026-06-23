@@ -106,27 +106,31 @@ const MyPayslipPage = () => {
 
     const p = payslipData;
     const d = {
-      luongCoBan: p.luongCoBan ?? 0,
-      tongPhuCap: p.tongPhuCap ?? 0,
-      soCongChuan: p.soCongChuanTrongThang ?? 22, // LẤY CÔNG CHUẨN VÀO ĐÂY
-      tongNgayCong: p.tongNgayCong ?? 0,
-      tongGioOT: p.tongGioOT ?? 0,
-      nghiCoPhep: p.nghiCoPhep ?? 0,
-      nghiKhongLuong: p.nghiKhongLuong ?? 0, // LẤY NGHỈ KHÔNG LƯƠNG
-      nghiKhongPhep: p.nghiKhongPhep ?? 0,
-      lamNuaNgay: p.lamNuaNgay ?? 0,
-      luongChinh: p.luongChinh ?? 0,
-      luongOT: p.luongOT ?? 0,
-      tongThuNhap: p.tongThuNhap ?? 0,
-      khauTruBHXH: p.khauTruBHXH ?? 0,
-      khauTruBHYT: p.khauTruBHYT ?? 0,
-      khauTruBHTN: p.khauTruBHTN ?? 0,
-      thueTNCN: p.thueTNCN ?? 0,
-      khoanTruKhac: p.khoanTruKhac ?? 0,
-      thucLanh: p.thucLanh ?? 0,
-      hoTen: p.nhanVien?.hoTen || employeeName,
-      phongBan: p.nhanVien?.tenPhongBan || "---",
-      chucVu: p.nhanVien?.tenChucVu || "---",
+      luongCoBan:     p.luongCoBan ?? 0,
+      tienAn:         p.tienAn ?? 0,
+      tienXe:         p.tienGuiXe ?? p.tienXe ?? 0,
+      tienChuyenCan:  p.tienChuyenCan ?? 0,
+      tongPhuCap:     p.tongPhuCap ?? 0,
+      soCongChuan:    p.soCongChuanTrongThang ?? 22,
+      tongNgayCong:   p.tongNgayCong ?? 0,
+      tongGioOT:      p.tongGioOT ?? 0,
+      nghiCoPhep:     p.nghiCoPhep ?? 0,
+      nghiKhongLuong: p.nghiKhongLuong ?? 0,
+      nghiKhongPhep:  p.nghiKhongPhep ?? 0,
+      lamNuaNgay:     p.lamNuaNgay ?? 0,
+      luongChinh:     p.luongChinh ?? 0,
+      luongOT:        p.luongOT ?? 0,
+      tongThuNhap:    p.tongThuNhap ?? 0,
+      khauTruBHXH:    p.khauTruBHXH ?? 0,
+      khauTruBHYT:    p.khauTruBHYT ?? 0,
+      khauTruBHTN:    p.khauTruBHTN ?? 0,
+      thueTNCN:       p.thueTNCN ?? 0,
+      khoanTruKhac:   p.khoanTruKhac ?? 0,
+      lyDoKhac:       p.lyDoKhac || "",
+      thucLanh:       p.thucLanh ?? 0,
+      hoTen:    p.nhanVien?.hoTen    || employeeName,
+      phongBan: p.nhanVien?.tenPhongBan || contextEmployee?.tenPhongBan || contextEmployee?.phongBan?.tenPhongBan || "---",
+      chucVu:   p.nhanVien?.tenChucVu   || contextEmployee?.tenChucVu   || contextEmployee?.chucVuNhanVien?.tenChucVu || "---",
     };
 
     const totalInsurance = d.khauTruBHXH + d.khauTruBHYT + d.khauTruBHTN;
@@ -161,60 +165,99 @@ const MyPayslipPage = () => {
         </div>
 
         <div className="payslip-body">
+          {/* I. THU NHẬP */}
           <div className="section-block">
             <h4 className="section-title text-green">I. THU NHẬP</h4>
-            <div className="detail-row">
-              <span>Lương Cơ Bản</span>
+
+            <div className="detail-row sub-header">
+              <span style={{ color: "#6b7280", fontSize: "12px" }}>Lương theo công</span>
+            </div>
+            <div className="detail-row indent">
+              <span>Lương cơ bản</span>
               <span className="amount">{formatCurrency(d.luongCoBan)}</span>
             </div>
-            <div className="detail-row">
-              <span>Phụ Cấp</span>
-              <span className="amount">{formatCurrency(d.tongPhuCap)}</span>
+            <div className="detail-row indent highlight-bg">
+              <span>Lương chính ({d.tongNgayCong} / {d.soCongChuan} công)</span>
+              <span className="amount bold">{formatCurrency(d.luongChinh)}</span>
             </div>
-            <div className="detail-row highlight-bg">
-              {/* Hiển thị tỷ lệ (Công đi làm / Công chuẩn) */}
-              <span>
-                Lương Chính ({d.tongNgayCong} / {d.soCongChuan} công)
-              </span>
-              <span className="amount bold">
-                {formatCurrency(d.luongChinh)}
-              </span>
+            {d.luongOT > 0 && (
+              <div className="detail-row indent">
+                <span>Lương tăng ca ({d.tongGioOT} giờ)</span>
+                <span className="amount">{formatCurrency(d.luongOT)}</span>
+              </div>
+            )}
+
+            <div className="detail-row sub-header" style={{ marginTop: "8px" }}>
+              <span style={{ color: "#6b7280", fontSize: "12px" }}>Phụ cấp</span>
             </div>
-            <div className="detail-row">
-              <span>Lương OT ({d.tongGioOT} giờ)</span>
-              <span className="amount">{formatCurrency(d.luongOT)}</span>
-            </div>
-            <div className="detail-row total-row">
+            {d.tienAn > 0 && (
+              <div className="detail-row indent">
+                <span>Tiền ăn</span>
+                <span className="amount">{formatCurrency(d.tienAn)}</span>
+              </div>
+            )}
+            {d.tienXe > 0 && (
+              <div className="detail-row indent">
+                <span>Tiền gửi xe / đi lại</span>
+                <span className="amount">{formatCurrency(d.tienXe)}</span>
+              </div>
+            )}
+            {d.tienChuyenCan > 0 && (
+              <div className="detail-row indent">
+                <span>Thưởng chuyên cần</span>
+                <span className="amount">{formatCurrency(d.tienChuyenCan)}</span>
+              </div>
+            )}
+            {d.tongPhuCap > 0 && d.tienAn === 0 && d.tienXe === 0 && d.tienChuyenCan === 0 && (
+              <div className="detail-row indent">
+                <span>Tổng phụ cấp</span>
+                <span className="amount">{formatCurrency(d.tongPhuCap)}</span>
+              </div>
+            )}
+
+            <div className="detail-row total-row" style={{ marginTop: "8px" }}>
               <span>TỔNG THU NHẬP (Gross)</span>
-              <span className="amount text-green">
-                {formatCurrency(d.tongThuNhap)}
-              </span>
+              <span className="amount text-green">{formatCurrency(d.tongThuNhap)}</span>
             </div>
           </div>
 
+          {/* II. KHẤU TRỪ */}
           <div className="section-block">
             <h4 className="section-title text-red">II. CÁC KHOẢN KHẤU TRỪ</h4>
-            <div className="detail-row">
+
+            <div className="detail-row sub-header">
+              <span style={{ color: "#6b7280", fontSize: "12px" }}>Bảo hiểm bắt buộc</span>
+            </div>
+            <div className="detail-row indent">
               <span>BHXH (8%)</span>
               <span className="amount">{formatCurrency(d.khauTruBHXH)}</span>
             </div>
-            <div className="detail-row">
+            <div className="detail-row indent">
               <span>BHYT (1.5%)</span>
               <span className="amount">{formatCurrency(d.khauTruBHYT)}</span>
             </div>
-            <div className="detail-row">
+            <div className="detail-row indent">
               <span>BHTN (1%)</span>
               <span className="amount">{formatCurrency(d.khauTruBHTN)}</span>
             </div>
-            <div className="detail-row">
-              <span>Thuế TNCN</span>
-              <span className="amount">{formatCurrency(d.thueTNCN)}</span>
+
+            <div className="detail-row sub-header" style={{ marginTop: "8px" }}>
+              <span style={{ color: "#6b7280", fontSize: "12px" }}>Thuế & khấu trừ khác</span>
             </div>
-            <div className="detail-row">
-              <span>Khấu trừ khác (Phạt...)</span>
-              <span className="amount">{formatCurrency(d.khoanTruKhac)}</span>
-            </div>
-            <div className="detail-row total-row">
+            {d.thueTNCN > 0 && (
+              <div className="detail-row indent">
+                <span>Thuế TNCN</span>
+                <span className="amount">{formatCurrency(d.thueTNCN)}</span>
+              </div>
+            )}
+            {d.khoanTruKhac > 0 && (
+              <div className="detail-row indent">
+                <span>Khấu trừ khác{d.lyDoKhac ? ` (${d.lyDoKhac})` : ""}</span>
+                <span className="amount">{formatCurrency(d.khoanTruKhac)}</span>
+              </div>
+            )}
+
+            <div className="detail-row total-row" style={{ marginTop: "8px" }}>
               <span>TỔNG KHẤU TRỪ</span>
               <span className="amount text-red">
                 {formatCurrency(totalInsurance + d.khoanTruKhac + d.thueTNCN)}

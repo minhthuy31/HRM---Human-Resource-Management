@@ -284,8 +284,13 @@ namespace HRApi.Controllers
                 var deptId        = User.FindFirst("MaPhongBan")?.Value;
                 var currentEmpId  = User.FindFirst("MaNhanVien")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-                var employees     = await _context.NhanViens.Where(nv => nv.TrangThai == true).ToListAsync();
-                var savedPayrolls = await _context.BangLuongs.Include(b => b.NhanVien)
+                var employees     = await _context.NhanViens
+                                        .Include(nv => nv.PhongBan)
+                                        .Include(nv => nv.ChucVuNhanVien)
+                                        .Where(nv => nv.TrangThai == true).ToListAsync();
+                var savedPayrolls = await _context.BangLuongs
+                                        .Include(b => b.NhanVien).ThenInclude(nv => nv.PhongBan)
+                                        .Include(b => b.NhanVien).ThenInclude(nv => nv.ChucVuNhanVien)
                                         .Where(b => b.Nam == year && b.Thang == month).ToListAsync();
 
                 var attendanceData = await _context.ChamCongs
@@ -370,7 +375,11 @@ namespace HRApi.Controllers
                 {
                     x.Id,
                     x.MaNhanVien,
-                    NhanVien            = new { HoTen = x.NhanVien?.HoTen },
+                    NhanVien = new {
+                        HoTen       = x.NhanVien != null ? x.NhanVien.HoTen : null,
+                        TenPhongBan = x.NhanVien?.PhongBan != null ? x.NhanVien.PhongBan.TenPhongBan : null,
+                        TenChucVu   = x.NhanVien?.ChucVuNhanVien != null ? x.NhanVien.ChucVuNhanVien.TenChucVu : null,
+                    },
                     x.Thang, x.Nam,
                     x.LuongCoBan, x.LuongDongBaoHiem,
                     x.SoCongChuanTrongThang,
