@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../api";
 import { useToast } from "../context/ToastContext";
-import { FaArrowLeft, FaUserCircle, FaCamera } from "react-icons/fa";
+import { FaArrowLeft, FaUserCircle, FaCamera, FaPenNib } from "react-icons/fa";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import dayjs from "dayjs";
@@ -150,6 +150,7 @@ const EmployeeEditPage = () => {
     { id: "bank", label: "Thông tin tài khoản" },
     { id: "education", label: "Trình độ học vấn" },
     { id: "insurance", label: "Bảo hiểm" },
+    { id: "signature", label: "Chữ ký số" },
   ];
 
   const renderPersonal = () => (
@@ -255,6 +256,7 @@ const EmployeeEditPage = () => {
             <option value="">-- Chọn --</option>
             <option value="Độc thân">Độc thân</option>
             <option value="Đã kết hôn">Đã kết hôn</option>
+            <option value="Ly hôn">Ly hôn</option>
           </select>
         </div>
         <div className="form-group">
@@ -355,11 +357,29 @@ const EmployeeEditPage = () => {
           />
         </div>
         <div className="form-group">
-          <label>Nơi cấp</label>
+          <label>Quốc gia cấp / Nơi cấp</label>
           <input
             name="noiCapHoChieu"
             value={employee.noiCapHoChieu || ""}
             onChange={handleChange}
+          />
+        </div>
+        <div className="form-group">
+          <label>Ngày cấp</label>
+          <DatePicker
+            selected={employee.ngayCapHoChieu ? new Date(employee.ngayCapHoChieu) : null}
+            onChange={(date) => handleDateChange(date, "ngayCapHoChieu")}
+            dateFormat="dd/MM/yyyy"
+            placeholderText="dd/mm/yyyy"
+          />
+        </div>
+        <div className="form-group">
+          <label>Ngày hết hạn</label>
+          <DatePicker
+            selected={employee.ngayHetHanHoChieu ? new Date(employee.ngayHetHanHoChieu) : null}
+            onChange={(date) => handleDateChange(date, "ngayHetHanHoChieu")}
+            dateFormat="dd/MM/yyyy"
+            placeholderText="dd/mm/yyyy"
           />
         </div>
       </div>
@@ -372,30 +392,65 @@ const EmployeeEditPage = () => {
       <div className="form-grid grid-2">
         <div className="form-group">
           <label>Email</label>
-          <input
-            name="email"
-            value={employee.email || ""}
-            onChange={handleChange}
-          />
+          <input name="email" value={employee.email || ""} onChange={handleChange} />
         </div>
         <div className="form-group">
-          <label>SĐT</label>
-          <input
-            name="sdt_NhanVien"
-            value={employee.sdt_NhanVien || ""}
-            onChange={handleChange}
-          />
+          <label>Số điện thoại</label>
+          <input name="sdt_NhanVien" value={employee.sdt_NhanVien || ""} onChange={handleChange} />
         </div>
       </div>
-      <div className="form-section-title">Địa chỉ</div>
+
+      <div className="form-section-title">Liên hệ khẩn cấp</div>
+      <div className="form-grid grid-2">
+        <div className="form-group">
+          <label>Người liên hệ</label>
+          <input name="nguoiLienHeKhanCap" value={employee.nguoiLienHeKhanCap || ""} onChange={handleChange} />
+        </div>
+        <div className="form-group">
+          <label>Mối quan hệ</label>
+          <input name="quanHeKhanCap" value={employee.quanHeKhanCap || ""} onChange={handleChange} placeholder="VD: Bố, Mẹ, Vợ..." />
+        </div>
+        <div className="form-group">
+          <label>SĐT khẩn cấp</label>
+          <input name="sdtKhanCap" value={employee.sdtKhanCap || ""} onChange={handleChange} />
+        </div>
+        <div className="form-group">
+          <label>Địa chỉ khẩn cấp</label>
+          <input name="diaChiKhanCap" value={employee.diaChiKhanCap || ""} onChange={handleChange} />
+        </div>
+      </div>
+
+      <div className="form-section-title">Địa chỉ thường trú</div>
       <div className="form-grid grid-1">
         <div className="form-group">
-          <label>Địa chỉ thường trú</label>
-          <input
-            name="diaChiThuongTru"
-            value={employee.diaChiThuongTru || ""}
-            onChange={handleChange}
-          />
+          <label>Địa chỉ chi tiết (Số nhà, đường)</label>
+          <input name="diaChiThuongTru" value={employee.diaChiThuongTru || ""} onChange={handleChange} />
+        </div>
+      </div>
+      <div className="form-grid grid-2">
+        <div className="form-group">
+          <label>Phường / Xã</label>
+          <input name="phuongXaThuongTru" value={employee.phuongXaThuongTru || ""} onChange={handleChange} />
+        </div>
+        <div className="form-group">
+          <label>Quận / Huyện</label>
+          <input name="quanHuyenThuongTru" value={employee.quanHuyenThuongTru || ""} onChange={handleChange} />
+        </div>
+        <div className="form-group">
+          <label>Tỉnh / Thành phố</label>
+          <input name="tinhThanhThuongTru" value={employee.tinhThanhThuongTru || ""} onChange={handleChange} />
+        </div>
+        <div className="form-group">
+          <label>Quốc gia</label>
+          <input name="quocGiaThuongTru" value={employee.quocGiaThuongTru || ""} onChange={handleChange} />
+        </div>
+      </div>
+
+      <div className="form-section-title">Địa chỉ tạm trú</div>
+      <div className="form-grid grid-1">
+        <div className="form-group">
+          <label>Địa chỉ tạm trú chi tiết</label>
+          <input name="diaChiTamTru" value={employee.diaChiTamTru || ""} onChange={handleChange} />
         </div>
       </div>
     </div>
@@ -403,72 +458,67 @@ const EmployeeEditPage = () => {
 
   const renderJob = () => (
     <div className="tab-content">
-      <div className="form-section-title">Công việc</div>
-      <div className="form-grid grid-3">
+      <div className="form-section-title">Thông tin quản lý</div>
+      <div className="form-grid grid-2">
         <div className="form-group">
-          <label>Quản lý</label>
-          <select
-            name="maQuanLyTrucTiep"
-            value={employee.maQuanLyTrucTiep || ""}
-            onChange={handleChange}
-          >
+          <label>Quản lý trực tiếp</label>
+          <select name="maQuanLyTrucTiep" value={employee.maQuanLyTrucTiep || ""} onChange={handleChange}>
             <option value="">-- Chọn --</option>
             {managers.map((m) => (
-              <option key={m.maNhanVien} value={m.maNhanVien}>
-                {m.hoTen}
-              </option>
+              <option key={m.maNhanVien} value={m.maNhanVien}>{m.hoTen}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Ngày bắt đầu làm việc</label>
+          <DatePicker
+            selected={employee.ngayVaoLam ? new Date(employee.ngayVaoLam) : null}
+            onChange={(date) => handleDateChange(date, "ngayVaoLam")}
+            dateFormat="dd/MM/yyyy"
+            placeholderText="dd/mm/yyyy"
+          />
+        </div>
+      </div>
+
+      <div className="form-section-title">Chi tiết công việc</div>
+      <div className="form-grid grid-3">
+        <div className="form-group">
+          <label>Phòng ban</label>
+          <select name="maPhongBan" value={employee.maPhongBan || ""} onChange={handleChange}>
+            <option value="">-- Chọn --</option>
+            {phongBans.map((pb) => (
+              <option key={pb.maPhongBan} value={pb.maPhongBan}>{pb.tenPhongBan}</option>
             ))}
           </select>
         </div>
         <div className="form-group">
           <label>Chức vụ</label>
-          <select
-            name="maChucVuNV"
-            value={employee.maChucVuNV || ""}
-            onChange={handleChange}
-          >
+          <select name="maChucVuNV" value={employee.maChucVuNV || ""} onChange={handleChange}>
             <option value="">-- Chọn --</option>
             {chucVus.map((c) => (
-              <option key={c.maChucVuNV} value={c.maChucVuNV}>
-                {c.tenChucVu}
-              </option>
+              <option key={c.maChucVuNV} value={c.maChucVuNV}>{c.tenChucVu}</option>
             ))}
           </select>
         </div>
         <div className="form-group">
-          <label>Loại NV</label>
-          <input
-            name="loaiNhanVien"
-            value={employee.loaiNhanVien || ""}
-            onChange={handleChange}
-          />
+          <label>Loại nhân viên</label>
+          <input name="loaiNhanVien" value={employee.loaiNhanVien || ""} onChange={handleChange} placeholder="VD: Full-time" />
         </div>
       </div>
 
-      {/* --- PHẦN BỔ SUNG: LƯƠNG & HỢP ĐỒNG --- */}
-      <div className="form-section-title" style={{ marginTop: "20px" }}>
-        Lương & Hợp đồng
-      </div>
+      <div className="form-section-title" style={{ marginTop: "20px" }}>Lương & Hợp đồng</div>
       <div className="form-grid grid-3">
         <div className="form-group">
           <label>Lương cơ bản (VNĐ)</label>
-          <input
-            type="number"
-            name="luongCoBan"
-            value={employee.luongCoBan}
-            onChange={handleChange}
-            placeholder="Nhập mức lương..."
-          />
+          <input type="number" name="luongCoBan" value={employee.luongCoBan} onChange={handleChange} placeholder="Nhập mức lương..." />
+        </div>
+        <div className="form-group">
+          <label>Số người phụ thuộc</label>
+          <input type="number" name="soNguoiPhuThuoc" value={employee.soNguoiPhuThuoc ?? 0} onChange={handleChange} min={0} max={10} />
         </div>
         <div className="form-group">
           <label>Số hợp đồng</label>
-          <input
-            type="text"
-            name="soHopDong"
-            value={employee.soHopDong}
-            onChange={handleChange}
-            placeholder="VD: HD-001/2025"
-          />
+          <input type="text" name="soHopDong" value={employee.soHopDong} onChange={handleChange} placeholder="VD: HD-001/2025" />
         </div>
       </div>
     </div>
@@ -512,41 +562,33 @@ const EmployeeEditPage = () => {
       <div className="form-grid grid-2">
         <div className="form-group">
           <label>Trình độ</label>
-          <select
-            name="maTrinhDoHocVan"
-            value={employee.maTrinhDoHocVan || ""}
-            onChange={handleChange}
-          >
+          <select name="maTrinhDoHocVan" value={employee.maTrinhDoHocVan || ""} onChange={handleChange}>
             <option value="">-- Chọn --</option>
             {trinhDoHocVans.map((td) => (
-              <option key={td.maTrinhDoHocVan} value={td.maTrinhDoHocVan}>
-                {td.tenTrinhDo}
-              </option>
+              <option key={td.maTrinhDoHocVan} value={td.maTrinhDoHocVan}>{td.tenTrinhDo}</option>
             ))}
           </select>
+        </div>
+        <div className="form-group">
+          <label>Hệ đào tạo</label>
+          <input name="heDaoTao" value={employee.heDaoTao || ""} onChange={handleChange} placeholder="VD: Chính quy" />
+        </div>
+        <div className="form-group">
+          <label>Đơn vị đào tạo (Trường)</label>
+          <input name="noiDaoTao" value={employee.noiDaoTao || ""} onChange={handleChange} />
         </div>
         <div className="form-group">
           <label>Chuyên ngành</label>
-          <select
-            name="maChuyenNganh"
-            value={employee.maChuyenNganh || ""}
-            onChange={handleChange}
-          >
+          <select name="maChuyenNganh" value={employee.maChuyenNganh || ""} onChange={handleChange}>
             <option value="">-- Chọn --</option>
             {chuyenNganhs.map((cn) => (
-              <option key={cn.maChuyenNganh} value={cn.maChuyenNganh}>
-                {cn.tenChuyenNganh}
-              </option>
+              <option key={cn.maChuyenNganh} value={cn.maChuyenNganh}>{cn.tenChuyenNganh}</option>
             ))}
           </select>
         </div>
         <div className="form-group">
-          <label>Nơi đào tạo</label>
-          <input
-            name="noiDaoTao"
-            value={employee.noiDaoTao || ""}
-            onChange={handleChange}
-          />
+          <label>Chuyên ngành chi tiết</label>
+          <input name="chuyenNganhChiTiet" value={employee.chuyenNganhChiTiet || ""} onChange={handleChange} />
         </div>
       </div>
     </div>
@@ -584,6 +626,29 @@ const EmployeeEditPage = () => {
     </div>
   );
 
+  const renderSignature = () => (
+    <div className="tab-content">
+      <div className="form-section-title">Chữ ký điện tử</div>
+      <div style={{
+        border: "2px dashed #d1d5db", borderRadius: "8px", padding: "24px",
+        textAlign: "center", background: "#f9fafb", minHeight: "200px",
+        display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column",
+      }}>
+        {employee.chuKy ? (
+          <img src={employee.chuKy} alt="Chữ ký" style={{ maxWidth: "100%", maxHeight: "160px", objectFit: "contain" }} />
+        ) : (
+          <>
+            <div style={{ fontSize: "40px", marginBottom: "10px", color: "#cbd5e1" }}>✍️</div>
+            <span style={{ color: "#94a3b8", fontStyle: "italic" }}>Nhân viên chưa có chữ ký số.</span>
+            <div style={{ fontSize: "12px", color: "#64748b", marginTop: "6px" }}>
+              (Cập nhật tại màn hình danh sách nhân viên → chuột phải → Cập nhật chữ ký)
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
   if (loading)
     return (
       <DashboardLayout>
@@ -613,6 +678,8 @@ const EmployeeEditPage = () => {
         return renderEducation();
       case "insurance":
         return renderInsurance();
+      case "signature":
+        return renderSignature();
       default:
         return <div>Chưa cập nhật</div>;
     }
