@@ -100,6 +100,8 @@ const formatTime = (t) => (t ? t.substring(0, 5) : "");
 const RequestManagementPage = () => {
   // --- STATE MANAGEMENT ---
   const [searchParams] = useSearchParams();
+  const requestId = searchParams.get("requestId");
+
   const [activeTab, setActiveTab] = useState(() => {
     const tab = searchParams.get("tab");
     return ["LEAVE", "OT", "TRIP"].includes(tab) ? tab : "LEAVE";
@@ -107,6 +109,8 @@ const RequestManagementPage = () => {
   const [statusFilter, setStatusFilter] = useState("Chờ duyệt");
   const [deptFilter, setDeptFilter] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [highlightId, setHighlightId] = useState(requestId ? Number(requestId) : null);
+  const highlightRef = useRef(null);
 
   const [data, setData] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -206,6 +210,15 @@ const RequestManagementPage = () => {
     return () => clearTimeout(timer);
   }, [fetchData]);
 
+  // Scroll đến và highlight đơn được chỉ định từ URL
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      const timer = setTimeout(() => setHighlightId(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightId, data]);
+
   // --- HANDLE ACTIONS (APPROVE/REJECT) ---
   const getEndpointPrefix = () => {
     switch (activeTab) {
@@ -272,7 +285,15 @@ const RequestManagementPage = () => {
     }
 
     return data.map((item) => (
-      <tr key={item.id}>
+      <tr
+        key={item.id}
+        ref={item.id === highlightId ? highlightRef : null}
+        style={item.id === highlightId ? {
+          outline: "2px solid #f59e0b",
+          backgroundColor: "#fffbeb",
+          transition: "background-color 0.5s",
+        } : undefined}
+      >
         <td>
           <strong>{item.hoTenNhanVien}</strong>
           <br />

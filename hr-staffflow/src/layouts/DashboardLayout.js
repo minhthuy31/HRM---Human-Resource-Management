@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiLogOut, FiSun, FiMoon, FiBell } from "react-icons/fi";
 import { api } from "../api";
@@ -16,6 +16,8 @@ const DashboardLayout = ({ children }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [unreadData, setUnreadData] = useState({ total: 0, nghiPhep: 0, ot: 0, congTac: 0 });
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifRef = useRef(null);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -46,6 +48,16 @@ const DashboardLayout = ({ children }) => {
     OT:    { icon: "⏰", label: "Tăng ca",   tab: "OT",    color: "#7c3aed" },
     TRIP:  { icon: "✈️", label: "Công tác",  tab: "TRIP",  color: "#0369a1" },
   };
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setIsNotifOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const fetchUnreadRequests = async () => {
     try {
@@ -227,52 +239,65 @@ const DashboardLayout = ({ children }) => {
             {isDarkMode ? <FiSun size={20} /> : <FiMoon size={20} />}
           </div>
 
-          <div className="notification-container">
+          <div
+            ref={notifRef}
+            className="notification-container"
+            onClick={() => setIsNotifOpen((prev) => !prev)}
+          >
             <FiBell size={20} />
             {unreadData.total > 0 && (
               <div className="notification-badge">{unreadData.total > 99 ? '99+' : unreadData.total}</div>
             )}
-            <div className="notification-hover-zone"></div>
-            <div className="notification-dropdown">
-              <div className="notification-header">
-                Đơn từ chờ duyệt
-                {unreadData.total > 0 && (
-                  <span style={{ marginLeft: "6px", background: "#ef4444", color: "#fff", borderRadius: "10px", padding: "1px 7px", fontSize: "11px" }}>
-                    {unreadData.total}
-                  </span>
-                )}
-              </div>
-              {pendingRequests.length > 0 ? (
-                <>
-                  {pendingRequests.map((req, idx) => {
-                    const cfg = typeConfig[req.type] || typeConfig.LEAVE;
-                    return (
-                      <Link
-                        key={idx}
-                        to={`/nghi-phep?tab=${cfg.tab}`}
-                        className="notification-item"
-                      >
-                        <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
-                          <span style={{ fontSize: "16px", flexShrink: 0, marginTop: "1px" }}>{cfg.icon}</span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "4px" }}>
-                              <span className="notification-title" style={{ color: cfg.color }}>{req.hoTen}</span>
-                              <span style={{ fontSize: "10px", color: "#9ca3af", flexShrink: 0 }}>{timeAgo(req.ngayGui)}</span>
+            {isNotifOpen && (
+              <div className="notification-dropdown" style={{ display: "block" }}>
+                <div className="notification-header">
+                  Đơn từ chờ duyệt
+                  {unreadData.total > 0 && (
+                    <span style={{ marginLeft: "6px", background: "#ef4444", color: "#fff", borderRadius: "10px", padding: "1px 7px", fontSize: "11px" }}>
+                      {unreadData.total}
+                    </span>
+                  )}
+                </div>
+                {pendingRequests.length > 0 ? (
+                  <>
+                    {pendingRequests.map((req, idx) => {
+                      const cfg = typeConfig[req.type] || typeConfig.LEAVE;
+                      return (
+                        <div
+                          key={idx}
+                          className="notification-item"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsNotifOpen(false);
+                            navigate(`/nghi-phep?tab=${cfg.tab}&requestId=${req.id}`);
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                            <span style={{ fontSize: "16px", flexShrink: 0, marginTop: "1px" }}>{cfg.icon}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "4px" }}>
+                                <span className="notification-title" style={{ color: cfg.color }}>{req.hoTen}</span>
+                                <span style={{ fontSize: "10px", color: "#9ca3af", flexShrink: 0 }}>{timeAgo(req.ngayGui)}</span>
+                              </div>
+                              <span className="notification-desc">{req.moTa}</span>
                             </div>
-                            <span className="notification-desc">{req.moTa}</span>
                           </div>
                         </div>
-                      </Link>
-                    );
-                  })}
-                  <Link to="/nghi-phep" className="notification-item" style={{ textAlign: "center", color: "#2563eb", fontSize: "13px", fontWeight: 500, justifyContent: "center" }}>
-                    Xem tất cả đơn từ →
-                  </Link>
-                </>
-              ) : (
-                <div className="notification-empty">Không có đơn từ chờ duyệt</div>
-              )}
-            </div>
+                      );
+                    })}
+                    <div
+                      className="notification-item"
+                      style={{ textAlign: "center", color: "#2563eb", fontSize: "13px", fontWeight: 500, justifyContent: "center" }}
+                      onClick={(e) => { e.stopPropagation(); setIsNotifOpen(false); navigate("/nghi-phep"); }}
+                    >
+                      Xem tất cả đơn từ →
+                    </div>
+                  </>
+                ) : (
+                  <div className="notification-empty">Không có đơn từ chờ duyệt</div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="avatar-container">
