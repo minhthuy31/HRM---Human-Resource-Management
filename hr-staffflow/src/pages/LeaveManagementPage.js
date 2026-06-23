@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../api";
 import { getUserFromToken } from "../utils/auth";
@@ -98,7 +99,11 @@ const formatTime = (t) => (t ? t.substring(0, 5) : "");
 
 const RequestManagementPage = () => {
   // --- STATE MANAGEMENT ---
-  const [activeTab, setActiveTab] = useState("LEAVE"); // 'LEAVE', 'OT', 'TRIP'
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = searchParams.get("tab");
+    return ["LEAVE", "OT", "TRIP"].includes(tab) ? tab : "LEAVE";
+  }); // 'LEAVE', 'OT', 'TRIP'
   const [statusFilter, setStatusFilter] = useState("Chờ duyệt");
   const [deptFilter, setDeptFilter] = useState("");
   const [searchTerm, setSearchTerm] = useState("");

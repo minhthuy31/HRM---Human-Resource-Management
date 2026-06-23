@@ -321,15 +321,17 @@ li a:hover {
 .notification-dropdown {
   display: none;
   position: absolute;
-  top: 46px; /* Dưới bell 1 chút */
+  top: 46px;
   right: -10px;
   background-color: var(--card-bg);
   border: 1px solid var(--sidebar-border);
-  box-shadow: 0 4px 12px var(--shadow-color);
-  border-radius: 8px;
-  width: 280px;
+  box-shadow: 0 4px 20px var(--shadow-color);
+  border-radius: 10px;
+  width: 340px;
   z-index: 1001;
   overflow: hidden;
+  max-height: 480px;
+  overflow-y: auto;
 }
 
 .notification-container:hover .notification-dropdown,

@@ -15,6 +15,7 @@ const DashboardLayout = ({ children }) => {
   const [nhanVien, setNhanVien] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [unreadData, setUnreadData] = useState({ total: 0, nghiPhep: 0, ot: 0, congTac: 0 });
+  const [pendingRequests, setPendingRequests] = useState([]);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -32,12 +33,28 @@ const DashboardLayout = ({ children }) => {
     return () => clearInterval(timer);
   }, []);
 
+  const timeAgo = (dateStr) => {
+    const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
+    if (diff < 1) return "vừa xong";
+    if (diff < 60) return `${diff} phút trước`;
+    if (diff < 1440) return `${Math.floor(diff / 60)} giờ trước`;
+    return `${Math.floor(diff / 1440)} ngày trước`;
+  };
+
+  const typeConfig = {
+    LEAVE: { icon: "🗓", label: "Nghỉ phép", tab: "LEAVE", color: "#16a34a" },
+    OT:    { icon: "⏰", label: "Tăng ca",   tab: "OT",    color: "#7c3aed" },
+    TRIP:  { icon: "✈️", label: "Công tác",  tab: "TRIP",  color: "#0369a1" },
+  };
+
   const fetchUnreadRequests = async () => {
     try {
-      const response = await api.get("/ThongBao/unread-requests-count");
-      if (response.data) {
-        setUnreadData(response.data);
-      }
+      const [countRes, listRes] = await Promise.all([
+        api.get("/ThongBao/unread-requests-count"),
+        api.get("/ThongBao/pending-requests"),
+      ]);
+      if (countRes.data) setUnreadData(countRes.data);
+      if (listRes.data)  setPendingRequests(listRes.data);
     } catch (error) {
       console.error("Lỗi khi lấy số đơn chờ duyệt:", error);
     }
@@ -217,27 +234,40 @@ const DashboardLayout = ({ children }) => {
             )}
             <div className="notification-hover-zone"></div>
             <div className="notification-dropdown">
-              <div className="notification-header">Thông báo đơn từ</div>
-              {unreadData.total > 0 ? (
+              <div className="notification-header">
+                Đơn từ chờ duyệt
+                {unreadData.total > 0 && (
+                  <span style={{ marginLeft: "6px", background: "#ef4444", color: "#fff", borderRadius: "10px", padding: "1px 7px", fontSize: "11px" }}>
+                    {unreadData.total}
+                  </span>
+                )}
+              </div>
+              {pendingRequests.length > 0 ? (
                 <>
-                  {unreadData.nghiPhep > 0 && (
-                    <Link to="/nghi-phep" className="notification-item">
-                      <span className="notification-title">Đơn xin nghỉ phép</span>
-                      <span className="notification-desc">Có {unreadData.nghiPhep} đơn chờ duyệt</span>
-                    </Link>
-                  )}
-                  {unreadData.ot > 0 && (
-                    <Link to="/nghi-phep" className="notification-item">
-                      <span className="notification-title">Đơn đăng ký OT</span>
-                      <span className="notification-desc">Có {unreadData.ot} đơn chờ duyệt</span>
-                    </Link>
-                  )}
-                  {unreadData.congTac > 0 && (
-                    <Link to="/nghi-phep" className="notification-item">
-                      <span className="notification-title">Đơn đăng ký công tác</span>
-                      <span className="notification-desc">Có {unreadData.congTac} đơn chờ duyệt</span>
-                    </Link>
-                  )}
+                  {pendingRequests.map((req, idx) => {
+                    const cfg = typeConfig[req.type] || typeConfig.LEAVE;
+                    return (
+                      <Link
+                        key={idx}
+                        to={`/nghi-phep?tab=${cfg.tab}`}
+                        className="notification-item"
+                      >
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                          <span style={{ fontSize: "16px", flexShrink: 0, marginTop: "1px" }}>{cfg.icon}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "4px" }}>
+                              <span className="notification-title" style={{ color: cfg.color }}>{req.hoTen}</span>
+                              <span style={{ fontSize: "10px", color: "#9ca3af", flexShrink: 0 }}>{timeAgo(req.ngayGui)}</span>
+                            </div>
+                            <span className="notification-desc">{req.moTa}</span>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                  <Link to="/nghi-phep" className="notification-item" style={{ textAlign: "center", color: "#2563eb", fontSize: "13px", fontWeight: 500, justifyContent: "center" }}>
+                    Xem tất cả đơn từ →
+                  </Link>
                 </>
               ) : (
                 <div className="notification-empty">Không có đơn từ chờ duyệt</div>

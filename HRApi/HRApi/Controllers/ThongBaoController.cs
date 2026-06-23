@@ -90,6 +90,68 @@ namespace HRApi.Controllers
             return Ok(new { message = "Đã ẩn thông báo." });
         }
 
+        // 6b. API Lấy danh sách đơn từ chờ duyệt chi tiết (từng đơn, tên NV)
+        [HttpGet("pending-requests")]
+        public async Task<IActionResult> GetPendingRequests()
+        {
+            var role = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role")?.Value;
+            var userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            var maPhongBan = User.Claims.FirstOrDefault(c => c.Type == "MaPhongBan")?.Value;
+
+            if (role == "Nhân viên")
+                return Ok(new List<object>());
+
+            var queryNP = _context.DonNghiPheps.Include(d => d.NhanVien).Where(d => d.TrangThai == "Chờ duyệt");
+            var queryOT = _context.DangKyOTs.Include(d => d.NhanVien).Where(d => d.TrangThai == "Chờ duyệt");
+            var queryCT = _context.DangKyCongTacs.Include(d => d.NhanVien).Where(d => d.TrangThai == "Chờ duyệt");
+
+            if (role == "Trưởng phòng")
+            {
+                if (string.IsNullOrEmpty(maPhongBan) && !string.IsNullOrEmpty(userId))
+                {
+                    var me = await _context.NhanViens.AsNoTracking().FirstOrDefaultAsync(x => x.MaNhanVien == userId);
+                    maPhongBan = me?.MaPhongBan;
+                }
+                if (string.IsNullOrEmpty(maPhongBan)) return Ok(new List<object>());
+                queryNP = queryNP.Where(d => d.NhanVien != null && d.NhanVien.MaPhongBan == maPhongBan);
+                queryOT = queryOT.Where(d => d.NhanVien != null && d.NhanVien.MaPhongBan == maPhongBan);
+                queryCT = queryCT.Where(d => d.NhanVien != null && d.NhanVien.MaPhongBan == maPhongBan);
+            }
+
+            var nghiPheps = await queryNP.OrderByDescending(d => d.NgayGuiDon).Take(8).Select(d => new {
+                id = d.Id,
+                type = "LEAVE",
+                hoTen = d.NhanVien.HoTen,
+                moTa = $"xin nghỉ phép {d.SoNgayNghi} ngày ({d.NgayBatDau.ToString("dd/MM")} - {d.NgayKetThuc.ToString("dd/MM")})",
+                ngayGui = d.NgayGuiDon
+            }).ToListAsync();
+
+            var ots = await queryOT.OrderByDescending(d => d.NgayGuiDon).Take(8).Select(d => new {
+                id = d.Id,
+                type = "OT",
+                hoTen = d.NhanVien.HoTen,
+                moTa = $"đăng ký OT {d.SoGio}h ngày {d.NgayLamThem.ToString("dd/MM")}",
+                ngayGui = d.NgayGuiDon
+            }).ToListAsync();
+
+            var congTacs = await queryCT.OrderByDescending(d => d.NgayGuiDon).Take(8).Select(d => new {
+                id = d.Id,
+                type = "TRIP",
+                hoTen = d.NhanVien.HoTen,
+                moTa = $"đăng ký công tác tại {d.NoiCongTac} ({d.NgayBatDau.ToString("dd/MM")} - {d.NgayKetThuc.ToString("dd/MM")})",
+                ngayGui = d.NgayGuiDon
+            }).ToListAsync();
+
+            var combined = nghiPheps.Cast<object>()
+                .Concat(ots.Cast<object>())
+                .Concat(congTacs.Cast<object>())
+                .OrderByDescending(x => (DateTime)((dynamic)x).ngayGui)
+                .Take(15)
+                .ToList();
+
+            return Ok(combined);
+        }
+
         // 6. API Lấy số lượng đơn từ chờ duyệt (Cho Notification Bell)
         [HttpGet("unread-requests-count")]
         public async Task<IActionResult> GetUnreadRequestsCount()
