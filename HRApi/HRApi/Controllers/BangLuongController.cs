@@ -379,7 +379,7 @@ namespace HRApi.Controllers
                     x.NghiCoPhep, x.NghiKhongLuong, x.NghiKhongPhep, x.LamNuaNgay,
                     x.LuongChinh, x.LuongOT,
                     x.KhauTruBHXH, x.KhauTruBHYT, x.KhauTruBHTN,
-                    x.ThueTNCN, x.KhoanTruKhac,
+                    x.ThueTNCN, x.KhoanTruKhac, x.LyDoKhac,
                     x.TongThuNhap, x.ThucLanh, x.DaChot
                 }).ToList();
 
@@ -413,9 +413,10 @@ namespace HRApi.Controllers
                 if (record != null)
                 {
                     record.KhoanTruKhac = item.KhoanTruKhac;
-                    decimal cacKhoanTru = record.KhauTruBHXH + record.KhauTruBHYT + record.KhauTruBHTN
-                                       + record.ThueTNCN + record.KhoanTruKhac;
-                    record.ThucLanh = record.TongThuNhap - cacKhoanTru;
+                    record.LyDoKhac     = item.LyDoKhac;
+                    // KhoanTruKhac > 0 = cộng thêm (thưởng), < 0 = trừ lương
+                    decimal cacKhoanTru = record.KhauTruBHXH + record.KhauTruBHYT + record.KhauTruBHTN + record.ThueTNCN;
+                    record.ThucLanh = record.TongThuNhap - cacKhoanTru + record.KhoanTruKhac;
                 }
             }
             await _context.SaveChangesAsync();

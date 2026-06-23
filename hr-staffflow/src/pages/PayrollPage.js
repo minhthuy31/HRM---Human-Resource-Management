@@ -110,6 +110,7 @@ const PayrollPage = () => {
           khauTruBHTN: item.khauTruBHTN || 0,
           thueTNCN: item.thueTNCN || 0,
           khoanTruKhac: item.khoanTruKhac || 0,
+          lyDoKhac: item.lyDoKhac || "",
           thucLanh: item.thucLanh || 0,
         }));
 
@@ -185,9 +186,10 @@ const PayrollPage = () => {
       const payload = payrolls.map((p) => ({
         id: p.id,
         khoanTruKhac: parseFloat(p.khoanTruKhac) || 0,
+        lyDoKhac: p.lyDoKhac || "",
       }));
       await api.post("/BangLuong/save", payload);
-      showToast("Lưu các khoản trừ thành công!", "success");
+      showToast("Lưu điều chỉnh thành công!", "success");
       fetchData(currentDate);
     } catch (e) {
       showToast("Lỗi lưu dữ liệu.", "error");
@@ -196,23 +198,24 @@ const PayrollPage = () => {
 
   const handleInputChange = (id, value) => {
     if (!canEdit) return;
-    const numVal = value.replace(/\D/g, "");
     setPayrolls((prev) =>
       prev.map((p) => {
         if (p.id !== id) return p;
-        const newKhoanTru = parseFloat(numVal) || 0;
-        const totalDeduct =
-          p.khauTruBHXH +
-          p.khauTruBHYT +
-          p.khauTruBHTN +
-          p.thueTNCN +
-          newKhoanTru;
+        const dieu = parseFloat(value) || 0;
+        const totalDeduct = p.khauTruBHXH + p.khauTruBHYT + p.khauTruBHTN + p.thueTNCN;
         return {
           ...p,
-          khoanTruKhac: numVal,
-          thucLanh: p.tongThuNhap - totalDeduct,
+          khoanTruKhac: value,
+          thucLanh: p.tongThuNhap - totalDeduct + dieu,
         };
       }),
+    );
+  };
+
+  const handleLyDoChange = (id, value) => {
+    if (!canEdit) return;
+    setPayrolls((prev) =>
+      prev.map((p) => (p.id !== id ? p : { ...p, lyDoKhac: value }))
     );
   };
 
@@ -370,7 +373,7 @@ const PayrollPage = () => {
                     <th className="sub-th">BHYT</th>
                     <th className="sub-th">BHTN</th>
                     <th className="sub-th">Thuế</th>
-                    <th className="sub-th bg-yellow-light">Khác (Sửa)</th>
+                    <th className="sub-th bg-yellow-light" title="Dương (+) = thưởng/cộng thêm | Âm (-) = trừ lương">Điều chỉnh (±)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -455,15 +458,45 @@ const PayrollPage = () => {
                         <td className="text-right text-sm">
                           {formatMoney(p.thueTNCN)}
                         </td>
-                        <td>
-                          <input
-                            className="salary-input"
-                            disabled={!canEdit}
-                            value={formatMoney(p.khoanTruKhac)}
-                            onChange={(e) =>
-                              handleInputChange(p.id, e.target.value)
-                            }
-                          />
+                        <td style={{ minWidth: "130px" }}>
+                          {canEdit ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              <input
+                                type="number"
+                                className="salary-input"
+                                value={p.khoanTruKhac || ""}
+                                onChange={(e) => handleInputChange(p.id, e.target.value)}
+                                placeholder="VD: 500000"
+                                style={{
+                                  color: parseFloat(p.khoanTruKhac) > 0 ? "#16a34a"
+                                       : parseFloat(p.khoanTruKhac) < 0 ? "#dc2626" : "",
+                                  fontWeight: "600",
+                                }}
+                              />
+                              <input
+                                className="salary-input"
+                                value={p.lyDoKhac || ""}
+                                onChange={(e) => handleLyDoChange(p.id, e.target.value)}
+                                placeholder="Lý do..."
+                                style={{ fontSize: "11px", color: "#6b7280", padding: "3px 6px" }}
+                              />
+                            </div>
+                          ) : (
+                            <div style={{ textAlign: "right" }}>
+                              {parseFloat(p.khoanTruKhac) !== 0 && (
+                                <div style={{
+                                  color: parseFloat(p.khoanTruKhac) > 0 ? "#16a34a" : "#dc2626",
+                                  fontWeight: "600",
+                                }}>
+                                  {parseFloat(p.khoanTruKhac) > 0 ? "+" : ""}
+                                  {formatMoney(p.khoanTruKhac)}
+                                </div>
+                              )}
+                              {p.lyDoKhac && (
+                                <div style={{ fontSize: "11px", color: "#6b7280" }}>{p.lyDoKhac}</div>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="sticky-col last-col text-right font-bold text-green">
                           {formatMoney(p.thucLanh)}

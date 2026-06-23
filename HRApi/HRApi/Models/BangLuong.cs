@@ -74,8 +74,12 @@ namespace HRApi.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal ThueTNCN { get; set; }
 
+        // Điều chỉnh khác: dương = cộng thêm lương (thưởng), âm = trừ lương
         [Column(TypeName = "decimal(18,2)")]
         public decimal KhoanTruKhac { get; set; }
+
+        [MaxLength(500)]
+        public string? LyDoKhac { get; set; }
 
         // --- 5. TỔNG KẾT ---
         [Column(TypeName = "decimal(18,2)")]
