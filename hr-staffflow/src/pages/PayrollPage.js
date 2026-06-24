@@ -385,14 +385,21 @@ const PayrollPage = () => {
                     <th colSpan={2} className="group-header bg-gray">
                       Cố định
                     </th>
-                    <th colSpan={8} className="group-header bg-blue-light">
+                    <th colSpan={9} className="group-header bg-blue-light">
                       Chấm công
                     </th>
                     <th colSpan={6} className="group-header bg-green-light">
                       Thu nhập
                     </th>
-                    <th colSpan={5} className="group-header bg-red-light">
+                    <th colSpan={4} className="group-header bg-red-light">
                       Khấu trừ
+                    </th>
+                    <th
+                      className="sub-th bg-yellow-light"
+                      rowSpan={2}
+                      title="Dương (+) = thưởng/cộng thêm | Âm (-) = trừ lương"
+                    >
+                      Điều chỉnh (±)
                     </th>
                     <th className="sticky-col last-col" rowSpan={2}>
                       Thực Lĩnh
@@ -454,12 +461,6 @@ const PayrollPage = () => {
                     <th className="sub-th">BHYT</th>
                     <th className="sub-th">BHTN</th>
                     <th className="sub-th">Thuế</th>
-                    <th
-                      className="sub-th bg-yellow-light"
-                      title="Dương (+) = thưởng/cộng thêm | Âm (-) = trừ lương"
-                    >
-                      Điều chỉnh (±)
-                    </th>
                   </tr>
                 </thead>
                 <tbody>

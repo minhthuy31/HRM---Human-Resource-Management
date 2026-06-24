@@ -111,7 +111,7 @@ namespace HRApi.Controllers
                 .ToListAsync();
 
             var holidaysInMonth = await _context.NgayLes
-                .Where(nl => nl.Date.Year == dto.Year && nl.Date.Month == dto.Month)
+                .Where(nl => nl.Date >= monthStart && nl.Date < monthEnd)
                 .Select(nl => nl.Date.Date).ToListAsync();
 
             // Công chuẩn thực tế của tháng (T2-T6 trừ lễ)
@@ -342,7 +342,7 @@ namespace HRApi.Controllers
                     .ToDictionaryAsync(k => k.Key, v => v.Sum(x => x.SoGio));
 
                 var holidaysInMonth = await _context.NgayLes
-                    .Where(nl => nl.Date.Year == year && nl.Date.Month == month)
+                    .Where(nl => nl.Date >= monthStart2 && nl.Date < monthEnd2)
                     .Select(nl => nl.Date.Date).ToListAsync();
 
                 decimal congChuanThang = TinhCongChuanThang(year, month, holidaysInMonth);
