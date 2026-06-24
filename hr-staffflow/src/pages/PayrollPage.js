@@ -106,6 +106,8 @@ const PayrollPage = () => {
           nghiKhongLuong: item.nghiKhongLuong || 0,
           nghiKhongPhep: item.nghiKhongPhep || 0,
           lamNuaNgay: item.lamNuaNgay || 0,
+          soNgayLamLe: item.soNgayLamLe || 0,
+          tienLamLe: item.tienLamLe || 0,
           luongChinh: item.luongChinh || 0,
           luongOT: item.luongOT || 0,
           tienAn: item.tienAn || 0,
@@ -427,6 +429,9 @@ const PayrollPage = () => {
                       KP
                     </th>
                     <th className="sub-th">1/2</th>
+                    <th className="sub-th" style={{ color: "#dc2626" }} title="Số ngày đi làm trong ngày lễ (hưởng 3x lương)">
+                      Lễ
+                    </th>
 
                     <th className="sub-th">Lương Chính</th>
                     <th className="sub-th" style={{ color: "#d97706" }}>
@@ -482,7 +487,7 @@ const PayrollPage = () => {
                           {p.soCongChuanTrongThang}
                         </td>
                         <td className="text-center font-bold text-blue">
-                          {p.tongNgayCong}
+                          {Math.round(p.tongNgayCong * 100) / 100}
                         </td>
                         <td
                           className="text-center font-bold"
@@ -507,6 +512,13 @@ const PayrollPage = () => {
                           {p.nghiKhongPhep}
                         </td>
                         <td className="text-center">{p.lamNuaNgay}</td>
+                        <td
+                          className="text-center"
+                          style={{ color: "#dc2626", fontWeight: p.soNgayLamLe > 0 ? 700 : 400 }}
+                          title={p.soNgayLamLe > 0 ? `Tiền lương ngày lễ (x3): +${p.tienLamLe.toLocaleString("vi-VN")}đ` : "Không có ngày lễ"}
+                        >
+                          {p.soNgayLamLe > 0 ? p.soNgayLamLe : "-"}
+                        </td>
 
                         <td className="text-right">
                           {formatMoney(p.luongChinh)}

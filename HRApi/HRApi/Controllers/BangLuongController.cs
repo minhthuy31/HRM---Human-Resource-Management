@@ -94,14 +94,13 @@ namespace HRApi.Controllers
             var monthEnd   = monthStart.AddMonths(1);
 
             // Chỉ tính lương cho NV đã vào làm trong/trước tháng này, bỏ qua Giám đốc/Tổng GĐ
-            // NgayVaoLam == null → NV cũ chưa set, không tính cho tháng cũ
+            // NgayVaoLam == null → NV cũ chưa set ngày, vẫn tính bình thường
             var excludedRoles = new[] { "Giám đốc", "Tổng giám đốc", "Admin" };
             var employees  = await _context.NhanViens
                                  .Include(n => n.HopDongs)
                                  .Include(n => n.UserRole)
                                  .Where(e => e.TrangThai == true
-                                          && e.NgayVaoLam != null
-                                          && e.NgayVaoLam.Value < monthEnd
+                                          && (e.NgayVaoLam == null || e.NgayVaoLam.Value < monthEnd)
                                           && (e.UserRole == null || !excludedRoles.Contains(e.UserRole.NameRole)))
                                  .ToListAsync();
 
@@ -117,6 +116,9 @@ namespace HRApi.Controllers
 
             // Công chuẩn thực tế của tháng (T2-T6 trừ lễ)
             decimal standardWorkDays = TinhCongChuanThang(dto.Year, dto.Month, holidaysInMonth);
+
+            // Dùng HashSet ngày-trong-tháng để so sánh an toàn (tránh timezone/Kind mismatch)
+            var holidayDaySet = new HashSet<int>(holidaysInMonth.Select(h => h.Day));
 
             var newPayrolls = new List<BangLuong>();
 
@@ -149,9 +151,9 @@ namespace HRApi.Controllers
                         bool isThuViec = contract.LoaiHopDong?.Contains("thử việc", StringComparison.OrdinalIgnoreCase) == true;
                         decimal salaryMultiplier = isThuViec ? 0.85m : 1.0m;
 
-                        // Tách ngày lễ / ngày thường
-                        var normalAtt  = periodAtt.Where(c => !holidaysInMonth.Contains(c.NgayChamCong.Date)).ToList();
-                        var holidayAtt = periodAtt.Where(c =>  holidaysInMonth.Contains(c.NgayChamCong.Date)).ToList();
+                        // Tách ngày lễ / ngày thường — so sánh theo Day để tránh DateTime Kind mismatch
+                        var normalAtt  = periodAtt.Where(c => !holidayDaySet.Contains(c.NgayChamCong.Day)).ToList();
+                        var holidayAtt = periodAtt.Where(c =>  holidayDaySet.Contains(c.NgayChamCong.Day)).ToList();
 
                         double normalNgayCong  = normalAtt.Sum(c => c.NgayCong);
                         double holidayWorkCong = holidayAtt.Sum(c => c.NgayCong);
@@ -174,7 +176,7 @@ namespace HRApi.Controllers
                         decimal hourlyRate = dailyRate / 8m;
                         foreach (var ot in periodOT)
                         {
-                            bool isHoliday  = holidaysInMonth.Contains(ot.NgayLamThem.Date);
+                            bool isHoliday  = holidayDaySet.Contains(ot.NgayLamThem.Day);
                             bool isWeekend  = ot.NgayLamThem.DayOfWeek == DayOfWeek.Saturday ||
                                               ot.NgayLamThem.DayOfWeek == DayOfWeek.Sunday;
 
@@ -258,7 +260,7 @@ namespace HRApi.Controllers
                     TienAn              = calcTienAn,
                     TienGuiXe           = calcTienXe,
                     TienChuyenCan       = calcChuyenCan,
-                    TongNgayCong        = totalWorkDays,
+                    TongNgayCong        = Math.Round(totalWorkDays, 2),
                     SoCongChuanTrongThang = standardWorkDays,
                     TongGioOT           = totalOTHours,
                     TongCongChuanOT     = Math.Round(totalCongChuanOT, 2),
@@ -345,10 +347,23 @@ namespace HRApi.Controllers
 
                 decimal congChuanThang = TinhCongChuanThang(year, month, holidaysInMonth);
 
+                // Tính số ngày làm lễ + tiền lễ cho từng NV (để hiển thị)
+                var attendanceData2 = await _context.ChamCongs
+                    .Where(c => c.NgayChamCong.Year == year && c.NgayChamCong.Month == month
+                             && !string.IsNullOrEmpty(c.MaNhanVien))
+                    .ToListAsync();
+
+                var holidayDaySetGet = new HashSet<int>(holidaysInMonth.Select(h => h.Day));
+                var holidayWorkByEmp = attendanceData2
+                    .Where(c => holidayDaySetGet.Contains(c.NgayChamCong.Day))
+                    .GroupBy(c => c.MaNhanVien)
+                    .ToDictionary(g => g.Key, g => g.Sum(c => c.NgayCong));
+
                 var fullList = new List<BangLuong>();
                 foreach (var emp in employees)
                 {
                     var saved = savedPayrolls.FirstOrDefault(p => p.MaNhanVien == emp.MaNhanVien);
+                    double ngayLamLe = holidayWorkByEmp.TryGetValue(emp.MaNhanVien, out var hl) ? hl : 0;
                     if (saved != null)
                     {
                         saved.NhanVien       = emp;
@@ -356,6 +371,11 @@ namespace HRApi.Controllers
                         saved.NghiKhongLuong = attendanceSummary.TryGetValue(emp.MaNhanVien, out var b) ? b.NghiKhongLuong : 0;
                         saved.NghiKhongPhep  = attendanceSummary.TryGetValue(emp.MaNhanVien, out var c) ? c.NghiKhongPhep  : 0;
                         saved.LamNuaNgay     = attendanceSummary.TryGetValue(emp.MaNhanVien, out var d) ? d.LamNuaNgay     : 0;
+                        saved.SoNgayLamLe    = ngayLamLe;
+                        // TienLamLe = dailyRate × ngayLamLe × (heSoLe-1) — phần tăng thêm so với ngày thường
+                        decimal dailyRateEmp = saved.LuongCoBan > 0 && congChuanThang > 0
+                            ? saved.LuongCoBan / congChuanThang : 0;
+                        saved.TienLamLe      = Math.Round(dailyRateEmp * (decimal)ngayLamLe * (3m - 1m), 0); // phần extra 2x
                         if (saved.SoCongChuanTrongThang == 0) saved.SoCongChuanTrongThang = congChuanThang;
                         fullList.Add(saved);
                     }
@@ -411,6 +431,7 @@ namespace HRApi.Controllers
                     x.TongNgayCong, x.TongGioOT, x.TongCongChuanOT,
                     x.TongPhuCap, x.TienAn, x.TienGuiXe, x.TienChuyenCan,
                     x.NghiCoPhep, x.NghiKhongLuong, x.NghiKhongPhep, x.LamNuaNgay,
+                    x.SoNgayLamLe, x.TienLamLe,
                     x.LuongChinh, x.LuongOT,
                     x.KhauTruBHXH, x.KhauTruBHYT, x.KhauTruBHTN,
                     x.ThueTNCN, x.KhoanTruKhac, x.LyDoKhac,

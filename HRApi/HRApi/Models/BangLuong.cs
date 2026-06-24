@@ -49,10 +49,14 @@ namespace HRApi.Models
         public int NghiKhongPhep { get; set; }
         [NotMapped]
         public int LamNuaNgay { get; set; }
-
-        // [MỚI] Nghỉ không lương (có đơn)
         [NotMapped]
         public int NghiKhongLuong { get; set; }
+
+        // Ngày lễ làm việc + tiền lương ngày lễ (tính động, không lưu DB)
+        [NotMapped]
+        public double SoNgayLamLe { get; set; }
+        [NotMapped]
+        public decimal TienLamLe { get; set; }
 
         // --- 3. TÍNH TOÁN CHI TIẾT ---
         [Column(TypeName = "decimal(18,2)")]
