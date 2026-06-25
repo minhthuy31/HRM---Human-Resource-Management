@@ -110,6 +110,7 @@ const PayrollPage = () => {
           tienLamLe: item.tienLamLe || 0,
           luongChinh: item.luongChinh || 0,
           luongOT: item.luongOT || 0,
+          luongLamThemLe: item.luongLamThemLe || 0,
           tienAn: item.tienAn || 0,
           tienGuiXe: item.tienGuiXe || 0,
           tienChuyenCan: item.tienChuyenCan || 0,
@@ -388,7 +389,7 @@ const PayrollPage = () => {
                     <th colSpan={9} className="group-header bg-blue-light">
                       Chấm công
                     </th>
-                    <th colSpan={6} className="group-header bg-green-light">
+                    <th colSpan={7} className="group-header bg-green-light">
                       Thu nhập
                     </th>
                     <th colSpan={4} className="group-header bg-red-light">
@@ -436,13 +437,20 @@ const PayrollPage = () => {
                       KP
                     </th>
                     <th className="sub-th">1/2</th>
-                    <th className="sub-th" style={{ color: "#dc2626" }} title="Số ngày đi làm trong ngày lễ (hưởng 3x lương)">
+                    <th className="sub-th" style={{ color: "#dc2626" }} title="Số ngày đi làm trong ngày lễ (hưởng 400% = 100% nguyên lương + 300% làm thêm)">
                       Lễ
                     </th>
 
                     <th className="sub-th">Lương Chính</th>
                     <th className="sub-th" style={{ color: "#d97706" }}>
                       Tiền OT
+                    </th>
+                    <th
+                      className="sub-th"
+                      style={{ color: "#dc2626" }}
+                      title="Tiền làm thêm ngày lễ (phần 300% — chưa gồm 100% nguyên lương đã nằm trong Lương Chính)"
+                    >
+                      Lương Lễ
                     </th>
                     <th className="sub-th" title="Tiền ăn (50k/ngày công)">
                       T.Ăn
@@ -516,7 +524,7 @@ const PayrollPage = () => {
                         <td
                           className="text-center"
                           style={{ color: "#dc2626", fontWeight: p.soNgayLamLe > 0 ? 700 : 400 }}
-                          title={p.soNgayLamLe > 0 ? `Tiền lương ngày lễ (x3): +${p.tienLamLe.toLocaleString("vi-VN")}đ` : "Không có ngày lễ"}
+                          title={p.soNgayLamLe > 0 ? `Tiền làm thêm ngày lễ (300%): +${p.tienLamLe.toLocaleString("vi-VN")}đ` : "Không có ngày lễ"}
                         >
                           {p.soNgayLamLe > 0 ? p.soNgayLamLe : "-"}
                         </td>
@@ -526,6 +534,9 @@ const PayrollPage = () => {
                         </td>
                         <td className="text-right" style={{ color: "#d97706" }}>
                           {formatMoney(p.luongOT)}
+                        </td>
+                        <td className="text-right text-sm" style={{ color: "#dc2626" }}>
+                          {p.luongLamThemLe > 0 ? formatMoney(p.luongLamThemLe) : "-"}
                         </td>
                         <td className="text-right text-sm">
                           {p.tienAn > 0 ? formatMoney(p.tienAn) : "-"}
@@ -628,7 +639,7 @@ const PayrollPage = () => {
                   ) : (
                     <tr>
                       <td
-                        colSpan="23"
+                        colSpan="24"
                         className="text-center"
                         style={{ padding: "30px 0" }}
                       >

@@ -75,6 +75,10 @@ namespace HRApi.Controllers
                 settings.HeSoOTCuoiTuan = updatedSettings.HeSoOTCuoiTuan;
                 settings.HeSoOTNgayLe = updatedSettings.HeSoOTNgayLe;
 
+                settings.GioOTToiDaNgay = updatedSettings.GioOTToiDaNgay;
+                settings.GioOTToiDaThang = updatedSettings.GioOTToiDaThang;
+                settings.GioOTToiDaNam = updatedSettings.GioOTToiDaNam;
+
                 settings.TienAnMoiNgay = updatedSettings.TienAnMoiNgay;
                 settings.TienGuiXeThang = updatedSettings.TienGuiXeThang;
                 settings.TienChuyenCan = updatedSettings.TienChuyenCan;

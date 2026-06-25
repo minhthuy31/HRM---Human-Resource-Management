@@ -62,6 +62,9 @@ const SystemSettingsPage = () => {
     heSoOTNgayThuong: 1.5,
     heSoOTCuoiTuan: 2.0,
     heSoOTNgayLe: 3.0,
+    gioOTToiDaNgay: 4,
+    gioOTToiDaThang: 40,
+    gioOTToiDaNam: 200,
     tienAnMoiNgay: 50000,
     tienGuiXeThang: 150000,
     tienChuyenCan: 500000,
@@ -166,6 +169,9 @@ const SystemSettingsPage = () => {
             heSoOTNgayThuong: Number(settings.heSoOTNgayThuong) || 1.5,
             heSoOTCuoiTuan: Number(settings.heSoOTCuoiTuan) || 2.0,
             heSoOTNgayLe: Number(settings.heSoOTNgayLe) || 3.0,
+            gioOTToiDaNgay: Number(settings.gioOTToiDaNgay) || 4,
+            gioOTToiDaThang: Number(settings.gioOTToiDaThang) || 40,
+            gioOTToiDaNam: Number(settings.gioOTToiDaNam) || 200,
             tienAnMoiNgay: Number(settings.tienAnMoiNgay) || 50000,
             tienGuiXeThang: Number(settings.tienGuiXeThang) || 150000,
             tienChuyenCan: Number(settings.tienChuyenCan) || 500000,
@@ -465,6 +471,65 @@ const SystemSettingsPage = () => {
                       value={
                         settings.heSoOTNgayLe !== undefined
                           ? settings.heSoOTNgayLe
+                          : ""
+                      }
+                      onChange={handleChange}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                </div>
+
+                <h3
+                  style={{
+                    color: "#0c4a6e",
+                    fontSize: "16px",
+                    marginTop: "25px",
+                    borderBottom: "1px solid #e0f2fe",
+                    paddingBottom: "10px",
+                  }}
+                >
+                  Giới hạn làm thêm giờ (Điều 107 BLLĐ 2019)
+                </h3>
+                <div className="form-row-3" style={{ marginTop: "15px" }}>
+                  <div className="form-group">
+                    <label>OT tối đa / ngày (giờ)</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      name="gioOTToiDaNgay"
+                      value={
+                        settings.gioOTToiDaNgay !== undefined
+                          ? settings.gioOTToiDaNgay
+                          : ""
+                      }
+                      onChange={handleChange}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>OT tối đa / tháng (giờ)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      name="gioOTToiDaThang"
+                      value={
+                        settings.gioOTToiDaThang !== undefined
+                          ? settings.gioOTToiDaThang
+                          : ""
+                      }
+                      onChange={handleChange}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>OT tối đa / năm (giờ)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      name="gioOTToiDaNam"
+                      value={
+                        settings.gioOTToiDaNam !== undefined
+                          ? settings.gioOTToiDaNam
                           : ""
                       }
                       onChange={handleChange}

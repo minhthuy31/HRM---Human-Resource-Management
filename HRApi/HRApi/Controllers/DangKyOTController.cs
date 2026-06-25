@@ -45,6 +45,51 @@ namespace HRApi.Controllers
 
                 var soGio = (tKetThuc - tBatDau).TotalHours;
 
+                // ── KIỂM TRA GIỚI HẠN OT (Điều 107 BLLĐ 2019) ──
+                var sys = await _context.SystemSettings.FirstOrDefaultAsync();
+                double gioToiDaNgayThuong = sys?.GioOTToiDaNgay > 0 ? sys.GioOTToiDaNgay : 4;
+                double gioToiDaThang      = sys?.GioOTToiDaThang > 0 ? sys.GioOTToiDaThang : 40;
+                double gioToiDaNam        = sys?.GioOTToiDaNam > 0 ? sys.GioOTToiDaNam : 200;
+
+                // Xác định ngày lễ / cuối tuần để áp trần giờ/ngày phù hợp
+                var ngayLamThemDate = dto.NgayLamThem.Date;
+                bool isNgayLe = await _context.NgayLes.AnyAsync(nl => nl.Date.Date == ngayLamThemDate);
+                bool isCuoiTuan = ngayLamThemDate.DayOfWeek == DayOfWeek.Saturday ||
+                                  ngayLamThemDate.DayOfWeek == DayOfWeek.Sunday;
+
+                // Trần giờ/ngày: ngày thường ≤ giới hạn cấu hình; lễ/cuối tuần ≤ 12h (BLLĐ cho phép tới 12h)
+                double tranGioNgay = (isNgayLe || isCuoiTuan) ? 12 : gioToiDaNgayThuong;
+
+                // Tổng giờ OT đã có trong cùng ngày (các đơn chưa bị từ chối)
+                double gioDaCoTrongNgay = await _context.DangKyOTs
+                    .Where(o => o.MaNhanVien == maNV
+                             && o.NgayLamThem.Date == ngayLamThemDate
+                             && o.TrangThai != "Từ chối")
+                    .SumAsync(o => o.SoGio);
+
+                if (gioDaCoTrongNgay + soGio > tranGioNgay)
+                    return BadRequest(new { message = $"Vượt giới hạn OT trong ngày ({tranGioNgay}h). Đã đăng ký {gioDaCoTrongNgay}h, đơn này {soGio}h." });
+
+                // Tổng giờ OT trong tháng (đã duyệt + chờ duyệt)
+                double gioDaCoTrongThang = await _context.DangKyOTs
+                    .Where(o => o.MaNhanVien == maNV
+                             && o.NgayLamThem.Year == ngayLamThemDate.Year
+                             && o.NgayLamThem.Month == ngayLamThemDate.Month
+                             && o.TrangThai != "Từ chối")
+                    .SumAsync(o => o.SoGio);
+
+                if (gioDaCoTrongThang + soGio > gioToiDaThang)
+                    return BadRequest(new { message = $"Vượt giới hạn OT trong tháng ({gioToiDaThang}h). Đã đăng ký {gioDaCoTrongThang}h, đơn này {soGio}h." });
+
+                // Tổng giờ OT trong năm — chỉ CẢNH BÁO, vẫn cho gửi (ngoại lệ 300h tùy ngành)
+                double gioDaCoTrongNam = await _context.DangKyOTs
+                    .Where(o => o.MaNhanVien == maNV
+                             && o.NgayLamThem.Year == ngayLamThemDate.Year
+                             && o.TrangThai != "Từ chối")
+                    .SumAsync(o => o.SoGio);
+
+                bool vuotGioiHanNam = gioDaCoTrongNam + soGio > gioToiDaNam;
+
                 var otRequest = new DangKyOT
                 {
                     MaNhanVien = maNV,
@@ -59,7 +104,14 @@ namespace HRApi.Controllers
 
                 _context.DangKyOTs.Add(otRequest);
                 await _context.SaveChangesAsync();
-                
+
+                if (vuotGioiHanNam)
+                    return Ok(new
+                    {
+                        message = "Đăng ký OT thành công",
+                        warning = $"Cảnh báo: Tổng OT năm ({gioDaCoTrongNam + soGio}h) đã vượt giới hạn {gioToiDaNam}h. Cần xác nhận thuộc ngành nghề được phép làm thêm tới 300h/năm."
+                    });
+
                 return Ok(new { message = "Đăng ký OT thành công" });
             }
             catch(Exception ex)

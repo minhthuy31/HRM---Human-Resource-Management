@@ -120,6 +120,8 @@ const MyPayslipPage = () => {
       lamNuaNgay:     p.lamNuaNgay ?? 0,
       luongChinh:     p.luongChinh ?? 0,
       luongOT:        p.luongOT ?? 0,
+      luongLamThemLe: p.luongLamThemLe ?? 0,
+      soNgayLamLe:    p.soNgayLamLe ?? 0,
       tongThuNhap:    p.tongThuNhap ?? 0,
       khauTruBHXH:    p.khauTruBHXH ?? 0,
       khauTruBHYT:    p.khauTruBHYT ?? 0,
@@ -184,6 +186,12 @@ const MyPayslipPage = () => {
               <div className="detail-row indent">
                 <span>Lương tăng ca ({d.tongGioOT} giờ)</span>
                 <span className="amount">{formatCurrency(d.luongOT)}</span>
+              </div>
+            )}
+            {d.luongLamThemLe > 0 && (
+              <div className="detail-row indent">
+                <span>Làm thêm ngày lễ ({d.soNgayLamLe} ngày × 300%)</span>
+                <span className="amount">{formatCurrency(d.luongLamThemLe)}</span>
               </div>
             )}
 

@@ -129,6 +129,7 @@ namespace HRApi.Controllers
                     .OrderBy(h => h.NgayBatDau).ToList();
 
                 decimal totalLuongChinh = 0, totalLuongOT = 0, totalLuongDongBH = 0;
+                decimal totalLuongLamThemLe = 0;
                 double  totalWorkDays = 0, totalOTHours = 0;
                 decimal totalCongChuanOT = 0;
                 decimal finalLuongCoBan = emp.LuongCoBan;
@@ -168,9 +169,12 @@ namespace HRApi.Controllers
                         // Lương chính (thử việc = 85% lương cơ bản)
                         decimal dailyRate    = contract.LuongCoBan * salaryMultiplier / standardWorkDays;
                         decimal luongThuong  = dailyRate * (decimal)normalNgayCong;
-                        decimal luongNghiLe  = dailyRate * (decimal)leNghiONha;
-                        decimal luongDiLamLe = dailyRate * (decimal)holidayWorkCong * heSoOtLe;
-                        totalLuongChinh += luongThuong + luongNghiLe + luongDiLamLe;
+                        // 100% nguyên lương cho TẤT CẢ ngày lễ (cả nghỉ ở nhà lẫn đi làm) → thuộc lương chính
+                        decimal luongNghiLe  = dailyRate * (decimal)(leNghiONha + holidayWorkCong);
+                        totalLuongChinh += luongThuong + luongNghiLe;
+                        // Tiền làm thêm ngày lễ: 300% (heSoOtLe) — tách riêng khỏi lương chính (Điều 98 BLLĐ)
+                        decimal luongLamThemLe = dailyRate * (decimal)holidayWorkCong * heSoOtLe;
+                        totalLuongLamThemLe += luongLamThemLe;
 
                         // OT — quy đổi sang công chuẩn OT
                         decimal hourlyRate = dailyRate / 8m;
@@ -235,7 +239,7 @@ namespace HRApi.Controllers
                     ? activeContracts.All(c => c.LoaiHopDong?.Contains("thử việc", StringComparison.OrdinalIgnoreCase) == true)
                     : emp.LoaiNhanVien?.Contains("thử việc", StringComparison.OrdinalIgnoreCase) == true;
 
-                decimal tongThuNhap = totalLuongChinh + totalLuongOT + tongPhuCap;
+                decimal tongThuNhap = totalLuongChinh + totalLuongOT + totalLuongLamThemLe + tongPhuCap;
                 decimal thueTNCN;
                 if (empIsThuViec)
                 {
@@ -266,6 +270,7 @@ namespace HRApi.Controllers
                     TongCongChuanOT     = Math.Round(totalCongChuanOT, 2),
                     LuongChinh          = Math.Round(totalLuongChinh, 0),
                     LuongOT             = Math.Round(totalLuongOT, 0),
+                    LuongLamThemLe      = Math.Round(totalLuongLamThemLe, 0),
                     KhauTruBHXH         = Math.Round(khauBHXH, 0),
                     KhauTruBHYT         = Math.Round(khauBHYT, 0),
                     KhauTruBHTN         = Math.Round(khauBHTN, 0),
@@ -372,10 +377,8 @@ namespace HRApi.Controllers
                         saved.NghiKhongPhep  = attendanceSummary.TryGetValue(emp.MaNhanVien, out var c) ? c.NghiKhongPhep  : 0;
                         saved.LamNuaNgay     = attendanceSummary.TryGetValue(emp.MaNhanVien, out var d) ? d.LamNuaNgay     : 0;
                         saved.SoNgayLamLe    = ngayLamLe;
-                        // TienLamLe = dailyRate × ngayLamLe × (heSoLe-1) — phần tăng thêm so với ngày thường
-                        decimal dailyRateEmp = saved.LuongCoBan > 0 && congChuanThang > 0
-                            ? saved.LuongCoBan / congChuanThang : 0;
-                        saved.TienLamLe      = Math.Round(dailyRateEmp * (decimal)ngayLamLe * (3m - 1m), 0); // phần extra 2x
+                        // TienLamLe hiển thị = phần làm thêm ngày lễ 300% (đã lưu sẵn trong LuongLamThemLe)
+                        saved.TienLamLe      = saved.LuongLamThemLe;
                         if (saved.SoCongChuanTrongThang == 0) saved.SoCongChuanTrongThang = congChuanThang;
                         fullList.Add(saved);
                     }
@@ -432,7 +435,7 @@ namespace HRApi.Controllers
                     x.TongPhuCap, x.TienAn, x.TienGuiXe, x.TienChuyenCan,
                     x.NghiCoPhep, x.NghiKhongLuong, x.NghiKhongPhep, x.LamNuaNgay,
                     x.SoNgayLamLe, x.TienLamLe,
-                    x.LuongChinh, x.LuongOT,
+                    x.LuongChinh, x.LuongOT, x.LuongLamThemLe,
                     x.KhauTruBHXH, x.KhauTruBHYT, x.KhauTruBHTN,
                     x.ThueTNCN, x.KhoanTruKhac, x.LyDoKhac,
                     x.TongThuNhap, x.ThucLanh, x.DaChot

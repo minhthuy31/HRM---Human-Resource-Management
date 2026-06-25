@@ -245,8 +245,11 @@ const EmployeeHomePage = () => {
             : data.gioKetThuc,
       };
 
-      await api.post("/DangKyOT", payload);
+      const res = await api.post("/DangKyOT", payload);
       showToast("Đăng ký làm thêm giờ thành công!");
+      if (res.data?.warning) {
+        showToast(res.data.warning, "warning");
+      }
       setIsOTModalOpen(false);
     } catch (error) {
       const errorMessage =

@@ -65,6 +65,10 @@ namespace HRApi.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal LuongOT { get; set; }
 
+        // Tiền lương làm thêm ngày lễ (phần 300% làm thêm — KHÔNG gồm 100% nguyên lương ngày lễ đã nằm trong LuongChinh)
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal LuongLamThemLe { get; set; }
+
         // --- 4. CÁC KHOẢN KHẤU TRỪ ---
         [Column(TypeName = "decimal(18,2)")]
         public decimal KhauTruBHXH { get; set; }
