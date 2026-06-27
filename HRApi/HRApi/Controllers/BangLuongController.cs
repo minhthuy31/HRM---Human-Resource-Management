@@ -139,11 +139,21 @@ namespace HRApi.Controllers
 
                 if (activeContracts != null && activeContracts.Any())
                 {
-                    foreach (var contract in activeContracts)
+                    for (int ci = 0; ci < activeContracts.Count; ci++)
                     {
+                        var contract = activeContracts[ci];
                         DateTime periodStart = contract.NgayBatDau > monthStart ? contract.NgayBatDau : monthStart;
                         DateTime periodEnd   = (contract.NgayKetThuc.HasValue && contract.NgayKetThuc.Value < monthEnd.AddDays(-1))
                                               ? contract.NgayKetThuc.Value : monthEnd.AddDays(-1);
+
+                        // Chống đếm trùng ngày khi hợp đồng chồng lấn:
+                        // HĐ bắt đầu sau sẽ thay thế HĐ trước cho những ngày trùng nhau.
+                        if (ci + 1 < activeContracts.Count)
+                        {
+                            DateTime boundary = activeContracts[ci + 1].NgayBatDau.AddDays(-1);
+                            if (boundary < periodEnd) periodEnd = boundary;
+                        }
+                        if (periodEnd < periodStart) continue; // HĐ bị thay thế hoàn toàn trong tháng
 
                         var periodAtt = empAtt.Where(c => c.NgayChamCong.Date >= periodStart.Date && c.NgayChamCong.Date <= periodEnd.Date).ToList();
                         var periodOT  = empOT.Where(o => o.NgayLamThem.Date >= periodStart.Date && o.NgayLamThem.Date <= periodEnd.Date).ToList();
@@ -212,11 +222,19 @@ namespace HRApi.Controllers
                     totalLuongDongBH = isThuViec ? 0 : totalLuongChinh;
                 }
 
-                // ── PHỤ CẤP ──
+                // ── PHỤ CẤP (tính theo SỐ NGÀY ĐI LÀM, đi nửa buổi cũng tính trọn 1 ngày) ──
+                // Ngày đi làm = ngày có check-in HOẶC ngày công > 0 thuộc loại Làm việc / Công tác.
+                int soNgayDiLam = empAtt.Count(c =>
+                    c.GioCheckIn != null
+                    || (c.NgayCong > 0 && (c.LoaiNgayCong == "Làm việc" || c.LoaiNgayCong == "Công tác")));
+
+                const double DUNG_SAI_CHUYEN_CAN = 2; // thiếu tối đa 2 ngày so với công chuẩn vẫn đủ chuyên cần
+
                 decimal dailyXe       = standardWorkDays > 0 ? tienGuiXeThang / standardWorkDays : 0;
-                decimal calcTienAn    = Math.Round(tienAnMoiNgay   * (decimal)totalWorkDays, 0);
-                decimal calcTienXe    = Math.Round(dailyXe         * (decimal)totalWorkDays, 0);
-                decimal calcChuyenCan = totalWorkDays >= (double)standardWorkDays ? tienChuyenCanMax : 0m;
+                decimal calcTienAn    = Math.Round(tienAnMoiNgay * soNgayDiLam, 0);
+                decimal calcTienXe    = Math.Round(dailyXe       * soNgayDiLam, 0);
+                decimal calcChuyenCan = soNgayDiLam >= (double)standardWorkDays - DUNG_SAI_CHUYEN_CAN
+                                        ? tienChuyenCanMax : 0m;
 
                 decimal tongPhuCap = calcTienAn + calcTienXe + calcChuyenCan;
 
