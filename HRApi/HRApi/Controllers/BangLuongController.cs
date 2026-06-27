@@ -163,7 +163,11 @@ namespace HRApi.Controllers
                         decimal salaryMultiplier = isThuViec ? 0.85m : 1.0m;
 
                         // Tách ngày lễ / ngày thường — so sánh theo Day để tránh DateTime Kind mismatch
-                        var normalAtt  = periodAtt.Where(c => !holidayDaySet.Contains(c.NgayChamCong.Day)).ToList();
+                        // CÔNG THƯỜNG chỉ tính T2-T6 không phải lễ. Chấm công T7/CN KHÔNG vào công thường
+                        // (làm cuối tuần phải qua đơn OT hệ số 2.0).
+                        var normalAtt  = periodAtt.Where(c => !holidayDaySet.Contains(c.NgayChamCong.Day)
+                                                           && c.NgayChamCong.DayOfWeek != DayOfWeek.Saturday
+                                                           && c.NgayChamCong.DayOfWeek != DayOfWeek.Sunday).ToList();
                         var holidayAtt = periodAtt.Where(c =>  holidayDaySet.Contains(c.NgayChamCong.Day)).ToList();
 
                         double normalNgayCong  = normalAtt.Sum(c => c.NgayCong);
