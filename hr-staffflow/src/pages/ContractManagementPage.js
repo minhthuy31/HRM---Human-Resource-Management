@@ -140,10 +140,10 @@ const ContractManagementPage = () => {
     try {
       const id = encodeURIComponent(soHopDong);
       await api.delete(`/HopDong?id=${id}`);
-      showToast("Xóa hợp đồng thành công!");
+      showToast("Đã vô hiệu hóa hợp đồng!");
       fetchContracts();
     } catch (err) {
-      const msg = err.response?.data?.message || "Có lỗi xảy ra khi xóa.";
+      const msg = err.response?.data?.message || "Có lỗi xảy ra khi vô hiệu hóa.";
       showToast("Lỗi: " + msg, "error");
     }
   };
@@ -224,10 +224,10 @@ const ContractManagementPage = () => {
               background: "#fff", borderRadius: "12px", padding: "28px 32px",
               boxShadow: "0 8px 32px rgba(0,0,0,0.18)", minWidth: "320px", textAlign: "center",
             }}>
-              <div style={{ fontSize: "40px", marginBottom: "12px" }}>🗑️</div>
-              <p style={{ fontSize: "15px", fontWeight: 600, marginBottom: "6px" }}>Xác nhận xóa hợp đồng</p>
+              <div style={{ fontSize: "40px", marginBottom: "12px" }}>🚫</div>
+              <p style={{ fontSize: "15px", fontWeight: 600, marginBottom: "6px" }}>Xác nhận vô hiệu hóa hợp đồng</p>
               <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "20px" }}>
-                Hợp đồng <strong>{confirmDelete}</strong> sẽ bị xóa vĩnh viễn.
+                Hợp đồng <strong>{confirmDelete}</strong> sẽ chuyển sang trạng thái <strong>Đã chấm dứt</strong> (không bị xóa khỏi hệ thống).
               </p>
               <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
                 <button onClick={() => setConfirmDelete(null)}
@@ -236,7 +236,7 @@ const ContractManagementPage = () => {
                 </button>
                 <button onClick={handleConfirmDelete}
                   style={{ padding: "8px 20px", borderRadius: "6px", border: "none", background: "#dc2626", color: "#fff", cursor: "pointer", fontWeight: 600 }}>
-                  Xóa
+                  Vô hiệu hóa
                 </button>
               </div>
             </div>
@@ -378,7 +378,7 @@ const ContractManagementPage = () => {
                               <button
                                 className="icon-btn delete"
                                 onClick={() => handleDelete(c.soHopDong)}
-                                title="Xóa"
+                                title="Vô hiệu hóa (chấm dứt)"
                               >
                                 <FaTrash />
                               </button>

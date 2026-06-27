@@ -201,15 +201,20 @@ namespace HRApi.Controllers
         }
 
         // DELETE: api/HopDong
+        // Vô hiệu hóa (soft-delete) thay vì xóa cứng — chuyển hợp đồng về trạng thái
+        // "Đã chấm dứt", giữ lịch sử để bảng lương đã chốt vẫn tham chiếu được.
         [HttpDelete]
         [Authorize(Roles = "Giám đốc,Nhân sự trưởng")]
         public async Task<IActionResult> DeleteHopDong([FromQuery] string id)
         {
             var hd = await _context.HopDongs.FindAsync(id);
             if (hd == null) return NotFound(new { message = "Không tìm thấy hợp đồng." });
-            _context.HopDongs.Remove(hd);
+            if (hd.TrangThai == "DaChamDut")
+                return BadRequest(new { message = "Hợp đồng đã ở trạng thái Đã chấm dứt." });
+
+            hd.TrangThai = "DaChamDut";
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Đã xóa hợp đồng" });
+            return Ok(new { message = "Đã vô hiệu hóa (chấm dứt) hợp đồng." });
         }
 
         // GET: api/NhanVien/GiamDoc
