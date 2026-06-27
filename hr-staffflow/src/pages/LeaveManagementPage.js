@@ -150,9 +150,12 @@ const RequestManagementPage = () => {
   const user = getUserFromToken();
   const userRole = user?.role || user?.Role || "";
 
-  const canApprove = ["Trưởng phòng", "Giám đốc", "Tổng giám đốc"].includes(
-    userRole,
-  );
+  const canApprove = [
+    "Trưởng phòng",
+    "Giám đốc",
+    "Tổng giám đốc",
+    "Nhân sự trưởng",
+  ].includes(userRole);
 
   const canViewAllAndFilter = [
     "Giám đốc",

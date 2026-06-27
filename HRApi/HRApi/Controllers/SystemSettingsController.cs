@@ -27,7 +27,8 @@ namespace HRApi.Controllers
                 settings = new SystemSetting
                 {
                     TenCongTy = "",
-                    MucLuongCoSo = 1800000,
+                    MucLuongCoSo = 2530000,
+                    LuongToiThieuVung = 5310000,
                     HeSoOTNgayThuong = 1.5,
                     HeSoOTCuoiTuan = 2.0,
                     HeSoOTNgayLe = 3.0
@@ -66,6 +67,7 @@ namespace HRApi.Controllers
                 settings.NgayPhepTieuChuan = updatedSettings.NgayPhepTieuChuan;
 
                 settings.MucLuongCoSo = updatedSettings.MucLuongCoSo;
+                settings.LuongToiThieuVung = updatedSettings.LuongToiThieuVung;
                 settings.PhanTramBHXHCompany = updatedSettings.PhanTramBHXHCompany;
                 settings.PhanTramBHXHEmployee = updatedSettings.PhanTramBHXHEmployee;
                 settings.GiamTruGiaCanh = updatedSettings.GiamTruGiaCanh;

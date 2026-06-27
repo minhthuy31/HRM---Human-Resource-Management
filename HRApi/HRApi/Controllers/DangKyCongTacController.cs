@@ -129,13 +129,20 @@ namespace HRApi.Controllers
             return Ok(result);
         }
 
-        // --- DUYỆT ĐƠN (Chỉ Trưởng phòng & Giám đốc) ---
+        // --- DUYỆT ĐƠN (Trưởng phòng, Giám đốc & Nhân sự trưởng) ---
         [HttpPost("approve/{id}")]
-        [Authorize(Roles = "Trưởng phòng,Giám đốc")] // Bỏ Kế toán, HR
+        [Authorize(Roles = "Trưởng phòng,Giám đốc,Nhân sự trưởng")]
         public async Task<IActionResult> Approve(int id)
         {
             var req = await _context.DangKyCongTacs.Include(d => d.NhanVien).FirstOrDefaultAsync(d => d.Id == id);
             if (req == null || req.TrangThai != "Chờ duyệt") return NotFound("Đơn không hợp lệ.");
+
+            // Kiểm tra bảng công đã bị khóa chưa (sau khi khóa không được sửa chấm công)
+            var isLocked = await _context.KhoaCongs.AnyAsync(k =>
+                k.Nam == req.NgayBatDau.Year &&
+                k.Thang == req.NgayBatDau.Month &&
+                k.IsLocked);
+            if (isLocked) return BadRequest(new { message = "Bảng công tháng đó đã bị khóa, không thể duyệt đơn." });
 
             var currentUserRole = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role")?.Value;
             var currentUserMaPhongBan = User.Claims.FirstOrDefault(c => c.Type == "MaPhongBan")?.Value;
@@ -182,9 +189,9 @@ namespace HRApi.Controllers
             return Ok(new { message = "Đã duyệt đơn công tác." });
         }
 
-        // --- TỪ CHỐI ĐƠN (Chỉ Trưởng phòng & Giám đốc) ---
+        // --- TỪ CHỐI ĐƠN (Trưởng phòng, Giám đốc & Nhân sự trưởng) ---
         [HttpPost("reject/{id}")]
-        [Authorize(Roles = "Trưởng phòng,Giám đốc")] // Bỏ Kế toán, HR
+        [Authorize(Roles = "Trưởng phòng,Giám đốc,Nhân sự trưởng")]
         public async Task<IActionResult> Reject(int id, [FromBody] RejectDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto?.LyDoTuChoi))

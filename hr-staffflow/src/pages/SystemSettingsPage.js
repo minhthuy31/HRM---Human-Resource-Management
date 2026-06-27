@@ -55,6 +55,7 @@ const SystemSettingsPage = () => {
     soPhutDiMuonChoPhep: 15,
     ngayPhepTieuChuan: 12,
     mucLuongCoSo: 2530000,
+    luongToiThieuVung: 5310000,
     phanTramBHXHCompany: 21.5,
     phanTramBHXHEmployee: 10.5,
     giamTruGiaCanh: 11000000,
@@ -162,6 +163,7 @@ const SystemSettingsPage = () => {
             soPhutDiMuonChoPhep: Number(settings.soPhutDiMuonChoPhep) || 0,
             ngayPhepTieuChuan: Number(settings.ngayPhepTieuChuan) || 0,
             mucLuongCoSo: Number(settings.mucLuongCoSo) || 0,
+            luongToiThieuVung: Number(settings.luongToiThieuVung) || 0,
             phanTramBHXHCompany: Number(settings.phanTramBHXHCompany) || 0,
             phanTramBHXHEmployee: Number(settings.phanTramBHXHEmployee) || 0,
             giamTruGiaCanh: Number(settings.giamTruGiaCanh) || 0,
@@ -719,19 +721,41 @@ const SystemSettingsPage = () => {
             {activeTab === "payroll" /* Giữ nguyên ... */ && (
               <div className="settings-panel">
                 <h2>Cấu hình Thuế & Bảo hiểm</h2>
-                <div className="form-group">
-                  <label>Mức lương cơ sở (VNĐ)</label>
-                  <input
-                    type="number"
-                    name="mucLuongCoSo"
-                    value={
-                      settings.mucLuongCoSo !== undefined
-                        ? settings.mucLuongCoSo
-                        : ""
-                    }
-                    onChange={handleChange}
-                    disabled={!canEdit}
-                  />
+                <div className="form-row-2">
+                  <div className="form-group">
+                    <label>Mức lương cơ sở (VNĐ)</label>
+                    <input
+                      type="number"
+                      name="mucLuongCoSo"
+                      value={
+                        settings.mucLuongCoSo !== undefined
+                          ? settings.mucLuongCoSo
+                          : ""
+                      }
+                      onChange={handleChange}
+                      disabled={!canEdit}
+                    />
+                    <small style={{ color: "#6b7280", fontSize: "12px" }}>
+                      Trần BHXH/BHYT = 20 × mức này
+                    </small>
+                  </div>
+                  <div className="form-group">
+                    <label>Lương tối thiểu vùng I (VNĐ)</label>
+                    <input
+                      type="number"
+                      name="luongToiThieuVung"
+                      value={
+                        settings.luongToiThieuVung !== undefined
+                          ? settings.luongToiThieuVung
+                          : ""
+                      }
+                      onChange={handleChange}
+                      disabled={!canEdit}
+                    />
+                    <small style={{ color: "#6b7280", fontSize: "12px" }}>
+                      Trần BHTN = 20 × mức này (NĐ 293/2025: 5.310.000)
+                    </small>
+                  </div>
                 </div>
                 <div className="form-row-2">
                   <div className="form-group">

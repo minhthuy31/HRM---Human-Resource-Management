@@ -22,7 +22,8 @@ namespace HRApi.Models
         public int NgayPhepTieuChuan { get; set; }
 
         // Lương thuế
-        public decimal MucLuongCoSo { get; set; }
+        public decimal MucLuongCoSo { get; set; }          // Trần BHXH/BHYT = 20 × MucLuongCoSo
+        public decimal LuongToiThieuVung { get; set; } = 5_310_000m; // Vùng I (NĐ 293/2025) - Trần BHTN = 20 × giá trị này
         public double PhanTramBHXHCompany { get; set; }
         public double PhanTramBHXHEmployee { get; set; }
         public decimal GiamTruGiaCanh { get; set; }

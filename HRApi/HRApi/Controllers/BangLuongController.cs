@@ -228,8 +228,10 @@ namespace HRApi.Controllers
                 decimal khauBHXH    = Math.Round(luongBHXHYT * 0.08m, 0);
                 decimal khauBHYT    = Math.Round(luongBHXHYT * 0.015m, 0);
 
-                // Trần BHTN: 20 × lương tối thiểu vùng I (4.960.000 × 20 = 99.200.000)
-                decimal luongBHTN = Math.Min(totalLuongDongBH, 99_200_000m);
+                // Trần BHTN: 20 × lương tối thiểu vùng I (NĐ 293/2025: 5.310.000 × 20 = 106.200.000)
+                decimal luongToiThieuVung = sys?.LuongToiThieuVung > 0 ? sys.LuongToiThieuVung : 5_310_000m;
+                decimal tranBHTN  = luongToiThieuVung * 20m;
+                decimal luongBHTN = Math.Min(totalLuongDongBH, tranBHTN);
                 decimal khauBHTN  = Math.Round(luongBHTN * 0.01m, 0);
 
                 decimal tongBH = khauBHXH + khauBHYT + khauBHTN;
