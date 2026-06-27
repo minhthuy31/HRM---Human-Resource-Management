@@ -52,7 +52,7 @@ const ContractManagementPage = () => {
 
       const res = await api.get(url);
       const sorted = [...(res.data || [])].sort((a, b) =>
-        (a.hoTenNhanVien || "").localeCompare(b.hoTenNhanVien || "", "vi")
+        (a.hoTenNhanVien || "").localeCompare(b.hoTenNhanVien || "", "vi"),
       );
       setContracts(sorted);
     } catch (err) {
@@ -120,7 +120,11 @@ const ContractManagementPage = () => {
       } else {
         await api.post("/HopDong", payload, config);
       }
-      showToast(isUpdate ? "Cập nhật hợp đồng thành công!" : "Tạo hợp đồng mới thành công!");
+      showToast(
+        isUpdate
+          ? "Cập nhật hợp đồng thành công!"
+          : "Tạo hợp đồng mới thành công!",
+      );
       setIsModalOpen(false);
       setEditingContract(null);
       fetchContracts();
@@ -143,7 +147,8 @@ const ContractManagementPage = () => {
       showToast("Đã vô hiệu hóa hợp đồng!");
       fetchContracts();
     } catch (err) {
-      const msg = err.response?.data?.message || "Có lỗi xảy ra khi vô hiệu hóa.";
+      const msg =
+        err.response?.data?.message || "Có lỗi xảy ra khi vô hiệu hóa.";
       showToast("Lỗi: " + msg, "error");
     }
   };
@@ -156,16 +161,25 @@ const ContractManagementPage = () => {
   const formatDate = (d) =>
     d ? new Date(d).toLocaleDateString("vi-VN") : "---";
 
-  const statusLabel = (s) => ({
-    HieuLuc: "Đang hiệu lực",
-    HetHan: "Hết hạn",
-    DaChamDut: "Đã chấm dứt",
-  }[s] || s);
+  const statusLabel = (s) =>
+    ({
+      HieuLuc: "Đang hiệu lực",
+      HetHan: "Hết hạn",
+      DaChamDut: "Đã chấm dứt",
+    })[s] || s;
 
   const handleExportExcel = () => {
     const headers = [
-      "STT", "Số HĐ", "Họ tên NV", "Mã NV", "Phòng ban",
-      "Loại HĐ", "Ngày bắt đầu", "Ngày kết thúc", "Lương ký (VNĐ)", "Trạng thái",
+      "STT",
+      "Số HĐ",
+      "Họ tên NV",
+      "Mã NV",
+      "Phòng ban",
+      "Loại HĐ",
+      "Ngày bắt đầu",
+      "Ngày kết thúc",
+      "Lương ký (VNĐ)",
+      "Trạng thái",
     ];
 
     const rows = contracts.map((c, i) => [
@@ -176,28 +190,36 @@ const ContractManagementPage = () => {
       c.tenPhongBan || "",
       c.loaiHopDong || "",
       c.ngayBatDau ? new Date(c.ngayBatDau).toLocaleDateString("vi-VN") : "",
-      c.ngayKetThuc ? new Date(c.ngayKetThuc).toLocaleDateString("vi-VN") : "Vô thời hạn",
+      c.ngayKetThuc
+        ? new Date(c.ngayKetThuc).toLocaleDateString("vi-VN")
+        : "Vô thời hạn",
       Number(c.luongCoBan) || 0,
       statusLabel(c.trangThai),
     ]);
 
-    const wsData = [
-      [`DANH SÁCH HỢP ĐỒNG LAO ĐỘNG`],
-      [],
-      headers,
-      ...rows,
-    ];
+    const wsData = [[`DANH SÁCH HỢP ĐỒNG LAO ĐỘNG`], [], headers, ...rows];
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
     ws["!cols"] = [
-      { wch: 5 }, { wch: 16 }, { wch: 22 }, { wch: 10 }, { wch: 18 },
-      { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 16 },
+      { wch: 5 },
+      { wch: 16 },
+      { wch: 22 },
+      { wch: 10 },
+      { wch: 18 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 16 },
     ];
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "HopDong");
-    XLSX.writeFile(wb, `DanhSachHopDong_${new Date().toLocaleDateString("vi-VN").replace(/\//g, "-")}.xlsx`);
+    XLSX.writeFile(
+      wb,
+      `DanhSachHopDong_${new Date().toLocaleDateString("vi-VN").replace(/\//g, "-")}.xlsx`,
+    );
   };
 
   const getStatusBadge = (status, endDate) => {
@@ -216,26 +238,78 @@ const ContractManagementPage = () => {
       <div className="contract-page">
         {/* Confirm xóa */}
         {confirmDelete && (
-          <div style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
-            zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <div style={{
-              background: "#fff", borderRadius: "12px", padding: "28px 32px",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.18)", minWidth: "320px", textAlign: "center",
-            }}>
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.45)",
+              zIndex: 9000,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: "12px",
+                padding: "28px 32px",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+                minWidth: "320px",
+                textAlign: "center",
+              }}
+            >
               <div style={{ fontSize: "40px", marginBottom: "12px" }}>🚫</div>
-              <p style={{ fontSize: "15px", fontWeight: 600, marginBottom: "6px" }}>Xác nhận vô hiệu hóa hợp đồng</p>
-              <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "20px" }}>
-                Hợp đồng <strong>{confirmDelete}</strong> sẽ chuyển sang trạng thái <strong>Đã chấm dứt</strong> (không bị xóa khỏi hệ thống).
+              <p
+                style={{
+                  fontSize: "15px",
+                  fontWeight: 600,
+                  marginBottom: "6px",
+                }}
+              >
+                Xác nhận vô hiệu hóa hợp đồng
               </p>
-              <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
-                <button onClick={() => setConfirmDelete(null)}
-                  style={{ padding: "8px 20px", borderRadius: "6px", border: "1px solid #d1d5db", cursor: "pointer", background: "#f9fafb" }}>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#6b7280",
+                  marginBottom: "20px",
+                }}
+              >
+                Hợp đồng <strong>{confirmDelete}</strong> sẽ chuyển sang trạng
+                thái <strong>Đã chấm dứt</strong>
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  justifyContent: "center",
+                }}
+              >
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  style={{
+                    padding: "8px 20px",
+                    borderRadius: "6px",
+                    border: "1px solid #d1d5db",
+                    cursor: "pointer",
+                    background: "#f9fafb",
+                  }}
+                >
                   Hủy
                 </button>
-                <button onClick={handleConfirmDelete}
-                  style={{ padding: "8px 20px", borderRadius: "6px", border: "none", background: "#dc2626", color: "#fff", cursor: "pointer", fontWeight: 600 }}>
+                <button
+                  onClick={handleConfirmDelete}
+                  style={{
+                    padding: "8px 20px",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: "#dc2626",
+                    color: "#fff",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                >
                   Vô hiệu hóa
                 </button>
               </div>
@@ -259,10 +333,17 @@ const ContractManagementPage = () => {
             <button
               onClick={handleExportExcel}
               style={{
-                backgroundColor: "#16a34a", color: "white",
-                padding: "8px 16px", borderRadius: "6px", border: "none",
-                display: "flex", alignItems: "center", gap: "6px",
-                cursor: "pointer", fontWeight: "500", fontSize: "14px",
+                backgroundColor: "#16a34a",
+                color: "white",
+                padding: "8px 16px",
+                borderRadius: "6px",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                cursor: "pointer",
+                fontWeight: "500",
+                fontSize: "14px",
               }}
             >
               <FaFileExcel /> Xuất Excel

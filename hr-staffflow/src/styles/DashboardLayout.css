@@ -82,17 +82,23 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  flex: 1;
 }
 .logo {
-  width: 90px;
-  height: 70px;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  object-fit: contain;
   transition: width 0.3s ease;
 }
 .sidebar h2 {
-  font-size: 23px;
+  font-size: 20px;
   margin: 0;
   font-weight: 600;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .toggle-btn {
   background: none;
@@ -101,6 +107,7 @@ body {
   cursor: pointer;
   color: var(--toggle-icon-color);
   margin-right: 6px;
+  flex-shrink: 0;
 }
 .toggle-icon {
   transition: transform 0.3s ease;
