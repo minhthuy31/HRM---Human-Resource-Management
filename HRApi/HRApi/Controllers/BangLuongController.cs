@@ -187,11 +187,11 @@ namespace HRApi.Controllers
                         // 100% nguyên lương cho TẤT CẢ ngày lễ (cả nghỉ ở nhà lẫn đi làm) → thuộc lương chính
                         decimal luongNghiLe  = dailyRate * (decimal)(leNghiONha + holidayWorkCong);
                         totalLuongChinh += luongThuong + luongNghiLe;
-                        // Tiền làm thêm ngày lễ: 300% (heSoOtLe) — tách riêng khỏi lương chính (Điều 98 BLLĐ)
-                        decimal luongLamThemLe = dailyRate * (decimal)holidayWorkCong * heSoOtLe;
-                        totalLuongLamThemLe += luongLamThemLe;
+                        // GĐ2: phần +300% làm thêm ngày lễ KHÔNG còn auto từ chấm công.
+                        // Mọi phần trả thêm (thường/cuối tuần/lễ) chỉ tính qua ĐƠN OT đã duyệt bên dưới.
 
-                        // OT — quy đổi sang công chuẩn OT
+                        // OT — quy đổi sang công chuẩn OT.
+                        // Tách: OT ngày lễ → cột "Lương Lễ" (×3.0); OT thường/cuối tuần → cột "Tiền OT".
                         decimal hourlyRate = dailyRate / 8m;
                         foreach (var ot in periodOT)
                         {
@@ -204,9 +204,12 @@ namespace HRApi.Controllers
                                                :              heSoOtThuong;
 
                             decimal congChuanOT = (decimal)ot.SoGio * multiplier;
+                            decimal tienOT      = hourlyRate * congChuanOT;
                             totalCongChuanOT += congChuanOT;
-                            totalLuongOT     += hourlyRate * congChuanOT;
                             totalOTHours     += ot.SoGio;
+
+                            if (isHoliday) totalLuongLamThemLe += tienOT; // OT ngày lễ (300%) → "Lương Lễ"
+                            else           totalLuongOT        += tienOT; // OT thường/cuối tuần → "Tiền OT"
                         }
 
                         // Căn cứ đóng BH (A1): NGUYÊN lương cơ bản cố định của HĐ chính thức,

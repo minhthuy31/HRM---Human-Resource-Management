@@ -58,6 +58,17 @@ namespace HRApi.Controllers
                 bool isCuoiTuan = ngayLamThemDate.DayOfWeek == DayOfWeek.Saturday ||
                                   ngayLamThemDate.DayOfWeek == DayOfWeek.Sunday;
 
+                // OT2: ngày thường KHÔNG được đăng ký OT đè lên ca hành chính (08:00–17:30) —
+                // giờ trong ca đã được tính công thường, tránh trả lương 2 lần.
+                // Ngày lễ/cuối tuần là ngày nghỉ (không có ca) nên cho phép mọi khung giờ.
+                if (!isNgayLe && !isCuoiTuan)
+                {
+                    var caStart = new TimeSpan(8, 0, 0);
+                    var caEnd   = new TimeSpan(17, 30, 0);
+                    if (tBatDau < caEnd && tKetThuc > caStart)
+                        return BadRequest(new { message = "OT ngày thường phải nằm ngoài giờ hành chính (08:00–17:30)." });
+                }
+
                 // Trần giờ/ngày: ngày thường ≤ giới hạn cấu hình; lễ/cuối tuần ≤ 12h (BLLĐ cho phép tới 12h)
                 double tranGioNgay = (isNgayLe || isCuoiTuan) ? 12 : gioToiDaNgayThuong;
 
