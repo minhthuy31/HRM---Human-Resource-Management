@@ -1,5 +1,6 @@
 ﻿using HRApi.Data;
 using HRApi.DTOs;
+using HRApi.Helpers;
 using HRApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -169,6 +170,7 @@ namespace HRApi.Controllers
                 if (existingChamCong != null)
                 {
                     existingChamCong.NgayCong = 1.0;
+                    existingChamCong.LoaiNgayCong = LoaiCong.CongTac;
                     existingChamCong.GhiChu = string.IsNullOrEmpty(existingChamCong.GhiChu)
                         ? noteContent
                         : existingChamCong.GhiChu + "; " + noteContent;
@@ -180,6 +182,7 @@ namespace HRApi.Controllers
                         MaNhanVien = req.MaNhanVien,
                         NgayChamCong = date.Date,
                         NgayCong = 1.0,
+                        LoaiNgayCong = LoaiCong.CongTac,
                         GhiChu = noteContent
                     });
                 }

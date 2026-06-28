@@ -1,5 +1,6 @@
 using HRApi.Data;
 using HRApi.DTOs;
+using HRApi.Helpers;
 using HRApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -244,14 +245,10 @@ namespace HRApi.Controllers
                 if (request.NhanVien?.MaPhongBan != currentUserMaPhongBan) return Forbid("Không đúng phòng ban.");
             }
 
-            // 1. Tổng phép đã dùng (dùng Sum thay Count để tính cả nửa ngày = 0.5)
+            // 1. Tổng phép đã dùng trong năm (đếm theo LoaiNgayCong, tính cả nửa ngày = 0.5)
             var requestYear = request.NgayBatDau.Year;
-            var currentUsedDays = await _context.ChamCongs
-                .Where(c => c.MaNhanVien == request.MaNhanVien &&
-                            c.NgayChamCong.Year == requestYear &&
-                            !string.IsNullOrEmpty(c.GhiChu) &&
-                            (c.GhiChu.Contains("Nghỉ có phép") || c.GhiChu.Contains("Nghỉ nửa ngày")))
-                .SumAsync(c => c.NgayCong);
+            var currentUsedDays = await CongHelper.DemPhepDaDungTrongNamAsync(
+                _context, request.MaNhanVien, requestYear);
 
             bool isHalfDay = request.SoNgayNghi == 0.5 && request.BuoiNghi != null && request.BuoiNghi != "ca-ngay";
             string buoiLabel = request.BuoiNghi == "sang" ? "buổi sáng" : request.BuoiNghi == "chieu" ? "buổi chiều" : "";
@@ -263,6 +260,7 @@ namespace HRApi.Controllers
 
                 double ngayCongValue;
                 string ghiChuMoi;
+                string loaiNgayMoi;
 
                 if (isHalfDay)
                 {
@@ -271,12 +269,14 @@ namespace HRApi.Controllers
                     {
                         ngayCongValue = 0.5;
                         ghiChuMoi = $"Nghỉ nửa ngày {buoiLabel}: {request.LyDo}";
+                        loaiNgayMoi = LoaiCong.NghiPhep;
                         currentUsedDays += 0.5;
                     }
                     else
                     {
                         ngayCongValue = 0.5; // Vẫn ghi 0.5 công nhưng không trừ phép
-                        ghiChuMoi = $"Nghỉ nửa ngày {buoiLabel} (không phép): {request.LyDo}";
+                        ghiChuMoi = $"Nghỉ nửa ngày {buoiLabel} (không lương): {request.LyDo}";
+                        loaiNgayMoi = LoaiCong.NghiKhongLuong;
                     }
                 }
                 else
@@ -286,12 +286,14 @@ namespace HRApi.Controllers
                     {
                         ngayCongValue = 1.0;
                         ghiChuMoi = $"Nghỉ có phép: {request.LyDo}";
+                        loaiNgayMoi = LoaiCong.NghiPhep;
                         currentUsedDays += 1.0;
                     }
                     else
                     {
                         ngayCongValue = 0.0;
-                        ghiChuMoi = $"Nghỉ không phép (hết quota): {request.LyDo}";
+                        ghiChuMoi = $"Nghỉ không lương (hết quota): {request.LyDo}";
+                        loaiNgayMoi = LoaiCong.NghiKhongLuong;
                     }
                 }
 
@@ -302,6 +304,7 @@ namespace HRApi.Controllers
                 {
                     existing.NgayCong = ngayCongValue;
                     existing.GhiChu = ghiChuMoi;
+                    existing.LoaiNgayCong = loaiNgayMoi;
                     existing.GioCheckOut = null;
                 }
                 else
@@ -311,7 +314,8 @@ namespace HRApi.Controllers
                         MaNhanVien = request.MaNhanVien,
                         NgayChamCong = date.Date,
                         NgayCong = ngayCongValue,
-                        GhiChu = ghiChuMoi
+                        GhiChu = ghiChuMoi,
+                        LoaiNgayCong = loaiNgayMoi
                     });
                 }
             }

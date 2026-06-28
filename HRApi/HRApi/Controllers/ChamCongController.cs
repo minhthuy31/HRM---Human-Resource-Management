@@ -1,5 +1,6 @@
 using HRApi.Data;
 using HRApi.DTOs;
+using HRApi.Helpers;
 using HRApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -330,7 +331,7 @@ namespace HRApi.Controllers
                 var employeeIds = validData.Select(c => c.MaNhanVien).Distinct().ToList();
                 var startYear = new DateTime(year, 1, 1);
                 var endYear = startYear.AddYears(1);
-                var paidLeaves = new Dictionary<string, int>();
+                var paidLeaves = new Dictionary<string, double>();
 
                 var employeesInfo = await _context.NhanViens
                     .Where(nv => employeeIds.Contains(nv.MaNhanVien))
@@ -342,24 +343,23 @@ namespace HRApi.Controllers
                     paidLeaves = await _context.ChamCongs
                         .Where(c => employeeIds.Contains(c.MaNhanVien) &&
                                c.NgayChamCong >= startYear && c.NgayChamCong < endYear &&
-                               c.NgayCong == 1.0 && !string.IsNullOrEmpty(c.GhiChu) &&
-                               c.GhiChu.ToLower().Contains("nghỉ phép"))
+                               c.LoaiNgayCong == LoaiCong.NghiPhep)
                         .GroupBy(c => c.MaNhanVien)
-                        .ToDictionaryAsync(g => g.Key, g => g.Count());
+                        .ToDictionaryAsync(g => g.Key, g => g.Sum(c => c.NgayCong));
                 }
 
                 var summaries = validData.GroupBy(c => c.MaNhanVien).ToDictionary(g => g.Key, g =>
                 {
                     string loaiNV = employeesInfo.ContainsKey(g.Key) ? (employeesInfo[g.Key] ?? "") : "";
                     int maxLeaves = loaiNV.ToLower().Contains("thử việc") ? 0 : 12;
-                    int usedLeaves = paidLeaves.ContainsKey(g.Key) ? paidLeaves[g.Key] : 0;
+                    double usedLeaves = paidLeaves.ContainsKey(g.Key) ? paidLeaves[g.Key] : 0;
 
                     return new
                     {
                         MaNhanVien = g.Key,
                         TongCong = g.Sum(c => c.NgayCong),
                         DiLamDu = g.Count(c => c.NgayCong == 1.0 && string.IsNullOrEmpty(c.GhiChu)),
-                        NghiCoPhep = g.Count(c => c.NgayCong == 1.0 && !string.IsNullOrEmpty(c.GhiChu) && c.GhiChu.ToLower().Contains("nghỉ phép")),
+                        NghiCoPhep = g.Where(c => c.LoaiNgayCong == LoaiCong.NghiPhep).Sum(c => c.NgayCong),
                         RemainingLeaveDays = maxLeaves - usedLeaves
                     };
                 });
@@ -468,41 +468,47 @@ namespace HRApi.Controllers
             bool wasConverted = false;
             double finalCong = dto.NgayCong;
             string? finalGhiChu = dto.GhiChu;
+            string finalLoai = LoaiCong.LamViec;
 
             if (dto.NgayCong == 1.0 && !string.IsNullOrEmpty(dto.GhiChu) && dto.GhiChu.ToLower().Contains("nghỉ phép"))
             {
+                finalLoai = LoaiCong.NghiPhep;
                 int maxLeave = (targetEmp.LoaiNhanVien != null && targetEmp.LoaiNhanVien.ToLower().Contains("thử việc")) ? 0 : 12;
 
                 if (maxLeave == 0)
                 {
                     finalCong = 0.0;
                     finalGhiChu = "Thử việc không có phép (Chuyển thành Nghỉ không lương)";
+                    finalLoai = LoaiCong.NghiKhongLuong;
                     wasConverted = true;
                 }
                 else
                 {
-                    var startY = new DateTime(dateParsed.Year, 1, 1);
-                    var endY = startY.AddYears(1);
                     int excludeId = existingRecord != null ? existingRecord.Id : 0;
-
-                    var taken = await _context.ChamCongs.CountAsync(c =>
-                        c.MaNhanVien == dto.MaNhanVien && c.NgayChamCong >= startY && c.NgayChamCong < endY &&
-                        c.NgayCong == 1.0 && !string.IsNullOrEmpty(c.GhiChu) && c.GhiChu.ToLower().Contains("nghỉ phép") &&
-                        c.Id != excludeId);
+                    var taken = await CongHelper.DemPhepDaDungTrongNamAsync(_context, dto.MaNhanVien, dateParsed.Year, excludeId);
 
                     if (taken >= maxLeave)
                     {
                         finalCong = 0.0;
                         finalGhiChu = "Hết quỹ phép năm -> Chuyển thành Nghỉ không lương";
+                        finalLoai = LoaiCong.NghiKhongLuong;
                         wasConverted = true;
                     }
                 }
+            }
+            else if (finalCong == 0.0 && !string.IsNullOrEmpty(finalGhiChu))
+            {
+                // Nghỉ cả ngày không hưởng lương: phân biệt "không lương" (có lý do) với "không phép" (vắng)
+                finalLoai = finalGhiChu.ToLower().Contains("không lương")
+                    ? LoaiCong.NghiKhongLuong
+                    : LoaiCong.NghiKhongPhep;
             }
 
             if (existingRecord != null)
             {
                 existingRecord.NgayCong = finalCong;
                 existingRecord.GhiChu = finalGhiChu;
+                existingRecord.LoaiNgayCong = finalLoai;
                 _context.ChamCongs.Update(existingRecord);
             }
             else
@@ -513,6 +519,7 @@ namespace HRApi.Controllers
                     NgayChamCong = dateParsed,
                     NgayCong = finalCong,
                     GhiChu = finalGhiChu,
+                    LoaiNgayCong = finalLoai,
                     GioCheckOut = null
                 });
             }

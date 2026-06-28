@@ -1,5 +1,6 @@
 ﻿using HRApi.Data;
 using HRApi.DTOs;
+using HRApi.Helpers;
 using HRApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -236,6 +237,7 @@ namespace HRApi.Controllers
                     MaNhanVien = req.MaNhanVien,
                     NgayChamCong = req.NgayLamThem.Date,
                     NgayCong = 0, // OT tính riêng, không cộng vào ngày công chuẩn
+                    LoaiNgayCong = LoaiCong.LamViec, // dòng giữ ghi chú OT, không phải ngày nghỉ
                     GhiChu = noteContent
                 });
             }

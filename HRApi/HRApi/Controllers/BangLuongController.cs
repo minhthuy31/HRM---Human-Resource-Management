@@ -1,4 +1,5 @@
 using HRApi.Data;
+using HRApi.Helpers;
 using HRApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -208,10 +209,10 @@ namespace HRApi.Controllers
                             totalOTHours     += ot.SoGio;
                         }
 
-                        // Bảo hiểm (không tính thử việc)
+                        // Căn cứ đóng BH (A1): NGUYÊN lương cơ bản cố định của HĐ chính thức,
+                        // KHÔNG prorate theo ngày công. Lấy theo HĐ chính thức (ghi đè nếu có nhiều kỳ).
                         if (!isThuViec)
-                            totalLuongDongBH += (contract.LuongCoBan / standardWorkDays)
-                                                * (decimal)(normalNgayCong + holidaysInPeriod);
+                            totalLuongDongBH = contract.LuongCoBan;
 
                         finalLuongCoBan = contract.LuongCoBan;
                     }
@@ -223,14 +224,18 @@ namespace HRApi.Controllers
                     bool isThuViec   = emp.LoaiNhanVien?.Contains("thử việc", StringComparison.OrdinalIgnoreCase) == true;
                     decimal salaryMultiplier = isThuViec ? 0.85m : 1.0m;
                     totalLuongChinh  = (emp.LuongCoBan * salaryMultiplier / standardWorkDays) * (decimal)totalWorkDays;
-                    totalLuongDongBH = isThuViec ? 0 : totalLuongChinh;
+                    // Căn cứ đóng BH (A1): nguyên lương cơ bản cố định, không prorate
+                    totalLuongDongBH = isThuViec ? 0 : emp.LuongCoBan;
                 }
 
                 // ── PHỤ CẤP (tính theo SỐ NGÀY ĐI LÀM, đi nửa buổi cũng tính trọn 1 ngày) ──
                 // Ngày đi làm = ngày có check-in HOẶC ngày công > 0 thuộc loại Làm việc / Công tác.
                 int soNgayDiLam = empAtt.Count(c =>
-                    c.GioCheckIn != null
-                    || (c.NgayCong > 0 && (c.LoaiNgayCong == "Làm việc" || c.LoaiNgayCong == "Công tác")));
+                    c.LoaiNgayCong != LoaiCong.NghiPhep
+                    && c.LoaiNgayCong != LoaiCong.NghiKhongLuong
+                    && c.LoaiNgayCong != LoaiCong.NghiKhongPhep
+                    && (c.GioCheckIn != null
+                        || (c.NgayCong > 0 && (c.LoaiNgayCong == LoaiCong.LamViec || c.LoaiNgayCong == LoaiCong.CongTac))));
 
                 const double DUNG_SAI_CHUYEN_CAN = 2; // thiếu tối đa 2 ngày so với công chuẩn vẫn đủ chuyên cần
 
@@ -358,9 +363,9 @@ namespace HRApi.Controllers
                     .ToDictionary(g => g.Key, g => new
                     {
                         TongCong       = g.Sum(x => x.NgayCong),
-                        NghiCoPhep     = g.Count(x => x.NgayCong == 1.0 && x.LoaiNgayCong == "Nghỉ phép"),
-                        NghiKhongLuong = g.Count(x => x.NgayCong == 0.0 && x.LoaiNgayCong == "Nghỉ không lương"),
-                        NghiKhongPhep  = g.Count(x => x.NgayCong == 0.0 && (string.IsNullOrEmpty(x.GhiChu) || !x.GhiChu.ToLower().Contains("không lương")) && x.LoaiNgayCong != "Làm việc"),
+                        NghiCoPhep     = g.Count(x => x.LoaiNgayCong == LoaiCong.NghiPhep),
+                        NghiKhongLuong = g.Count(x => x.LoaiNgayCong == LoaiCong.NghiKhongLuong),
+                        NghiKhongPhep  = g.Count(x => x.LoaiNgayCong == LoaiCong.NghiKhongPhep),
                         LamNuaNgay     = g.Count(x => x.NgayCong == 0.5)
                     });
 
