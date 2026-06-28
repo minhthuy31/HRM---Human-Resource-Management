@@ -96,6 +96,14 @@ namespace HRApi.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal ThucLanh { get; set; }    // Net 
 
+        // --- CHI TIẾT LƯƠNG THEO TỪNG KỲ HỢP ĐỒNG (JSON) ---
+        // Dùng để hiển thị "2 lương" khi NV chuyển hợp đồng giữa tháng (thử việc → chính thức).
+        [Column(TypeName = "nvarchar(MAX)")]
+        public string? ChiTietHopDongJson { get; set; }
+
+        [NotMapped]
+        public List<ChiTietLuongHopDong> ChiTietHopDong { get; set; } = new();
+
         // --- TRẠNG THÁI ---
         public DateTime NgayTinhLuong { get; set; } = DateTime.UtcNow;
         public bool DaChot { get; set; } = false;
@@ -106,5 +114,19 @@ namespace HRApi.Models
         [ForeignKey("NhanVien")]
         public string MaNhanVien { get; set; }
         public virtual NhanVien? NhanVien { get; set; }
+    }
+
+    // Một kỳ hợp đồng trong tháng (phục vụ hiển thị chi tiết "2 lương")
+    public class ChiTietLuongHopDong
+    {
+        public string SoHopDong { get; set; } = "";
+        public string LoaiHopDong { get; set; } = "";
+        public DateTime TuNgay { get; set; }
+        public DateTime DenNgay { get; set; }
+        public double SoNgayCong { get; set; }
+        public decimal LuongCoBan { get; set; }
+        public decimal HeSo { get; set; }       // 0.85 (thử việc) / 1.0 (chính thức)
+        public decimal DonGiaNgay { get; set; }
+        public decimal ThanhTien { get; set; }
     }
 }

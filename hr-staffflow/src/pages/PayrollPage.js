@@ -44,6 +44,16 @@ const PayrollPage = () => {
   const [loading, setLoading] = useState(true);
   const [isPublished, setIsPublished] = useState(false);
   const [deptTotal, setDeptTotal] = useState(0);
+  const [expandedRows, setExpandedRows] = useState({});
+
+  const toggleRow = (maNhanVien) =>
+    setExpandedRows((prev) => ({ ...prev, [maNhanVien]: !prev[maNhanVien] }));
+
+  const formatDate = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return d.toLocaleDateString("vi-VN");
+  };
 
   // Bộ lọc
   const [searchName, setSearchName] = useState("");
@@ -473,12 +483,38 @@ const PayrollPage = () => {
                 </thead>
                 <tbody>
                   {filteredPayrolls.length > 0 ? (
-                    filteredPayrolls.map((p) => (
-                      <tr key={p.maNhanVien}>
+                    filteredPayrolls.map((p) => {
+                      const segments = p.chiTietHopDong || [];
+                      const hasMulti = segments.length > 1;
+                      const isExpanded = !!expandedRows[p.maNhanVien];
+                      return (
+                      <React.Fragment key={p.maNhanVien}>
+                      <tr>
                         <td className="sticky-col first-col">
-                          <div className="employee-info">
-                            <strong>{p.nhanVien?.hoTen}</strong>
-                            <span>{p.maNhanVien}</span>
+                          <div
+                            className="employee-info"
+                            style={{ cursor: hasMulti ? "pointer" : "default" }}
+                            onClick={() => hasMulti && toggleRow(p.maNhanVien)}
+                          >
+                            <strong>
+                              {hasMulti && (isExpanded ? "▼ " : "▶ ")}
+                              {p.nhanVien?.hoTen}
+                            </strong>
+                            <span>
+                              {p.maNhanVien}
+                              {hasMulti && (
+                                <em
+                                  style={{
+                                    marginLeft: 6,
+                                    color: "#2563eb",
+                                    fontStyle: "normal",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {segments.length} HĐ
+                                </em>
+                              )}
+                            </span>
                           </div>
                         </td>
                         <td className="text-right">
@@ -635,7 +671,56 @@ const PayrollPage = () => {
                           {formatMoney(p.thucLanh)}
                         </td>
                       </tr>
-                    ))
+                      {isExpanded && hasMulti && (
+                        <tr>
+                          <td colSpan={24} style={{ background: "#f8fafc", padding: "10px 18px" }}>
+                            <div style={{ fontWeight: 600, marginBottom: 6, color: "#334155" }}>
+                              Chi tiết lương theo hợp đồng
+                            </div>
+                            <table style={{ width: "auto", fontSize: 13, borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr style={{ color: "#64748b" }}>
+                                  <th style={{ textAlign: "left", padding: "4px 12px" }}>Hợp đồng</th>
+                                  <th style={{ textAlign: "left", padding: "4px 12px" }}>Loại</th>
+                                  <th style={{ textAlign: "left", padding: "4px 12px" }}>Kỳ</th>
+                                  <th style={{ textAlign: "right", padding: "4px 12px" }}>Lương CB</th>
+                                  <th style={{ textAlign: "center", padding: "4px 12px" }}>Hệ số</th>
+                                  <th style={{ textAlign: "right", padding: "4px 12px" }}>Đơn giá/ngày</th>
+                                  <th style={{ textAlign: "center", padding: "4px 12px" }}>Công</th>
+                                  <th style={{ textAlign: "right", padding: "4px 12px" }}>Thành tiền</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {segments.map((s, i) => (
+                                  <tr key={i} style={{ borderTop: "1px solid #e2e8f0" }}>
+                                    <td style={{ padding: "4px 12px" }}>{s.soHopDong}</td>
+                                    <td style={{ padding: "4px 12px" }}>{s.loaiHopDong}</td>
+                                    <td style={{ padding: "4px 12px" }}>
+                                      {formatDate(s.tuNgay)} – {formatDate(s.denNgay)}
+                                    </td>
+                                    <td style={{ padding: "4px 12px", textAlign: "right" }}>{formatMoney(s.luongCoBan)}</td>
+                                    <td style={{ padding: "4px 12px", textAlign: "center" }}>×{s.heSo}</td>
+                                    <td style={{ padding: "4px 12px", textAlign: "right" }}>{formatMoney(s.donGiaNgay)}</td>
+                                    <td style={{ padding: "4px 12px", textAlign: "center" }}>{s.soNgayCong}</td>
+                                    <td style={{ padding: "4px 12px", textAlign: "right", fontWeight: 600 }}>{formatMoney(s.thanhTien)}</td>
+                                  </tr>
+                                ))}
+                                <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
+                                  <td colSpan={7} style={{ padding: "4px 12px", textAlign: "right" }}>
+                                    Tổng lương chính:
+                                  </td>
+                                  <td style={{ padding: "4px 12px", textAlign: "right", color: "#16a34a" }}>
+                                    {formatMoney(segments.reduce((sum, s) => sum + (s.thanhTien || 0), 0))}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td

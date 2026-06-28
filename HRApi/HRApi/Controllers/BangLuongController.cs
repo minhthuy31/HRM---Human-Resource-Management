@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace HRApi.Controllers
 {
@@ -134,6 +135,7 @@ namespace HRApi.Controllers
                 double  totalWorkDays = 0, totalOTHours = 0;
                 decimal totalCongChuanOT = 0;
                 decimal finalLuongCoBan = emp.LuongCoBan;
+                var chiTietSegments = new List<ChiTietLuongHopDong>();
 
                 var empAtt = attendanceData.Where(c => c.MaNhanVien == emp.MaNhanVien).ToList();
                 var empOT  = otEntries.Where(x => x.MaNhanVien == emp.MaNhanVien).ToList();
@@ -187,6 +189,20 @@ namespace HRApi.Controllers
                         // 100% nguyên lương cho TẤT CẢ ngày lễ (cả nghỉ ở nhà lẫn đi làm) → thuộc lương chính
                         decimal luongNghiLe  = dailyRate * (decimal)(leNghiONha + holidayWorkCong);
                         totalLuongChinh += luongThuong + luongNghiLe;
+
+                        // Ghi lại chi tiết kỳ hợp đồng này (để hiển thị "2 lương" khi chuyển HĐ)
+                        chiTietSegments.Add(new ChiTietLuongHopDong
+                        {
+                            SoHopDong   = contract.SoHopDong,
+                            LoaiHopDong = contract.LoaiHopDong,
+                            TuNgay      = periodStart,
+                            DenNgay     = periodEnd,
+                            SoNgayCong  = Math.Round(congChinh, 2),
+                            LuongCoBan  = contract.LuongCoBan,
+                            HeSo        = salaryMultiplier,
+                            DonGiaNgay  = Math.Round(dailyRate, 0),
+                            ThanhTien   = Math.Round(luongThuong + luongNghiLe, 0)
+                        });
                         // GĐ2: phần +300% làm thêm ngày lễ KHÔNG còn auto từ chấm công.
                         // Mọi phần trả thêm (thường/cuối tuần/lễ) chỉ tính qua ĐƠN OT đã duyệt bên dưới.
 
@@ -308,6 +324,7 @@ namespace HRApi.Controllers
                     LuongChinh          = Math.Round(totalLuongChinh, 0),
                     LuongOT             = Math.Round(totalLuongOT, 0),
                     LuongLamThemLe      = Math.Round(totalLuongLamThemLe, 0),
+                    ChiTietHopDongJson  = chiTietSegments.Any() ? JsonSerializer.Serialize(chiTietSegments) : null,
                     KhauTruBHXH         = Math.Round(khauBHXH, 0),
                     KhauTruBHYT         = Math.Round(khauBHYT, 0),
                     KhauTruBHTN         = Math.Round(khauBHTN, 0),
@@ -491,7 +508,10 @@ namespace HRApi.Controllers
                     x.LuongChinh, x.LuongOT, x.LuongLamThemLe,
                     x.KhauTruBHXH, x.KhauTruBHYT, x.KhauTruBHTN,
                     x.ThueTNCN, x.KhoanTruKhac, x.LyDoKhac,
-                    x.TongThuNhap, x.ThucLanh, x.DaChot
+                    x.TongThuNhap, x.ThucLanh, x.DaChot,
+                    ChiTietHopDong = string.IsNullOrEmpty(x.ChiTietHopDongJson)
+                        ? new List<ChiTietLuongHopDong>()
+                        : JsonSerializer.Deserialize<List<ChiTietLuongHopDong>>(x.ChiTietHopDongJson)
                 }).ToList();
 
                 return Ok(new { Data = result, IsPublished = isPublished, DepartmentTotal = deptTotal });
