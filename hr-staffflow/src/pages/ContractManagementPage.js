@@ -114,17 +114,20 @@ const ContractManagementPage = () => {
   const handleSave = async (payload, isUpdate) => {
     try {
       const config = { headers: { "Content-Type": "multipart/form-data" } };
+      let res;
       if (isUpdate) {
         const id = encodeURIComponent(payload.get("soHopDong"));
-        await api.put(`/HopDong?id=${id}`, payload, config);
+        res = await api.put(`/HopDong?id=${id}`, payload, config);
       } else {
-        await api.post("/HopDong", payload, config);
+        res = await api.post("/HopDong", payload, config);
       }
       showToast(
         isUpdate
           ? "Cập nhật hợp đồng thành công!"
-          : "Tạo hợp đồng mới thành công!",
+          : `Tạo hợp đồng ${res.data?.soHopDong || "mới"} thành công!`,
       );
+      // Cảnh báo khe hở ngày giữa 2 hợp đồng (nếu có)
+      if (res.data?.warning) showToast(res.data.warning, "error");
       setIsModalOpen(false);
       setEditingContract(null);
       fetchContracts();

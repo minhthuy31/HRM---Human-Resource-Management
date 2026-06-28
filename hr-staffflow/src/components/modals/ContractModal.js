@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FaFileContract } from "react-icons/fa";
 import "../../styles/Modal.css";
 import { useToast } from "../../context/ToastContext";
+import { api } from "../../api";
 
 const ContractModal = ({ contract, employees, onSave, onCancel }) => {
   const { showToast } = useToast();
@@ -36,6 +37,18 @@ const ContractModal = ({ contract, employees, onSave, onCancel }) => {
     }
   }, [contract]);
 
+  // Tạo mới: lấy trước mã hợp đồng tự sinh để hiển thị (mã chính thức do server cấp khi lưu)
+  useEffect(() => {
+    if (!contract) {
+      api
+        .get("/HopDong/next-code")
+        .then((res) =>
+          setFormData((prev) => ({ ...prev, soHopDong: res.data.soHopDong })),
+        )
+        .catch(() => {});
+    }
+  }, [contract]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -56,7 +69,7 @@ const ContractModal = ({ contract, employees, onSave, onCancel }) => {
   };
 
   const handleSubmit = () => {
-    if (!formData.soHopDong || !formData.maNhanVien || !formData.luongCoBan) {
+    if (!formData.maNhanVien || !formData.luongCoBan) {
       showToast("Vui lòng điền đầy đủ các trường bắt buộc (*)", "error");
       return;
     }
@@ -93,15 +106,14 @@ const ContractModal = ({ contract, employees, onSave, onCancel }) => {
         >
           <div className="form-group-row">
             <div className="form-group">
-              <label>
-                Số hợp đồng <span style={{ color: "red" }}>*</span>
-              </label>
+              <label>Số hợp đồng (tự sinh)</label>
               <input
                 name="soHopDong"
                 value={formData.soHopDong}
-                onChange={handleChange}
-                disabled={!!contract}
-                placeholder="VD: HĐ-2025/001"
+                disabled
+                readOnly
+                placeholder="HĐ-…/…"
+                style={{ background: "#f3f4f6", color: "#6b7280", fontWeight: "bold" }}
               />
             </div>
             <div className="form-group">
