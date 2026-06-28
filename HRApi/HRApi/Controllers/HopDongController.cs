@@ -120,6 +120,15 @@ namespace HRApi.Controllers
             var nhanVien = await _context.NhanViens.FindAsync(dto.MaNhanVien);
             if (nhanVien == null) return BadRequest(new { message = "Mã nhân viên không tồn tại." });
 
+            // Kiểm tra chồng lấn / khe hở ngày (chỉ với HĐ hiệu lực)
+            string? canhBaoKheHo = null;
+            if (dto.TrangThai == "HieuLuc")
+            {
+                var (ok, error, warning) = await KiemTraNgayHopDong(dto.MaNhanVien, dto.NgayBatDau, dto.NgayKetThuc, null);
+                if (!ok) return BadRequest(new { message = error });
+                canhBaoKheHo = warning;
+            }
+
             string? filePath = null;
             if (dto.FileDinhKem != null && dto.FileDinhKem.Length > 0)
             {
@@ -149,13 +158,13 @@ namespace HRApi.Controllers
             };
 
             _context.HopDongs.Add(hopDong);
-
-            nhanVien.LuongCoBan = dto.LuongCoBan;
-            nhanVien.SoHopDong = dto.SoHopDong;
-            nhanVien.LoaiNhanVien = dto.LoaiHopDong;
-
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Tạo hợp đồng thành công" });
+
+            // Đồng bộ NhanVien theo HĐ đang hiệu lực hôm nay (không ghi đè nhầm khi tạo HĐ quá khứ/tương lai)
+            await DongBoHopDongHienHanh(dto.MaNhanVien);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Tạo hợp đồng thành công", warning = canhBaoKheHo });
         }
 
         // PUT: api/HopDong
@@ -165,6 +174,15 @@ namespace HRApi.Controllers
         {
             var hopDong = await _context.HopDongs.FindAsync(id);
             if (hopDong == null) return NotFound(new { message = $"Không tìm thấy hợp đồng số '{id}'" });
+
+            // Kiểm tra chồng lấn / khe hở ngày (loại trừ chính HĐ đang sửa)
+            string? canhBaoKheHo = null;
+            if (dto.TrangThai == "HieuLuc")
+            {
+                var (ok, error, warning) = await KiemTraNgayHopDong(hopDong.MaNhanVien, dto.NgayBatDau, dto.NgayKetThuc, id);
+                if (!ok) return BadRequest(new { message = error });
+                canhBaoKheHo = warning;
+            }
 
             if (dto.FileDinhKem != null && dto.FileDinhKem.Length > 0)
             {
@@ -186,18 +204,13 @@ namespace HRApi.Controllers
             hopDong.TrangThai = dto.TrangThai;
             hopDong.GhiChu = dto.GhiChu;
 
-            if (hopDong.TrangThai == "HieuLuc")
-            {
-                var nhanVien = await _context.NhanViens.FindAsync(hopDong.MaNhanVien);
-                if (nhanVien != null)
-                {
-                    nhanVien.LuongCoBan = dto.LuongCoBan;
-                    nhanVien.LoaiNhanVien = dto.LoaiHopDong;
-                }
-            }
-
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Cập nhật thành công" });
+
+            // Đồng bộ NhanVien theo HĐ đang hiệu lực hôm nay
+            await DongBoHopDongHienHanh(hopDong.MaNhanVien);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Cập nhật thành công", warning = canhBaoKheHo });
         }
 
         // DELETE: api/HopDong
@@ -214,6 +227,11 @@ namespace HRApi.Controllers
 
             hd.TrangThai = "DaChamDut";
             await _context.SaveChangesAsync();
+
+            // Chấm dứt xong → đồng bộ lại NhanVien theo HĐ hiệu lực còn lại (nếu có)
+            await DongBoHopDongHienHanh(hd.MaNhanVien);
+            await _context.SaveChangesAsync();
+
             return Ok(new { message = "Đã vô hiệu hóa (chấm dứt) hợp đồng." });
         }
 
@@ -238,6 +256,75 @@ namespace HRApi.Controllers
             }
 
             return Ok(giamDoc);
+        }
+
+        // ==============================================================
+        // HELPER: Đồng bộ lương/HĐ xuống NhanVien theo HĐ ĐANG HIỆU LỰC HÔM NAY
+        // (start mới nhất thắng nếu có chồng lấn). Không còn HĐ hiệu lực → GIỮ NGUYÊN.
+        // ==============================================================
+        private async Task DongBoHopDongHienHanh(string maNhanVien)
+        {
+            var today = DateTime.Now.Date;
+            var hd = await _context.HopDongs
+                .Where(h => h.MaNhanVien == maNhanVien
+                         && h.TrangThai == "HieuLuc"
+                         && h.NgayBatDau.Date <= today
+                         && (h.NgayKetThuc == null || h.NgayKetThuc.Value.Date >= today))
+                .OrderByDescending(h => h.NgayBatDau)
+                .FirstOrDefaultAsync();
+
+            var nv = await _context.NhanViens.FindAsync(maNhanVien);
+            if (nv == null) return;
+
+            if (hd != null)
+            {
+                nv.LuongCoBan   = hd.LuongCoBan;
+                nv.SoHopDong    = hd.SoHopDong;
+                nv.LoaiNhanVien = hd.LoaiHopDong;
+            }
+            // else: NV không còn HĐ hiệu lực hôm nay → giữ nguyên lương cũ (quyết định ①a)
+        }
+
+        // ==============================================================
+        // HELPER: Kiểm tra chồng lấn (chặn) / khe hở ngày (cảnh báo) với các HĐ HieuLuc khác
+        // ==============================================================
+        private async Task<(bool ok, string? error, string? warning)> KiemTraNgayHopDong(
+            string maNhanVien, DateTime ngayBatDau, DateTime? ngayKetThuc, string? soHopDongHienTai)
+        {
+            var others = await _context.HopDongs
+                .Where(h => h.MaNhanVien == maNhanVien
+                         && h.TrangThai == "HieuLuc"
+                         && h.SoHopDong != soHopDongHienTai)
+                .ToListAsync();
+
+            DateTime end = ngayKetThuc ?? DateTime.MaxValue;
+
+            // 1. Chồng lấn → chặn
+            foreach (var h in others)
+            {
+                DateTime hEnd = h.NgayKetThuc ?? DateTime.MaxValue;
+                bool overlap = ngayBatDau.Date <= hEnd.Date && h.NgayBatDau.Date <= end.Date;
+                if (overlap)
+                    return (false,
+                        $"Khoảng ngày trùng với hợp đồng '{h.SoHopDong}' ({h.NgayBatDau:dd/MM/yyyy} - {(h.NgayKetThuc?.ToString("dd/MM/yyyy") ?? "không thời hạn")}).",
+                        null);
+            }
+
+            // 2. Khe hở so với HĐ liền trước → cảnh báo (vẫn cho lưu)
+            var prev = others
+                .Where(h => h.NgayKetThuc.HasValue && h.NgayKetThuc.Value.Date < ngayBatDau.Date)
+                .OrderByDescending(h => h.NgayKetThuc!.Value)
+                .FirstOrDefault();
+
+            string? warning = null;
+            if (prev != null)
+            {
+                int gap = (ngayBatDau.Date - prev.NgayKetThuc!.Value.Date).Days - 1;
+                if (gap > 0)
+                    warning = $"Có {gap} ngày trống giữa HĐ '{prev.SoHopDong}' (kết thúc {prev.NgayKetThuc:dd/MM/yyyy}) và HĐ này (bắt đầu {ngayBatDau:dd/MM/yyyy}) — lương các ngày này sẽ không được tính.";
+            }
+
+            return (true, null, warning);
         }
     }
 }
