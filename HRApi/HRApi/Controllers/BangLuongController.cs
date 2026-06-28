@@ -232,13 +232,18 @@ namespace HRApi.Controllers
                 }
 
                 // ── PHỤ CẤP (tính theo SỐ NGÀY ĐI LÀM, đi nửa buổi cũng tính trọn 1 ngày) ──
-                // Ngày đi làm = ngày có check-in HOẶC ngày công > 0 thuộc loại Làm việc / Công tác.
-                int soNgayDiLam = empAtt.Count(c =>
-                    c.LoaiNgayCong != LoaiCong.NghiPhep
-                    && c.LoaiNgayCong != LoaiCong.NghiKhongLuong
-                    && c.LoaiNgayCong != LoaiCong.NghiKhongPhep
-                    && (c.GioCheckIn != null
-                        || (c.NgayCong > 0 && (c.LoaiNgayCong == LoaiCong.LamViec || c.LoaiNgayCong == LoaiCong.CongTac))));
+                // Ngày đi làm = ngày có chấm công thực (Làm việc/Công tác) HOẶC ngày có đơn OT đã duyệt
+                // (làm lễ/cuối tuần chỉ qua đơn OT vẫn được tính là một ngày đi làm để hưởng phụ cấp).
+                var ngayDiLamSet = empAtt
+                    .Where(c => c.LoaiNgayCong != LoaiCong.NghiPhep
+                             && c.LoaiNgayCong != LoaiCong.NghiKhongLuong
+                             && c.LoaiNgayCong != LoaiCong.NghiKhongPhep
+                             && (c.GioCheckIn != null
+                                 || (c.NgayCong > 0 && (c.LoaiNgayCong == LoaiCong.LamViec || c.LoaiNgayCong == LoaiCong.CongTac))))
+                    .Select(c => c.NgayChamCong.Date)
+                    .ToHashSet();
+                foreach (var o in empOT) ngayDiLamSet.Add(o.NgayLamThem.Date);
+                int soNgayDiLam = ngayDiLamSet.Count;
 
                 const double DUNG_SAI_CHUYEN_CAN = 2; // thiếu tối đa 2 ngày so với công chuẩn vẫn đủ chuyên cần
 
@@ -391,16 +396,32 @@ namespace HRApi.Controllers
                     .ToListAsync();
 
                 var holidayDaySetGet = new HashSet<int>(holidaysInMonth.Select(h => h.Day));
-                var holidayWorkByEmp = attendanceData2
-                    .Where(c => holidayDaySetGet.Contains(c.NgayChamCong.Day))
-                    .GroupBy(c => c.MaNhanVien)
-                    .ToDictionary(g => g.Key, g => g.Sum(c => c.NgayCong));
+
+                // Số ngày làm lễ = số ngày lễ NV có chấm công (>0) HOẶC có đơn OT đã duyệt (đếm ngày, không trùng)
+                var holidayWorkDays = new Dictionary<string, HashSet<int>>();
+                foreach (var c in attendanceData2)
+                {
+                    if (string.IsNullOrEmpty(c.MaNhanVien) || c.NgayCong <= 0) continue;
+                    if (!holidayDaySetGet.Contains(c.NgayChamCong.Day)) continue;
+                    if (!holidayWorkDays.TryGetValue(c.MaNhanVien, out var set)) { set = new HashSet<int>(); holidayWorkDays[c.MaNhanVien] = set; }
+                    set.Add(c.NgayChamCong.Day);
+                }
+                var holidayOTs = await _context.DangKyOTs
+                    .Where(ot => ot.NgayLamThem.Year == year && ot.NgayLamThem.Month == month
+                              && ot.TrangThai == "Đã duyệt" && !string.IsNullOrEmpty(ot.MaNhanVien))
+                    .ToListAsync();
+                foreach (var o in holidayOTs)
+                {
+                    if (!holidayDaySetGet.Contains(o.NgayLamThem.Day)) continue;
+                    if (!holidayWorkDays.TryGetValue(o.MaNhanVien, out var set)) { set = new HashSet<int>(); holidayWorkDays[o.MaNhanVien] = set; }
+                    set.Add(o.NgayLamThem.Day);
+                }
 
                 var fullList = new List<BangLuong>();
                 foreach (var emp in employees)
                 {
                     var saved = savedPayrolls.FirstOrDefault(p => p.MaNhanVien == emp.MaNhanVien);
-                    double ngayLamLe = holidayWorkByEmp.TryGetValue(emp.MaNhanVien, out var hl) ? hl : 0;
+                    double ngayLamLe = holidayWorkDays.TryGetValue(emp.MaNhanVien, out var hl) ? hl.Count : 0;
                     if (saved != null)
                     {
                         saved.NhanVien       = emp;
