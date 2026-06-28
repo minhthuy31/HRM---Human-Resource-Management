@@ -46,6 +46,17 @@ namespace HRApi.Controllers
 
                 var soGio = (tKetThuc - tBatDau).TotalHours;
 
+                // Trừ thời gian nghỉ trưa (12:00–13:30) nếu khoảng OT bắc qua — không tính trưa là giờ làm thêm
+                var lunchStart = new TimeSpan(12, 0, 0);
+                var lunchEnd   = new TimeSpan(13, 30, 0);
+                if (tBatDau < lunchEnd && tKetThuc > lunchStart)
+                {
+                    var overlapStart = tBatDau > lunchStart ? tBatDau : lunchStart;
+                    var overlapEnd   = tKetThuc < lunchEnd ? tKetThuc : lunchEnd;
+                    soGio -= (overlapEnd - overlapStart).TotalHours;
+                }
+                soGio = Math.Round(soGio, 2);
+
                 // ── KIỂM TRA GIỚI HẠN OT (Điều 107 BLLĐ 2019) ──
                 var sys = await _context.SystemSettings.FirstOrDefaultAsync();
                 double gioToiDaNgayThuong = sys?.GioOTToiDaNgay > 0 ? sys.GioOTToiDaNgay : 4;
