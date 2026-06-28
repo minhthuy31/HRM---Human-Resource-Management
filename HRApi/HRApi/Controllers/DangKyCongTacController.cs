@@ -39,6 +39,11 @@ namespace HRApi.Controllers
             if (dto.NgayKetThuc < dto.NgayBatDau)
                 return BadRequest(new { message = "Ngày kết thúc không hợp lệ." });
 
+            // Không cho tạo đơn nếu bảng công tháng đó đã bị khóa
+            var isLocked = await _context.KhoaCongs.AnyAsync(k =>
+                k.Nam == dto.NgayBatDau.Year && k.Thang == dto.NgayBatDau.Month && k.IsLocked);
+            if (isLocked) return BadRequest(new { message = $"Bảng công tháng {dto.NgayBatDau.Month}/{dto.NgayBatDau.Year} đã bị khóa, không thể tạo đơn công tác." });
+
             var req = new DangKyCongTac
             {
                 MaNhanVien = maNV,

@@ -34,6 +34,12 @@ namespace HRApi.Controllers
                 var maNV = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
                 if (maNV == null) return Unauthorized();
 
+                // Không cho tạo đơn nếu bảng công tháng đó đã bị khóa
+                var ngayDangKy = dto.NgayLamThem.Date;
+                var isLockedMonth = await _context.KhoaCongs.AnyAsync(k =>
+                    k.Nam == ngayDangKy.Year && k.Thang == ngayDangKy.Month && k.IsLocked);
+                if (isLockedMonth) return BadRequest(new { message = $"Bảng công tháng {ngayDangKy.Month}/{ngayDangKy.Year} đã bị khóa, không thể đăng ký OT." });
+
                 // Parse string ("17:30") sang TimeSpan an toàn
                 if (!TimeSpan.TryParse(dto.GioBatDau, out TimeSpan tBatDau) || 
                     !TimeSpan.TryParse(dto.GioKetThuc, out TimeSpan tKetThuc))
