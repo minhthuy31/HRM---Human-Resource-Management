@@ -114,11 +114,11 @@ namespace HRApi.Controllers
         [Authorize(Roles = "Giám đốc,Nhân sự trưởng")]
         public async Task<ActionResult<HopDong>> CreateHopDong([FromForm] HopDongInputDto dto)
         {
-            if (await _context.HopDongs.AnyAsync(h => h.SoHopDong == dto.SoHopDong))
-                return BadRequest(new { message = $"Số hợp đồng '{dto.SoHopDong}' đã tồn tại." });
-
             var nhanVien = await _context.NhanViens.FindAsync(dto.MaNhanVien);
             if (nhanVien == null) return BadRequest(new { message = "Mã nhân viên không tồn tại." });
+
+            // Mã hợp đồng TỰ SINH theo định dạng HĐ-{năm}/{số thứ tự 3 chữ số}
+            string soHopDong = await SinhMaHopDongMoi();
 
             // Kiểm tra chồng lấn / khe hở ngày (chỉ với HĐ hiệu lực)
             string? canhBaoKheHo = null;
@@ -144,7 +144,7 @@ namespace HRApi.Controllers
 
             var hopDong = new HopDong
             {
-                SoHopDong = dto.SoHopDong,
+                SoHopDong = soHopDong,
                 MaNhanVien = dto.MaNhanVien,
                 LoaiHopDong = dto.LoaiHopDong,
                 NgayBatDau = dto.NgayBatDau,
@@ -164,7 +164,7 @@ namespace HRApi.Controllers
             await DongBoHopDongHienHanh(dto.MaNhanVien);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Tạo hợp đồng thành công", warning = canhBaoKheHo });
+            return Ok(new { message = "Tạo hợp đồng thành công", soHopDong, warning = canhBaoKheHo });
         }
 
         // PUT: api/HopDong
@@ -256,6 +256,36 @@ namespace HRApi.Controllers
             }
 
             return Ok(giamDoc);
+        }
+
+        // GET: api/HopDong/next-code — xem trước mã hợp đồng sẽ được cấp
+        [HttpGet("next-code")]
+        [Authorize(Roles = "Giám đốc,Nhân sự trưởng")]
+        public async Task<IActionResult> GetNextCode()
+        {
+            return Ok(new { soHopDong = await SinhMaHopDongMoi() });
+        }
+
+        // ==============================================================
+        // HELPER: Sinh mã hợp đồng tự động — định dạng HĐ-{năm}/{số 3 chữ số}, đánh số lại theo từng năm
+        // ==============================================================
+        private async Task<string> SinhMaHopDongMoi()
+        {
+            int nam = DateTime.Now.Year;
+            string prefix = $"HĐ-{nam}/";
+
+            var maHienCo = await _context.HopDongs
+                .Where(h => h.SoHopDong.StartsWith(prefix))
+                .Select(h => h.SoHopDong)
+                .ToListAsync();
+
+            int max = 0;
+            foreach (var ma in maHienCo)
+            {
+                if (int.TryParse(ma.Substring(prefix.Length), out int n) && n > max) max = n;
+            }
+
+            return $"{prefix}{(max + 1):D3}";
         }
 
         // ==============================================================
