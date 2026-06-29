@@ -170,7 +170,6 @@ namespace HRApi.Controllers
                         bool isThuViec = contract.LoaiHopDong?.Contains("thử việc", StringComparison.OrdinalIgnoreCase) == true;
                         decimal salaryMultiplier = isThuViec ? 0.85m : 1.0m;
 
-                        // Tách ngày lễ / ngày thường — so sánh theo Day để tránh DateTime Kind mismatch
                         // CÔNG THƯỜNG chỉ tính T2-T6 không phải lễ. Chấm công T7/CN KHÔNG vào công thường
                         // (làm cuối tuần phải qua đơn OT hệ số 2.0).
                         var normalAtt  = periodAtt.Where(c => !holidayDaySet.Contains(c.NgayChamCong.Day)
@@ -181,8 +180,11 @@ namespace HRApi.Controllers
                         double normalNgayCong  = normalAtt.Sum(c => c.NgayCong);
                         double holidayWorkCong = holidayAtt.Sum(c => c.NgayCong);
 
+                        // Ngày lễ HƯỞNG LƯƠNG chỉ tính ngày lễ rơi vào T2-T6.
+                        // Ngày lễ trùng T7/CN vốn đã là ngày nghỉ cuối tuần → KHÔNG cộng lương lễ.
                         int holidaysInPeriod = holidaysInMonth
-                            .Count(h => h >= periodStart.Date && h <= periodEnd.Date && h.DayOfWeek != DayOfWeek.Sunday);
+                            .Count(h => h >= periodStart.Date && h <= periodEnd.Date
+                                     && h.DayOfWeek != DayOfWeek.Saturday && h.DayOfWeek != DayOfWeek.Sunday);
                         double leNghiONha = Math.Max(0, holidaysInPeriod - holidayWorkCong);
 
                         double congChinh = normalNgayCong + holidayWorkCong + leNghiONha;
@@ -191,7 +193,7 @@ namespace HRApi.Controllers
                         // Lương chính (thử việc = 85% lương cơ bản)
                         decimal dailyRate    = contract.LuongCoBan * salaryMultiplier / standardWorkDays;
                         decimal luongThuong  = dailyRate * (decimal)normalNgayCong;
-                        // 100% nguyên lương cho TẤT CẢ ngày lễ (cả nghỉ ở nhà lẫn đi làm) → thuộc lương chính
+                        // 100% nguyên lương cho ngày lễ (nghỉ ở nhà lẫn đi làm) → thuộc lương chính
                         decimal luongNghiLe  = dailyRate * (decimal)(leNghiONha + holidayWorkCong);
                         totalLuongChinh += luongThuong + luongNghiLe;
 
