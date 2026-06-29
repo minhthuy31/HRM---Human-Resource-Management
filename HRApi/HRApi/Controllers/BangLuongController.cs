@@ -138,6 +138,9 @@ namespace HRApi.Controllers
                 var chiTietSegments = new List<ChiTietLuongHopDong>();
                 double  soNgayCongChinhThuc = 0;   // tổng công thuộc HĐ chính thức (xét luật 14 ngày)
                 decimal luongCoBanChinhThuc = 0;   // mức lương HĐ chính thức làm căn cứ đóng BH
+                // OT tách 3 loại (giờ + tiền) để hiển thị thanh sổ
+                double  otGioThuong = 0, otGioCuoiTuan = 0, otGioLe = 0;
+                decimal otTienThuong = 0, otTienCuoiTuan = 0, otTienLe = 0;
 
                 var empAtt = attendanceData.Where(c => c.MaNhanVien == emp.MaNhanVien).ToList();
                 var empOT  = otEntries.Where(x => x.MaNhanVien == emp.MaNhanVien).ToList();
@@ -225,9 +228,12 @@ namespace HRApi.Controllers
                             decimal tienOT      = hourlyRate * congChuanOT;
                             totalCongChuanOT += congChuanOT;
                             totalOTHours     += ot.SoGio;
+                            totalLuongOT     += tienOT; // TẤT CẢ OT (thường/cuối tuần/lễ) gộp vào "Tiền OT"
 
-                            if (isHoliday) totalLuongLamThemLe += tienOT; // OT ngày lễ (300%) → "Lương Lễ"
-                            else           totalLuongOT        += tienOT; // OT thường/cuối tuần → "Tiền OT"
+                            // Tách 3 loại để hiển thị chi tiết
+                            if (isHoliday)      { otGioLe       += ot.SoGio; otTienLe       += tienOT; }
+                            else if (isWeekend) { otGioCuoiTuan += ot.SoGio; otTienCuoiTuan += tienOT; }
+                            else                { otGioThuong   += ot.SoGio; otTienThuong   += tienOT; }
                         }
 
                         // Cộng dồn số ngày công CHÍNH THỨC + giữ mức lương chính thức (để xét đóng BH theo luật 14 ngày)
@@ -315,6 +321,12 @@ namespace HRApi.Controllers
                     thueTNCN = TinhThueTNCNLuyTien(thuNhapCT);
                 }
 
+                // Dựng chi tiết OT 3 loại (chỉ thêm loại có giờ > 0)
+                var chiTietOTList = new List<ChiTietOT>();
+                if (otGioThuong   > 0) chiTietOTList.Add(new ChiTietOT { LoaiNgay = "Ngày thường", SoGio = otGioThuong,   HeSo = heSoOtThuong,  ThanhTien = Math.Round(otTienThuong, 0) });
+                if (otGioCuoiTuan > 0) chiTietOTList.Add(new ChiTietOT { LoaiNgay = "T7-CN",       SoGio = otGioCuoiTuan, HeSo = heSoOtCuoiTuan, ThanhTien = Math.Round(otTienCuoiTuan, 0) });
+                if (otGioLe       > 0) chiTietOTList.Add(new ChiTietOT { LoaiNgay = "Ngày lễ",     SoGio = otGioLe,       HeSo = heSoOtLe,      ThanhTien = Math.Round(otTienLe, 0) });
+
                 newPayrolls.Add(new BangLuong
                 {
                     MaNhanVien          = emp.MaNhanVien,
@@ -332,8 +344,9 @@ namespace HRApi.Controllers
                     TongCongChuanOT     = Math.Round(totalCongChuanOT, 2),
                     LuongChinh          = Math.Round(totalLuongChinh, 0),
                     LuongOT             = Math.Round(totalLuongOT, 0),
-                    LuongLamThemLe      = Math.Round(totalLuongLamThemLe, 0),
+                    LuongLamThemLe      = 0, // đã gộp OT lễ vào LuongOT; giữ cột để tương thích, không dùng nữa
                     ChiTietHopDongJson  = chiTietSegments.Any() ? JsonSerializer.Serialize(chiTietSegments) : null,
+                    ChiTietOTJson       = chiTietOTList.Any() ? JsonSerializer.Serialize(chiTietOTList) : null,
                     KhauTruBHXH         = Math.Round(khauBHXH, 0),
                     KhauTruBHYT         = Math.Round(khauBHYT, 0),
                     KhauTruBHTN         = Math.Round(khauBHTN, 0),
@@ -520,7 +533,10 @@ namespace HRApi.Controllers
                     x.TongThuNhap, x.ThucLanh, x.DaChot,
                     ChiTietHopDong = string.IsNullOrEmpty(x.ChiTietHopDongJson)
                         ? new List<ChiTietLuongHopDong>()
-                        : JsonSerializer.Deserialize<List<ChiTietLuongHopDong>>(x.ChiTietHopDongJson)
+                        : JsonSerializer.Deserialize<List<ChiTietLuongHopDong>>(x.ChiTietHopDongJson),
+                    ChiTietOT = string.IsNullOrEmpty(x.ChiTietOTJson)
+                        ? new List<ChiTietOT>()
+                        : JsonSerializer.Deserialize<List<ChiTietOT>>(x.ChiTietOTJson)
                 }).ToList();
 
                 return Ok(new { Data = result, IsPublished = isPublished, DepartmentTotal = deptTotal });

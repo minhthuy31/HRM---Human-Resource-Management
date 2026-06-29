@@ -104,6 +104,13 @@ namespace HRApi.Models
         [NotMapped]
         public List<ChiTietLuongHopDong> ChiTietHopDong { get; set; } = new();
 
+        // Chi tiết OT theo 3 loại ngày (thường / cuối tuần / lễ) — hiển thị trong thanh sổ mở rộng
+        [Column(TypeName = "nvarchar(MAX)")]
+        public string? ChiTietOTJson { get; set; }
+
+        [NotMapped]
+        public List<ChiTietOT> ChiTietOT { get; set; } = new();
+
         // --- TRẠNG THÁI ---
         public DateTime NgayTinhLuong { get; set; } = DateTime.UtcNow;
         public bool DaChot { get; set; } = false;
@@ -127,6 +134,15 @@ namespace HRApi.Models
         public decimal LuongCoBan { get; set; }
         public decimal HeSo { get; set; }       // 0.85 (thử việc) / 1.0 (chính thức)
         public decimal DonGiaNgay { get; set; }
+        public decimal ThanhTien { get; set; }
+    }
+
+    // Một loại OT trong tháng (Ngày thường / T7-CN / Ngày lễ)
+    public class ChiTietOT
+    {
+        public string LoaiNgay { get; set; } = "";   // "Ngày thường" | "T7-CN" | "Ngày lễ"
+        public double SoGio { get; set; }
+        public decimal HeSo { get; set; }            // 1.5 / 2.0 / 3.0
         public decimal ThanhTien { get; set; }
     }
 }

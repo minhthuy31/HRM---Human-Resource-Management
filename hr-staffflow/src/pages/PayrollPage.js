@@ -396,10 +396,10 @@ const PayrollPage = () => {
                     <th colSpan={2} className="group-header bg-gray">
                       Cố định
                     </th>
-                    <th colSpan={9} className="group-header bg-blue-light">
+                    <th colSpan={7} className="group-header bg-blue-light">
                       Chấm công
                     </th>
-                    <th colSpan={7} className="group-header bg-green-light">
+                    <th colSpan={6} className="group-header bg-green-light">
                       Thu nhập
                     </th>
                     <th colSpan={4} className="group-header bg-red-light">
@@ -425,15 +425,8 @@ const PayrollPage = () => {
                       C.Chuẩn
                     </th>
                     <th className="sub-th">Công</th>
-                    <th className="sub-th" style={{ color: "#d97706" }}>
+                    <th className="sub-th" style={{ color: "#d97706" }} title="Tổng giờ OT (mở rộng để xem 3 loại)">
                       OT (h)
-                    </th>
-                    <th
-                      className="sub-th"
-                      style={{ color: "#9333ea" }}
-                      title="Công chuẩn OT = Giờ OT × Hệ số (1.5/2.0/3.0)"
-                    >
-                      OT CC
                     </th>
                     <th className="sub-th">Phép</th>
                     <th
@@ -447,20 +440,10 @@ const PayrollPage = () => {
                       KP
                     </th>
                     <th className="sub-th">1/2</th>
-                    <th className="sub-th" style={{ color: "#dc2626" }} title="Số ngày đi làm trong ngày lễ (hưởng 400% = 100% nguyên lương + 300% làm thêm)">
-                      Lễ
-                    </th>
 
                     <th className="sub-th">Lương Chính</th>
-                    <th className="sub-th" style={{ color: "#d97706" }}>
+                    <th className="sub-th" style={{ color: "#d97706" }} title="Tổng tiền OT (thường + T7/CN + lễ). Mở rộng để xem chi tiết.">
                       Tiền OT
-                    </th>
-                    <th
-                      className="sub-th"
-                      style={{ color: "#dc2626" }}
-                      title="Tiền làm thêm ngày lễ (phần 300% — chưa gồm 100% nguyên lương đã nằm trong Lương Chính)"
-                    >
-                      Lương Lễ
                     </th>
                     <th className="sub-th" title="Tiền ăn (50k/ngày công)">
                       T.Ăn
@@ -485,7 +468,10 @@ const PayrollPage = () => {
                   {filteredPayrolls.length > 0 ? (
                     filteredPayrolls.map((p) => {
                       const segments = p.chiTietHopDong || [];
+                      const otSegs = p.chiTietOT || [];
                       const hasMulti = segments.length > 1;
+                      const hasOT = otSegs.length > 0;
+                      const canExpand = hasMulti || hasOT;
                       const isExpanded = !!expandedRows[p.maNhanVien];
                       return (
                       <React.Fragment key={p.maNhanVien}>
@@ -493,11 +479,11 @@ const PayrollPage = () => {
                         <td className="sticky-col first-col">
                           <div
                             className="employee-info"
-                            style={{ cursor: hasMulti ? "pointer" : "default" }}
-                            onClick={() => hasMulti && toggleRow(p.maNhanVien)}
+                            style={{ cursor: canExpand ? "pointer" : "default" }}
+                            onClick={() => canExpand && toggleRow(p.maNhanVien)}
                           >
                             <strong>
-                              {hasMulti && (isExpanded ? "▼ " : "▶ ")}
+                              {canExpand && (isExpanded ? "▼ " : "▶ ")}
                               {p.nhanVien?.hoTen}
                             </strong>
                             <span>
@@ -512,6 +498,18 @@ const PayrollPage = () => {
                                   }}
                                 >
                                   {segments.length} HĐ
+                                </em>
+                              )}
+                              {hasOT && (
+                                <em
+                                  style={{
+                                    marginLeft: 6,
+                                    color: "#d97706",
+                                    fontStyle: "normal",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  OT
                                 </em>
                               )}
                             </span>
@@ -540,12 +538,6 @@ const PayrollPage = () => {
                         >
                           {p.tongGioOT > 0 ? p.tongGioOT : "-"}
                         </td>
-                        <td
-                          className="text-center font-bold"
-                          style={{ color: "#9333ea" }}
-                        >
-                          {p.tongCongChuanOT > 0 ? p.tongCongChuanOT : "-"}
-                        </td>
                         <td className="text-center">{p.nghiCoPhep}</td>
                         <td
                           className="text-center"
@@ -557,22 +549,12 @@ const PayrollPage = () => {
                           {p.nghiKhongPhep}
                         </td>
                         <td className="text-center">{p.lamNuaNgay}</td>
-                        <td
-                          className="text-center"
-                          style={{ color: "#dc2626", fontWeight: p.soNgayLamLe > 0 ? 700 : 400 }}
-                          title={p.soNgayLamLe > 0 ? `Tiền làm thêm ngày lễ (300%): +${p.tienLamLe.toLocaleString("vi-VN")}đ` : "Không có ngày lễ"}
-                        >
-                          {p.soNgayLamLe > 0 ? p.soNgayLamLe : "-"}
-                        </td>
 
                         <td className="text-right">
                           {formatMoney(p.luongChinh)}
                         </td>
                         <td className="text-right" style={{ color: "#d97706" }}>
                           {formatMoney(p.luongOT)}
-                        </td>
-                        <td className="text-right text-sm" style={{ color: "#dc2626" }}>
-                          {p.luongLamThemLe > 0 ? formatMoney(p.luongLamThemLe) : "-"}
                         </td>
                         <td className="text-right text-sm">
                           {p.tienAn > 0 ? formatMoney(p.tienAn) : "-"}
@@ -671,9 +653,11 @@ const PayrollPage = () => {
                           {formatMoney(p.thucLanh)}
                         </td>
                       </tr>
-                      {isExpanded && hasMulti && (
+                      {isExpanded && canExpand && (
                         <tr>
-                          <td colSpan={24} style={{ background: "#f8fafc", padding: "10px 18px" }}>
+                          <td colSpan={22} style={{ background: "#f8fafc", padding: "10px 18px" }}>
+                            {hasMulti && (
+                            <>
                             <div style={{ fontWeight: 600, marginBottom: 6, color: "#334155" }}>
                               Chi tiết lương theo hợp đồng
                             </div>
@@ -715,6 +699,41 @@ const PayrollPage = () => {
                                 </tr>
                               </tbody>
                             </table>
+                            </>
+                            )}
+                            {hasOT && (
+                            <>
+                            <div style={{ fontWeight: 600, margin: "12px 0 6px", color: "#334155" }}>
+                              Chi tiết OT
+                            </div>
+                            <table style={{ width: "auto", fontSize: 13, borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr style={{ color: "#64748b" }}>
+                                  <th style={{ textAlign: "left", padding: "4px 12px" }}>Loại ngày</th>
+                                  <th style={{ textAlign: "center", padding: "4px 12px" }}>Số giờ</th>
+                                  <th style={{ textAlign: "center", padding: "4px 12px" }}>Hệ số</th>
+                                  <th style={{ textAlign: "right", padding: "4px 12px" }}>Thành tiền</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {otSegs.map((o, i) => (
+                                  <tr key={i} style={{ borderTop: "1px solid #e2e8f0" }}>
+                                    <td style={{ padding: "4px 12px" }}>{o.loaiNgay}</td>
+                                    <td style={{ padding: "4px 12px", textAlign: "center" }}>{o.soGio}h</td>
+                                    <td style={{ padding: "4px 12px", textAlign: "center" }}>×{o.heSo}</td>
+                                    <td style={{ padding: "4px 12px", textAlign: "right", fontWeight: 600 }}>{formatMoney(o.thanhTien)}</td>
+                                  </tr>
+                                ))}
+                                <tr style={{ borderTop: "2px solid #cbd5e1", fontWeight: 700 }}>
+                                  <td colSpan={3} style={{ padding: "4px 12px", textAlign: "right" }}>Tổng tiền OT:</td>
+                                  <td style={{ padding: "4px 12px", textAlign: "right", color: "#d97706" }}>
+                                    {formatMoney(otSegs.reduce((sum, o) => sum + (o.thanhTien || 0), 0))}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                            </>
+                            )}
                           </td>
                         </tr>
                       )}
@@ -724,7 +743,7 @@ const PayrollPage = () => {
                   ) : (
                     <tr>
                       <td
-                        colSpan="24"
+                        colSpan="22"
                         className="text-center"
                         style={{ padding: "30px 0" }}
                       >
