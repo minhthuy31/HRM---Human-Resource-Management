@@ -44,10 +44,13 @@ const PayrollPage = () => {
   const [loading, setLoading] = useState(true);
   const [isPublished, setIsPublished] = useState(false);
   const [deptTotal, setDeptTotal] = useState(0);
-  const [expandedRows, setExpandedRows] = useState({});
+  const [expandedRows, setExpandedRows] = useState({});   // xổ chi tiết hợp đồng (cột Lương Chính)
+  const [expandedOT, setExpandedOT] = useState({});       // xổ chi tiết OT (cột Tiền OT)
 
   const toggleRow = (maNhanVien) =>
     setExpandedRows((prev) => ({ ...prev, [maNhanVien]: !prev[maNhanVien] }));
+  const toggleOT = (maNhanVien) =>
+    setExpandedOT((prev) => ({ ...prev, [maNhanVien]: !prev[maNhanVien] }));
 
   const formatDate = (iso) => {
     if (!iso) return "";
@@ -471,21 +474,14 @@ const PayrollPage = () => {
                       const otSegs = p.chiTietOT || [];
                       const hasMulti = segments.length > 1;
                       const hasOT = otSegs.length > 0;
-                      const canExpand = hasMulti || hasOT;
-                      const isExpanded = !!expandedRows[p.maNhanVien];
+                      const isHDOpen = !!expandedRows[p.maNhanVien];
+                      const isOTOpen = !!expandedOT[p.maNhanVien];
                       return (
                       <React.Fragment key={p.maNhanVien}>
                       <tr>
                         <td className="sticky-col first-col">
-                          <div
-                            className="employee-info"
-                            style={{ cursor: canExpand ? "pointer" : "default" }}
-                            onClick={() => canExpand && toggleRow(p.maNhanVien)}
-                          >
-                            <strong>
-                              {canExpand && (isExpanded ? "▼ " : "▶ ")}
-                              {p.nhanVien?.hoTen}
-                            </strong>
+                          <div className="employee-info">
+                            <strong>{p.nhanVien?.hoTen}</strong>
                             <span>
                               {p.maNhanVien}
                               {hasMulti && (
@@ -550,11 +546,31 @@ const PayrollPage = () => {
                         </td>
                         <td className="text-center">{p.lamNuaNgay}</td>
 
-                        <td className="text-right">
+                        <td
+                          className="text-right"
+                          style={{ cursor: hasMulti ? "pointer" : "default" }}
+                          onClick={() => hasMulti && toggleRow(p.maNhanVien)}
+                          title={hasMulti ? "Bấm xem chi tiết theo hợp đồng" : undefined}
+                        >
                           {formatMoney(p.luongChinh)}
+                          {hasMulti && (
+                            <span style={{ marginLeft: 4, fontSize: 11, color: "#2563eb" }}>
+                              {isHDOpen ? "▴" : "▾"}
+                            </span>
+                          )}
                         </td>
-                        <td className="text-right" style={{ color: "#d97706" }}>
+                        <td
+                          className="text-right"
+                          style={{ color: "#d97706", cursor: hasOT ? "pointer" : "default" }}
+                          onClick={() => hasOT && toggleOT(p.maNhanVien)}
+                          title={hasOT ? "Bấm xem chi tiết OT" : undefined}
+                        >
                           {formatMoney(p.luongOT)}
+                          {hasOT && (
+                            <span style={{ marginLeft: 4, fontSize: 11 }}>
+                              {isOTOpen ? "▴" : "▾"}
+                            </span>
+                          )}
                         </td>
                         <td className="text-right text-sm">
                           {p.tienAn > 0 ? formatMoney(p.tienAn) : "-"}
@@ -653,11 +669,9 @@ const PayrollPage = () => {
                           {formatMoney(p.thucLanh)}
                         </td>
                       </tr>
-                      {isExpanded && canExpand && (
+                      {isHDOpen && hasMulti && (
                         <tr>
                           <td colSpan={22} style={{ background: "#f8fafc", padding: "10px 18px" }}>
-                            {hasMulti && (
-                            <>
                             <div style={{ fontWeight: 600, marginBottom: 6, color: "#334155" }}>
                               Chi tiết lương theo hợp đồng
                             </div>
@@ -699,11 +713,13 @@ const PayrollPage = () => {
                                 </tr>
                               </tbody>
                             </table>
-                            </>
-                            )}
-                            {hasOT && (
-                            <>
-                            <div style={{ fontWeight: 600, margin: "12px 0 6px", color: "#334155" }}>
+                          </td>
+                        </tr>
+                      )}
+                      {isOTOpen && hasOT && (
+                        <tr>
+                          <td colSpan={22} style={{ background: "#fffbeb", padding: "10px 18px" }}>
+                            <div style={{ fontWeight: 600, marginBottom: 6, color: "#334155" }}>
                               Chi tiết OT
                             </div>
                             <table style={{ width: "auto", fontSize: 13, borderCollapse: "collapse" }}>
@@ -732,8 +748,6 @@ const PayrollPage = () => {
                                 </tr>
                               </tbody>
                             </table>
-                            </>
-                            )}
                           </td>
                         </tr>
                       )}
