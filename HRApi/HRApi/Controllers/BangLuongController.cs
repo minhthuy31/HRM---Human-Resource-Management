@@ -264,25 +264,25 @@ namespace HRApi.Controllers
                     totalLuongDongBH = isThuViec ? 0 : emp.LuongCoBan;
                 }
 
-                // ── PHỤ CẤP (tính theo SỐ NGÀY ĐI LÀM, đi nửa buổi cũng tính trọn 1 ngày) ──
-                // Ngày đi làm = ngày có chấm công thực (Làm việc/Công tác) HOẶC ngày có đơn OT đã duyệt
-                // (làm lễ/cuối tuần chỉ qua đơn OT vẫn được tính là một ngày đi làm để hưởng phụ cấp).
-                var ngayDiLamSet = empAtt
-                    .Where(c => c.LoaiNgayCong != LoaiCong.NghiPhep
-                             && c.LoaiNgayCong != LoaiCong.NghiKhongLuong
-                             && c.LoaiNgayCong != LoaiCong.NghiKhongPhep
-                             && (c.GioCheckIn != null
-                                 || (c.NgayCong > 0 && (c.LoaiNgayCong == LoaiCong.LamViec || c.LoaiNgayCong == LoaiCong.CongTac))))
-                    .Select(c => c.NgayChamCong.Date)
-                    .ToHashSet();
-                foreach (var o in empOT) ngayDiLamSet.Add(o.NgayLamThem.Date);
-                int soNgayDiLam = ngayDiLamSet.Count;
+                // ── PHỤ CẤP (tính theo SỐ NGÀY CÔNG THƯỜNG đi làm thực tế) ──
+                // CHỈ tính ngày T2-T6 KHÔNG lễ có đi làm (chấm công Làm việc/Công tác).
+                // KHÔNG tính T7/CN/ngày lễ (kể cả có đơn OT) — các ngày đó được trả qua OT, không hưởng phụ cấp ngày.
+                int soNgayDiLam = empAtt.Count(c =>
+                    !holidayDaySet.Contains(c.NgayChamCong.Day)
+                    && c.NgayChamCong.DayOfWeek != DayOfWeek.Saturday
+                    && c.NgayChamCong.DayOfWeek != DayOfWeek.Sunday
+                    && c.LoaiNgayCong != LoaiCong.NghiPhep
+                    && c.LoaiNgayCong != LoaiCong.NghiKhongLuong
+                    && c.LoaiNgayCong != LoaiCong.NghiKhongPhep
+                    && (c.GioCheckIn != null
+                        || (c.NgayCong > 0 && (c.LoaiNgayCong == LoaiCong.LamViec || c.LoaiNgayCong == LoaiCong.CongTac))));
 
                 const double DUNG_SAI_CHUYEN_CAN = 2; // thiếu tối đa 2 ngày so với công chuẩn vẫn đủ chuyên cần
 
                 decimal dailyXe       = standardWorkDays > 0 ? tienGuiXeThang / standardWorkDays : 0;
                 decimal calcTienAn    = Math.Round(tienAnMoiNgay * soNgayDiLam, 0);
-                decimal calcTienXe    = Math.Round(dailyXe       * soNgayDiLam, 0);
+                // Tiền xe = (xe tháng / công chuẩn) × ngày công, NHƯNG không vượt mức xe tháng quy định
+                decimal calcTienXe    = Math.Min(tienGuiXeThang, Math.Round(dailyXe * soNgayDiLam, 0));
                 decimal calcChuyenCan = soNgayDiLam >= (double)standardWorkDays - DUNG_SAI_CHUYEN_CAN
                                         ? tienChuyenCanMax : 0m;
 
