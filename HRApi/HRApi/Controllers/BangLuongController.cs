@@ -136,6 +136,8 @@ namespace HRApi.Controllers
                 decimal totalCongChuanOT = 0;
                 decimal finalLuongCoBan = emp.LuongCoBan;
                 var chiTietSegments = new List<ChiTietLuongHopDong>();
+                double  soNgayCongChinhThuc = 0;   // tổng công thuộc HĐ chính thức (xét luật 14 ngày)
+                decimal luongCoBanChinhThuc = 0;   // mức lương HĐ chính thức làm căn cứ đóng BH
 
                 var empAtt = attendanceData.Where(c => c.MaNhanVien == emp.MaNhanVien).ToList();
                 var empOT  = otEntries.Where(x => x.MaNhanVien == emp.MaNhanVien).ToList();
@@ -228,13 +230,20 @@ namespace HRApi.Controllers
                             else           totalLuongOT        += tienOT; // OT thường/cuối tuần → "Tiền OT"
                         }
 
-                        // Căn cứ đóng BH (A1): NGUYÊN lương cơ bản cố định của HĐ chính thức,
-                        // KHÔNG prorate theo ngày công. Lấy theo HĐ chính thức (ghi đè nếu có nhiều kỳ).
+                        // Cộng dồn số ngày công CHÍNH THỨC + giữ mức lương chính thức (để xét đóng BH theo luật 14 ngày)
                         if (!isThuViec)
-                            totalLuongDongBH = contract.LuongCoBan;
+                        {
+                            soNgayCongChinhThuc += congChinh;
+                            luongCoBanChinhThuc = contract.LuongCoBan;
+                        }
 
                         finalLuongCoBan = contract.LuongCoBan;
                     }
+
+                    // Luật BHXH (14 ngày): chỉ đóng BH nếu số ngày làm việc CHÍNH THỨC trong tháng ≥ 14.
+                    // < 14 ngày (vd nửa tháng đầu thử việc) → KHÔNG đóng BH cả tháng đó.
+                    // Mức đóng tính trên NGUYÊN lương HĐ chính thức (không prorate, không tính lương thử việc).
+                    totalLuongDongBH = soNgayCongChinhThuc >= 14 ? luongCoBanChinhThuc : 0;
                 }
                 else
                 {
