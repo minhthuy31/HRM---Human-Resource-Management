@@ -17,7 +17,9 @@ namespace HRApi.Models
         // Chấm công
         public string? GioVaoLam { get; set; }
         public string? GioTanLam { get; set; }
-        public string? ThoiGianNghiTrua { get; set; }
+        public string? ThoiGianNghiTrua { get; set; }   // (cũ, giữ lại để tương thích)
+        public string? GioNghiTruaBatDau { get; set; }  // "12:00"
+        public string? GioNghiTruaKetThuc { get; set; } // "13:30"
         public int SoPhutDiMuonChoPhep { get; set; }
         public int NgayPhepTieuChuan { get; set; }
 

@@ -22,16 +22,8 @@ namespace HRApi.Controllers
         public class LockDto { public int Year { get; set; } public int Month { get; set; } }
         public class LockActionDto { public int Year { get; set; } public int Month { get; set; } public bool IsLocked { get; set; } }
 
-        // ==============================================================
-        // CẤU HÌNH CA LÀM VIỆC CHUẨN (SHIFT SETTINGS)
-        // ==============================================================
-        private readonly TimeSpan SHIFT_START = new TimeSpan(8, 0, 0);       // Bắt đầu ca: 08:00
-        private readonly TimeSpan SHIFT_END = new TimeSpan(17, 30, 0);       // Kết thúc ca: 17:30
-        private readonly TimeSpan LATE_GRACE = new TimeSpan(8, 0, 0);        // Sau 08:00 là tính đi muộn
-        private readonly TimeSpan EARLY_GRACE = new TimeSpan(17, 30, 0);     // Trước 17:30 là tính về sớm
-        private readonly TimeSpan LUNCH_START = new TimeSpan(12, 0, 0);      // Bắt đầu nghỉ trưa: 12:00
-        private readonly TimeSpan LUNCH_END = new TimeSpan(13, 30, 0);       // Kết thúc nghỉ trưa: 13:30
-        
+        // Ca làm việc & nghỉ trưa được đọc từ Cài đặt hệ thống (ShiftConfig), có fallback 08:00–17:30 / 12:00–13:30.
+
         // HELPER: Đồng bộ múi giờ UTC+7
         private DateTime GetVnTime() => DateTime.UtcNow.AddHours(7);
 
@@ -171,6 +163,7 @@ namespace HRApi.Controllers
 
             DateTime vnTime = GetVnTime();
             DateTime today = vnTime.Date;
+            var shift = await ShiftConfig.LoadAsync(_context);
 
             var existing = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == currentUserId && c.NgayChamCong.Date == today);
 
@@ -179,7 +172,7 @@ namespace HRApi.Controllers
                 if (existing.GioCheckIn == null)
                 {
                     existing.GioCheckIn = vnTime;
-                    existing.DiMuon = vnTime.TimeOfDay > LATE_GRACE;
+                    existing.DiMuon = vnTime.TimeOfDay > shift.Start;
                     existing.GhiChu = existing.DiMuon ? "Face Check-in (Đi muộn)" : "Face Check-in";
 
                     _context.ChamCongs.Update(existing);
@@ -195,14 +188,19 @@ namespace HRApi.Controllers
                     existing.GioCheckOut = vnTime;
 
                     // Mở comment và đổi thành biến kiểm tra về sớm thực tế
-                    bool isEarly = vnTime.TimeOfDay < EARLY_GRACE;
+                    bool isEarly = vnTime.TimeOfDay < shift.End;
 
-                    // TÍNH PHÚT LÀM VIỆC 
-                    existing.NgayCong = CalculateWorkDay(existing.GioCheckIn.Value, existing.GioCheckOut.Value);
+                    // TÍNH PHÚT LÀM VIỆC
+                    existing.NgayCong = CalculateWorkDay(existing.GioCheckIn.Value, existing.GioCheckOut.Value, shift);
 
+                    bool isWeekend = today.DayOfWeek == DayOfWeek.Saturday || today.DayOfWeek == DayOfWeek.Sunday;
                     string note = $"Check-in: {existing.GioCheckIn:HH:mm} | Check-out: {existing.GioCheckOut:HH:mm}";
-                    if (existing.DiMuon) note += " (Đi muộn)";
-                    if (isEarly) note += " (Về sớm)"; 
+                    if (isWeekend) note += " (Cuối tuần - không tính công, cần đơn OT)";
+                    else
+                    {
+                        if (existing.DiMuon) note += " (Đi muộn)";
+                        if (isEarly) note += " (Về sớm)";
+                    }
                     existing.GhiChu = note;
 
                     _context.ChamCongs.Update(existing);
@@ -214,7 +212,7 @@ namespace HRApi.Controllers
             }
             else
             {
-                bool isLate = vnTime.TimeOfDay > LATE_GRACE;
+                bool isLate = vnTime.TimeOfDay > shift.Start;
                 var newChamCong = new ChamCong
                 {
                     MaNhanVien = currentUserId,
@@ -237,24 +235,28 @@ namespace HRApi.Controllers
         // ==============================================================
         // 3. THUẬT TOÁN TÍNH CÔNG THEO GIỜ (CORE BUSINESS LOGIC)
         // ==============================================================
-        private double CalculateWorkDay(DateTime checkIn, DateTime checkOut)
+        private double CalculateWorkDay(DateTime checkIn, DateTime checkOut, ShiftConfig shift)
             {
+                // T7/CN KHÔNG tính công thường — làm cuối tuần chỉ được trả qua đơn OT (hệ số 2.0).
+                if (checkIn.DayOfWeek == DayOfWeek.Saturday || checkIn.DayOfWeek == DayOfWeek.Sunday)
+                    return 0.0;
+
                 TimeSpan inTime = checkIn.TimeOfDay;
                 TimeSpan outTime = checkOut.TimeOfDay;
 
-                // 1. Cắt gọt thời gian theo ca chuẩn (08:00 - 17:30)
-                if (inTime < SHIFT_START) inTime = SHIFT_START;
-                if (outTime > SHIFT_END) outTime = SHIFT_END;
+                // 1. Cắt gọt thời gian theo ca chuẩn (đọc từ cài đặt)
+                if (inTime < shift.Start) inTime = shift.Start;
+                if (outTime > shift.End) outTime = shift.End;
                 if (outTime <= inTime) return 0.0;
 
                 // 2. Tính tổng số giờ ở công ty
                 double totalHours = (outTime - inTime).TotalHours;
 
-                // 3. Trừ đi thời gian nghỉ trưa (12:00 - 13:30) nếu có giao thoa
-                if (inTime < LUNCH_END && outTime > LUNCH_START)
+                // 3. Trừ đi thời gian nghỉ trưa nếu có giao thoa
+                if (inTime < shift.LunchEnd && outTime > shift.LunchStart)
                 {
-                    TimeSpan overlapStart = (inTime > LUNCH_START) ? inTime : LUNCH_START;
-                    TimeSpan overlapEnd = (outTime < LUNCH_END) ? outTime : LUNCH_END;
+                    TimeSpan overlapStart = (inTime > shift.LunchStart) ? inTime : shift.LunchStart;
+                    TimeSpan overlapEnd = (outTime < shift.LunchEnd) ? outTime : shift.LunchEnd;
                     double lunchOverlapHours = (overlapEnd - overlapStart).TotalHours;
                     
                     if (lunchOverlapHours > 0) totalHours -= lunchOverlapHours;

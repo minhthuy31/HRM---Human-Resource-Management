@@ -52,6 +52,8 @@ const SystemSettingsPage = () => {
     gioVaoLam: "08:30",
     gioTanLam: "17:30",
     thoiGianNghiTrua: "12:00 - 13:00",
+    gioNghiTruaBatDau: "12:00",
+    gioNghiTruaKetThuc: "13:30",
     soPhutDiMuonChoPhep: 15,
     ngayPhepTieuChuan: 12,
     mucLuongCoSo: 2530000,
@@ -380,11 +382,21 @@ const SystemSettingsPage = () => {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Giờ nghỉ trưa</label>
+                    <label>Nghỉ trưa từ</label>
                     <input
-                      type="text"
-                      name="thoiGianNghiTrua"
-                      value={settings.thoiGianNghiTrua || ""}
+                      type="time"
+                      name="gioNghiTruaBatDau"
+                      value={settings.gioNghiTruaBatDau || ""}
+                      onChange={handleChange}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Nghỉ trưa đến</label>
+                    <input
+                      type="time"
+                      name="gioNghiTruaKetThuc"
+                      value={settings.gioNghiTruaKetThuc || ""}
                       onChange={handleChange}
                       disabled={!canEdit}
                     />

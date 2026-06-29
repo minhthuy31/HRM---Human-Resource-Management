@@ -34,4 +34,20 @@ namespace HRApi.Models
         public DateTime NgayKy { get; set; } = DateTime.Now;
         public string? GhiChu { get; set; }
     }
+
+    // Danh mục cố định cho loại & trạng thái hợp đồng (tránh nhập sai chuỗi tự do)
+    public static class LoaiHopDongConst
+    {
+        public const string ThuViec   = "Thử việc";
+        public const string ChinhThuc = "Chính thức";
+        public static readonly string[] All = { ThuViec, ChinhThuc };
+    }
+
+    public static class TrangThaiHopDong
+    {
+        public const string HieuLuc   = "HieuLuc";
+        public const string HetHan    = "HetHan";
+        public const string DaChamDut = "DaChamDut";
+        public static readonly string[] All = { HieuLuc, HetHan, DaChamDut };
+    }
 }

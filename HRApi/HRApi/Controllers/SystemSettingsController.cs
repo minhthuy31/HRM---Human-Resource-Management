@@ -63,6 +63,8 @@ namespace HRApi.Controllers
                 settings.GioVaoLam = updatedSettings.GioVaoLam;
                 settings.GioTanLam = updatedSettings.GioTanLam;
                 settings.ThoiGianNghiTrua = updatedSettings.ThoiGianNghiTrua;
+                settings.GioNghiTruaBatDau = updatedSettings.GioNghiTruaBatDau;
+                settings.GioNghiTruaKetThuc = updatedSettings.GioNghiTruaKetThuc;
                 settings.SoPhutDiMuonChoPhep = updatedSettings.SoPhutDiMuonChoPhep;
                 settings.NgayPhepTieuChuan = updatedSettings.NgayPhepTieuChuan;
 

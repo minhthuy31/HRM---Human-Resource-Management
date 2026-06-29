@@ -52,19 +52,20 @@ namespace HRApi.Controllers
 
                 var soGio = (tKetThuc - tBatDau).TotalHours;
 
-                // Trừ thời gian nghỉ trưa (12:00–13:30) nếu khoảng OT bắc qua — không tính trưa là giờ làm thêm
-                var lunchStart = new TimeSpan(12, 0, 0);
-                var lunchEnd   = new TimeSpan(13, 30, 0);
-                if (tBatDau < lunchEnd && tKetThuc > lunchStart)
+                // Cấu hình ca làm (đọc từ cài đặt, fallback 08:00–17:30 / trưa 12:00–13:30)
+                var sys = await _context.SystemSettings.FirstOrDefaultAsync();
+                var shift = ShiftConfig.FromSettings(sys);
+
+                // Trừ thời gian nghỉ trưa (theo cài đặt) nếu khoảng OT bắc qua — không tính trưa là giờ làm thêm
+                if (tBatDau < shift.LunchEnd && tKetThuc > shift.LunchStart)
                 {
-                    var overlapStart = tBatDau > lunchStart ? tBatDau : lunchStart;
-                    var overlapEnd   = tKetThuc < lunchEnd ? tKetThuc : lunchEnd;
+                    var overlapStart = tBatDau > shift.LunchStart ? tBatDau : shift.LunchStart;
+                    var overlapEnd   = tKetThuc < shift.LunchEnd ? tKetThuc : shift.LunchEnd;
                     soGio -= (overlapEnd - overlapStart).TotalHours;
                 }
                 soGio = Math.Round(soGio, 2);
 
                 // ── KIỂM TRA GIỚI HẠN OT (Điều 107 BLLĐ 2019) ──
-                var sys = await _context.SystemSettings.FirstOrDefaultAsync();
                 double gioToiDaNgayThuong = sys?.GioOTToiDaNgay > 0 ? sys.GioOTToiDaNgay : 4;
                 double gioToiDaThang      = sys?.GioOTToiDaThang > 0 ? sys.GioOTToiDaThang : 40;
                 double gioToiDaNam        = sys?.GioOTToiDaNam > 0 ? sys.GioOTToiDaNam : 200;
@@ -80,10 +81,8 @@ namespace HRApi.Controllers
                 // Ngày lễ/cuối tuần là ngày nghỉ (không có ca) nên cho phép mọi khung giờ.
                 if (!isNgayLe && !isCuoiTuan)
                 {
-                    var caStart = new TimeSpan(8, 0, 0);
-                    var caEnd   = new TimeSpan(17, 30, 0);
-                    if (tBatDau < caEnd && tKetThuc > caStart)
-                        return BadRequest(new { message = "OT ngày thường phải nằm ngoài giờ hành chính (08:00–17:30)." });
+                    if (tBatDau < shift.End && tKetThuc > shift.Start)
+                        return BadRequest(new { message = $"OT ngày thường phải nằm ngoài giờ hành chính ({shift.Start:hh\\:mm}–{shift.End:hh\\:mm})." });
                 }
 
                 // Trần giờ/ngày: ngày thường ≤ giới hạn cấu hình; lễ/cuối tuần ≤ 12h (BLLĐ cho phép tới 12h)

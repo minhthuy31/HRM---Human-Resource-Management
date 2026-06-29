@@ -34,6 +34,17 @@ namespace HRApi.Controllers
             var userDept = User.Claims.FirstOrDefault(c => c.Type == "MaPhongBan")?.Value;
             var now = DateTime.Now; // Biến thời gian hiện tại
 
+            // Auto-expire: HĐ đang "HieuLuc" nhưng đã qua ngày kết thúc → tự chuyển "HetHan"
+            var hetHan = await _context.HopDongs
+                .Where(h => h.TrangThai == TrangThaiHopDong.HieuLuc
+                         && h.NgayKetThuc != null && h.NgayKetThuc.Value.Date < now.Date)
+                .ToListAsync();
+            if (hetHan.Count > 0)
+            {
+                foreach (var h in hetHan) h.TrangThai = TrangThaiHopDong.HetHan;
+                await _context.SaveChangesAsync();
+            }
+
             var query = _context.HopDongs
                 .Include(h => h.NhanVien).ThenInclude(nv => nv.PhongBan)
                 .Include(h => h.NhanVien).ThenInclude(nv => nv.ChucVuNhanVien)
@@ -114,6 +125,11 @@ namespace HRApi.Controllers
         [Authorize(Roles = "Giám đốc,Nhân sự trưởng")]
         public async Task<ActionResult<HopDong>> CreateHopDong([FromForm] HopDongInputDto dto)
         {
+            if (!LoaiHopDongConst.All.Contains(dto.LoaiHopDong))
+                return BadRequest(new { message = "Loại hợp đồng không hợp lệ (chỉ 'Thử việc' hoặc 'Chính thức')." });
+            if (!TrangThaiHopDong.All.Contains(dto.TrangThai))
+                return BadRequest(new { message = "Trạng thái hợp đồng không hợp lệ." });
+
             var nhanVien = await _context.NhanViens.FindAsync(dto.MaNhanVien);
             if (nhanVien == null) return BadRequest(new { message = "Mã nhân viên không tồn tại." });
 
@@ -174,6 +190,11 @@ namespace HRApi.Controllers
         {
             var hopDong = await _context.HopDongs.FindAsync(id);
             if (hopDong == null) return NotFound(new { message = $"Không tìm thấy hợp đồng số '{id}'" });
+
+            if (!LoaiHopDongConst.All.Contains(dto.LoaiHopDong))
+                return BadRequest(new { message = "Loại hợp đồng không hợp lệ (chỉ 'Thử việc' hoặc 'Chính thức')." });
+            if (!TrangThaiHopDong.All.Contains(dto.TrangThai))
+                return BadRequest(new { message = "Trạng thái hợp đồng không hợp lệ." });
 
             // Kiểm tra chồng lấn / khe hở ngày (loại trừ chính HĐ đang sửa)
             string? canhBaoKheHo = null;
