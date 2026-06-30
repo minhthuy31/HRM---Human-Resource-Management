@@ -4,11 +4,11 @@ import * as faceapi from "face-api.js";
 import { useToast } from "../context/ToastContext";
 
 // ===== Cấu hình kiểm tra "người sống" (liveness / chống giả mạo bằng ảnh) =====
-// Ngưỡng CỐ ĐỊNH, đặt theo dữ liệu đo thực tế: mắt mở EAR ~0.32, lúc chớp tụt ~0.20.
-// Khoảng đệm rộng giữa 2 ngưỡng (hysteresis) để đếm chớp ổn định, chống nhiễu.
-const EAR_CLOSED = 0.25; // EAR < 0.25 => coi là ĐANG NHẮM
-const EAR_OPEN = 0.29; // EAR > 0.29 => coi là ĐÃ MỞ lại (hoàn tất 1 cú chớp)
-const BLINKS_REQUIRED = 1; // Số lần chớp mắt cần để xác thực là người thật
+// Cơ chế: yêu cầu NHẮM MẮT GIỮ một lúc (thay vì rình 1 cú chớp chớp nhoáng).
+// Mắt nhắm kéo dài => camera chắc chắn bắt trúng ngay lần đầu => nhanh, không mỏi mắt.
+// Ngưỡng đặt theo dữ liệu đo thực tế: mắt mở EAR ~0.32, lúc nhắm tụt ~0.20.
+const EAR_CLOSED = 0.25; // EAR < 0.25 => coi là ĐANG NHẮM mắt
+const CLOSED_HOLD_MS = 800; // Giữ nhắm liên tục đủ lâu này => xác thực là người thật
 const LIVENESS_TIMEOUT_MS = 15000; // Thời gian tối đa cho bước xác thực
 
 // Tính Eye Aspect Ratio (EAR) cho 1 mắt gồm 6 điểm landmark
@@ -65,11 +65,10 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       return false;
     }
 
-    // inputSize nhỏ hơn => quét nhanh hơn nhiều => đủ khung hình để BẮT được cái chớp mắt
-    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 160 });
+    // inputSize nhỏ => quét nhanh, mượt hơn trên máy yếu
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 128 });
     const startTime = Date.now();
-    let blinkCount = 0;
-    let eyeClosed = false; // Đang trong trạng thái nhắm mắt (để đếm 1 chu kỳ chớp)
+    let closedStart = 0; // Mốc thời gian bắt đầu nhắm mắt liên tục (0 = đang mở)
     let sawFace = false;
 
     livenessRunningRef.current = true;
@@ -100,22 +99,18 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
           eyeAspectRatio(landmarks.getRightEye())) /
         2;
 
-      // Đếm chớp theo chu kỳ: mở -> nhắm -> mở (2 ngưỡng cố định, có đệm chống nhiễu)
-      if (!eyeClosed && ear < EAR_CLOSED) {
-        eyeClosed = true;
-      } else if (eyeClosed && ear > EAR_OPEN) {
-        eyeClosed = false;
-        blinkCount += 1;
+      // Xác thực khi NHẮM MẮT giữ liên tục đủ lâu (ảnh tĩnh không tự nhắm được)
+      if (ear < EAR_CLOSED) {
+        if (closedStart === 0) closedStart = Date.now();
+        if (Date.now() - closedStart >= CLOSED_HOLD_MS) {
+          setStatusText("Xác thực người thật thành công ✓");
+          return true;
+        }
+        setStatusText("Giữ nhắm mắt... sắp xong");
+      } else {
+        closedStart = 0; // Mở mắt thì đặt lại bộ đếm
+        setStatusText("Hãy NHẮM MẮT và giữ ~1 giây để xác thực");
       }
-
-      if (blinkCount >= BLINKS_REQUIRED) {
-        setStatusText("Xác thực người thật thành công ✓");
-        return true;
-      }
-
-      setStatusText(
-        `Vui lòng chớp mắt để xác thực (${blinkCount}/${BLINKS_REQUIRED})`
-      );
     }
 
     if (!sawFace) {
@@ -258,8 +253,8 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
               textAlign: "center",
             }}
           >
-            Để chống gian lận, hệ thống yêu cầu chớp mắt để xác thực bạn là người
-            thật (không dùng được ảnh).
+            Để chống gian lận, khi xác nhận hãy NHẮM MẮT và giữ khoảng 1 giây để
+            xác thực bạn là người thật (không dùng được ảnh).
           </p>
         )}
 
