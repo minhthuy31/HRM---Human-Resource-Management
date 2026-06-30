@@ -4,18 +4,21 @@ import * as faceapi from "face-api.js";
 import { useToast } from "../context/ToastContext";
 
 // ===== Cấu hình kiểm tra "người sống" (liveness / chống giả mạo bằng ảnh) =====
-// Cơ chế: yêu cầu NHẮM MẮT GIỮ một lúc (thay vì rình 1 cú chớp chớp nhoáng).
-// Mắt nhắm kéo dài => camera chắc chắn bắt trúng ngay lần đầu => nhanh, không mỏi mắt.
-// Ngưỡng đặt theo dữ liệu đo thực tế: mắt mở EAR ~0.32, lúc nhắm tụt ~0.20.
-const EAR_CLOSED = 0.25; // EAR < 0.25 => coi là ĐANG NHẮM mắt
-const CLOSED_HOLD_MS = 800; // Giữ nhắm liên tục đủ lâu này => xác thực là người thật
+// Cơ chế: yêu cầu HÁ MIỆNG. Miệng đóng/mở chênh nhau rất lớn nên tín hiệu rõ ràng,
+// camera bắt trúng ngay lần đầu kể cả máy yếu => nhanh, không phải lặp lại nhiều lần.
+// Ảnh tĩnh giơ trước camera không tự há miệng được nên bị chặn.
+const MAR_OPEN = 0.35; // MAR > 0.35 => coi là ĐANG HÁ MIỆNG (miệng đóng ~0.0-0.1)
+const OPEN_HOLD_MS = 400; // Giữ há miệng liên tục đủ lâu này => xác thực là người thật
 const LIVENESS_TIMEOUT_MS = 15000; // Thời gian tối đa cho bước xác thực
 
-// Tính Eye Aspect Ratio (EAR) cho 1 mắt gồm 6 điểm landmark
-const eyeAspectRatio = (eye) => {
+// Tính Mouth Aspect Ratio (MAR): độ mở miệng theo chiều dọc / chiều rộng miệng.
+// getMouth() trả 20 điểm (landmark 48..67). Dùng môi TRONG cho tín hiệu há rõ nhất:
+//   điểm 62 (môi trên trong) = index 14, điểm 66 (môi dưới trong) = index 18,
+//   khóe trái 48 = index 0, khóe phải 54 = index 6.
+const mouthAspectRatio = (mouth) => {
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-  const vertical = dist(eye[1], eye[5]) + dist(eye[2], eye[4]);
-  const horizontal = 2 * dist(eye[0], eye[3]);
+  const vertical = dist(mouth[14], mouth[18]);
+  const horizontal = dist(mouth[0], mouth[6]);
   return horizontal === 0 ? 0 : vertical / horizontal;
 };
 
@@ -53,10 +56,10 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
   }, []);
 
   /**
-   * Kiểm tra "người sống" bằng cách yêu cầu người dùng chớp mắt.
+   * Kiểm tra "người sống" bằng cách yêu cầu người dùng HÁ MIỆNG.
    * Phân tích trực tiếp luồng video (nhiều khung hình) thay vì 1 ảnh tĩnh,
    * nên ảnh in / điện thoại giơ trước camera sẽ KHÔNG vượt qua được.
-   * Trả về true nếu phát hiện đủ số lần chớp mắt trong thời gian cho phép.
+   * Trả về true nếu phát hiện há miệng giữ đủ lâu trong thời gian cho phép.
    */
   const runLivenessCheck = async () => {
     const video = webcamRef.current?.video;
@@ -68,7 +71,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
     // inputSize nhỏ => quét nhanh, mượt hơn trên máy yếu
     const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 128 });
     const startTime = Date.now();
-    let closedStart = 0; // Mốc thời gian bắt đầu nhắm mắt liên tục (0 = đang mở)
+    let openStart = 0; // Mốc thời gian bắt đầu há miệng liên tục (0 = đang ngậm)
     let sawFace = false;
 
     livenessRunningRef.current = true;
@@ -77,7 +80,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       if (Date.now() - startTime > LIVENESS_TIMEOUT_MS) {
         setStatusText("");
         showToast(
-          "Xác thực thất bại: không phát hiện chớp mắt. Vui lòng nhìn vào camera và chớp mắt (không dùng ảnh).",
+          "Xác thực thất bại: chưa phát hiện há miệng. Vui lòng nhìn vào camera và há miệng (không dùng ảnh).",
           "error"
         );
         return false;
@@ -93,23 +96,19 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       }
 
       sawFace = true;
-      const landmarks = detection.landmarks;
-      const ear =
-        (eyeAspectRatio(landmarks.getLeftEye()) +
-          eyeAspectRatio(landmarks.getRightEye())) /
-        2;
+      const mar = mouthAspectRatio(detection.landmarks.getMouth());
 
-      // Xác thực khi NHẮM MẮT giữ liên tục đủ lâu (ảnh tĩnh không tự nhắm được)
-      if (ear < EAR_CLOSED) {
-        if (closedStart === 0) closedStart = Date.now();
-        if (Date.now() - closedStart >= CLOSED_HOLD_MS) {
+      // Xác thực khi HÁ MIỆNG giữ liên tục đủ lâu (ảnh tĩnh không tự há miệng được)
+      if (mar > MAR_OPEN) {
+        if (openStart === 0) openStart = Date.now();
+        if (Date.now() - openStart >= OPEN_HOLD_MS) {
           setStatusText("Xác thực người thật thành công ✓");
           return true;
         }
-        setStatusText("Giữ nhắm mắt... sắp xong");
+        setStatusText("Giữ há miệng... sắp xong");
       } else {
-        closedStart = 0; // Mở mắt thì đặt lại bộ đếm
-        setStatusText("Hãy NHẮM MẮT và giữ ~1 giây để xác thực");
+        openStart = 0; // Ngậm miệng thì đặt lại bộ đếm
+        setStatusText(`Hãy HÁ MIỆNG to để xác thực (độ mở: ${mar.toFixed(2)})`);
       }
     }
 
@@ -253,8 +252,8 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
               textAlign: "center",
             }}
           >
-            Để chống gian lận, khi xác nhận hãy NHẮM MẮT và giữ khoảng 1 giây để
-            xác thực bạn là người thật (không dùng được ảnh).
+            Để chống gian lận, khi xác nhận hãy HÁ MIỆNG to và giữ một chút để xác
+            thực bạn là người thật (không dùng được ảnh).
           </p>
         )}
 
