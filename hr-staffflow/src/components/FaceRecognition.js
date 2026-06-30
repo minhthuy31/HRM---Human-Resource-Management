@@ -68,39 +68,34 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
 
     // inputSize nhỏ hơn => quét nhanh hơn nhiều => đủ khung hình để BẮT được cái chớp mắt
     const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 160 });
-    const startTime = Date.now();
     let blinkCount = 0;
     let eyeClosed = false; // Đang trong trạng thái nhắm mắt (để đếm 1 chu kỳ chớp)
     let sawFace = false;
     let openBaseline = 0; // Mốc EAR khi mắt MỞ, tự cập nhật theo từng người
+    let minEar = 1; // EAR thấp nhất quan sát được (để CHẨN ĐOÁN)
+    let frameCount = 0;
 
     livenessRunningRef.current = true;
 
     while (livenessRunningRef.current) {
-      if (Date.now() - startTime > LIVENESS_TIMEOUT_MS) {
-        setStatusText("");
-        showToast(
-          "Xác thực thất bại: không phát hiện chớp mắt. Vui lòng nhìn vào camera và chớp mắt (không dùng ảnh).",
-          "error"
-        );
-        return false;
-      }
-
       const detection = await faceapi
         .detectSingleFace(video, options)
         .withFaceLandmarks();
 
       if (!detection) {
-        setStatusText("Không thấy khuôn mặt — hãy nhìn thẳng vào camera");
+        setStatusText("⚠ KHÔNG thấy khuôn mặt — chỉnh ánh sáng / nhìn thẳng");
         continue;
       }
 
+      frameCount += 1;
       sawFace = true;
       const landmarks = detection.landmarks;
       const ear =
         (eyeAspectRatio(landmarks.getLeftEye()) +
           eyeAspectRatio(landmarks.getRightEye())) /
         2;
+
+      if (ear < minEar) minEar = ear;
 
       // Tự hiệu chỉnh mốc "mắt mở": bám theo giá trị EAR cao nhất quan sát được.
       if (ear > openBaseline) openBaseline = ear;
@@ -124,8 +119,13 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         return true;
       }
 
+      // === DÒNG CHẨN ĐOÁN: đọc các số này báo lại để chỉnh cho đúng ===
       setStatusText(
-        `Vui lòng chớp mắt để xác thực (${blinkCount}/${BLINKS_REQUIRED})`
+        `Chớp ${blinkCount}/${BLINKS_REQUIRED} | EAR hiện tại: ${ear.toFixed(
+          3
+        )} | thấp nhất: ${minEar.toFixed(3)} | mốc mở: ${openBaseline.toFixed(
+          3
+        )} | khung: ${frameCount}`
       );
     }
 
