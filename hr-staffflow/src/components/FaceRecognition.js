@@ -11,8 +11,9 @@ import { useToast } from "../context/ToastContext";
 // QUAN TRỌNG: ngưỡng KHÔNG cố định mà TỰ ĐO theo mắt mở của từng người (baseline),
 // rồi lấy theo TỈ LỆ của baseline đó => hợp với mọi khuôn mặt/camera, hết cảnh
 // "ngưỡng không khớp mắt người này".
-const CALIB_FRAMES = 5; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
+const CALIB_FRAMES = 4; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
 const CLOSED_RATIO = 0.85; // Coi là NHẮM khi EAR tụt dưới 85% baseline (cao = dễ ăn, nhanh hơn)
+const CLOSED_HOLD_MS = 500; // Giữ nhắm liên tục đủ lâu này => qua (giúp máy yếu chắc chắn bắt trúng)
 const LIVENESS_TIMEOUT_MS = 20000; // Thời gian tối đa cho bước xác thực
 
 // Lấy trung vị (median) — bền với nhiễu hơn trung bình
@@ -78,11 +79,12 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
     // inputSize nhỏ => quét nhanh, mượt hơn trên máy yếu
     const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 128 });
     const startTime = Date.now();
-    let phase = 0; // 0: ĐO mắt mở, 1: chờ NHẮM -> đạt
+    let phase = 0; // 0: ĐO mắt mở, 1: chờ NHẮM (giữ) -> đạt
     let sawFace = false;
     const calib = []; // các mẫu EAR lúc đo baseline
     let baseline = 0; // mốc EAR mắt mở của riêng người này
     let closedThr = 0;
+    let closedStart = 0; // mốc thời gian bắt đầu nhắm liên tục (0 = đang mở)
 
     livenessRunningRef.current = true;
 
@@ -123,13 +125,19 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
           phase = 1;
         }
       } else if (phase === 1) {
-        // Hiện EAR hiện tại và ngưỡng cần đạt để bạn thấy ngay nó có ăn không
-        setStatusText(
-          `Hãy NHẮM MẮT — EAR ${ear.toFixed(2)} cần xuống dưới ${closedThr.toFixed(2)}`
-        );
+        // Nhắm mắt và GIỮ một chút: máy yếu vẫn chắc chắn bắt trúng
         if (ear < closedThr) {
-          setStatusText("Xác thực người thật thành công ✓");
-          return true;
+          if (closedStart === 0) closedStart = Date.now();
+          if (Date.now() - closedStart >= CLOSED_HOLD_MS) {
+            setStatusText("Xác thực người thật thành công ✓");
+            return true;
+          }
+          setStatusText("Giữ nhắm mắt... sắp xong");
+        } else {
+          closedStart = 0; // mở mắt thì đặt lại
+          setStatusText(
+            `Hãy NHẮM MẮT và giữ — EAR ${ear.toFixed(2)} cần dưới ${closedThr.toFixed(2)}`
+          );
         }
       }
     }
@@ -226,7 +234,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
               ref={webcamRef}
               screenshotFormat="image/jpeg"
               style={{ width: "100%", height: "auto" }}
-              videoConstraints={{ facingMode: "user" }}
+              videoConstraints={{ facingMode: "user", width: 320, height: 240 }}
             />
           ) : (
             <div
@@ -274,8 +282,8 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
               textAlign: "center",
             }}
           >
-            Để chống gian lận, khi xác nhận hãy giữ mắt mở 1 giây rồi NHẮM MẮT một
-            cái để xác thực bạn là người thật (không dùng được ảnh).
+            Để chống gian lận, khi xác nhận hãy giữ mắt mở 1 giây rồi NHẮM MẮT và
+            giữ nửa giây để xác thực bạn là người thật (không dùng được ảnh).
           </p>
         )}
 
