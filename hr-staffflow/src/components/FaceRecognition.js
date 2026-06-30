@@ -4,12 +4,11 @@ import * as faceapi from "face-api.js";
 import { useToast } from "../context/ToastContext";
 
 // ===== Cấu hình kiểm tra "người sống" (liveness / chống giả mạo bằng ảnh) =====
-// Ngưỡng nhắm/mở mắt được TỰ HIỆU CHỈNH theo từng khuôn mặt (xem CLOSED_RATIO),
-// nên không phụ thuộc cứng vào camera / khoảng cách / mắt to-nhỏ.
-const CLOSED_RATIO = 0.78; // Coi là NHẮM khi EAR tụt xuống dưới 78% mốc mắt mở
-const OPEN_RATIO = 0.9; // Coi là MỞ lại khi EAR hồi trên 90% mốc mắt mở (hysteresis)
-const EAR_ABS_MIN = 0.15; // Sàn tuyệt đối để chống nhiễu khi mất landmark
-const BLINKS_REQUIRED = 2; // Số lần chớp mắt cần để xác thực là người thật
+// Ngưỡng CỐ ĐỊNH, đặt theo dữ liệu đo thực tế: mắt mở EAR ~0.32, lúc chớp tụt ~0.20.
+// Khoảng đệm rộng giữa 2 ngưỡng (hysteresis) để đếm chớp ổn định, chống nhiễu.
+const EAR_CLOSED = 0.25; // EAR < 0.25 => coi là ĐANG NHẮM
+const EAR_OPEN = 0.29; // EAR > 0.29 => coi là ĐÃ MỞ lại (hoàn tất 1 cú chớp)
+const BLINKS_REQUIRED = 1; // Số lần chớp mắt cần để xác thực là người thật
 const LIVENESS_TIMEOUT_MS = 15000; // Thời gian tối đa cho bước xác thực
 
 // Tính Eye Aspect Ratio (EAR) cho 1 mắt gồm 6 điểm landmark
@@ -68,26 +67,32 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
 
     // inputSize nhỏ hơn => quét nhanh hơn nhiều => đủ khung hình để BẮT được cái chớp mắt
     const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 160 });
+    const startTime = Date.now();
     let blinkCount = 0;
     let eyeClosed = false; // Đang trong trạng thái nhắm mắt (để đếm 1 chu kỳ chớp)
     let sawFace = false;
-    let openBaseline = 0; // Mốc EAR khi mắt MỞ, tự cập nhật theo từng người
-    let minEar = 1; // EAR thấp nhất quan sát được (để CHẨN ĐOÁN)
-    let frameCount = 0;
 
     livenessRunningRef.current = true;
 
     while (livenessRunningRef.current) {
+      if (Date.now() - startTime > LIVENESS_TIMEOUT_MS) {
+        setStatusText("");
+        showToast(
+          "Xác thực thất bại: không phát hiện chớp mắt. Vui lòng nhìn vào camera và chớp mắt (không dùng ảnh).",
+          "error"
+        );
+        return false;
+      }
+
       const detection = await faceapi
         .detectSingleFace(video, options)
         .withFaceLandmarks();
 
       if (!detection) {
-        setStatusText("⚠ KHÔNG thấy khuôn mặt — chỉnh ánh sáng / nhìn thẳng");
+        setStatusText("Không thấy khuôn mặt — hãy nhìn thẳng vào camera");
         continue;
       }
 
-      frameCount += 1;
       sawFace = true;
       const landmarks = detection.landmarks;
       const ear =
@@ -95,23 +100,12 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
           eyeAspectRatio(landmarks.getRightEye())) /
         2;
 
-      if (ear < minEar) minEar = ear;
-
-      // Tự hiệu chỉnh mốc "mắt mở": bám theo giá trị EAR cao nhất quan sát được.
-      if (ear > openBaseline) openBaseline = ear;
-
-      // Cần vài khung đầu để lấy mốc mắt mở trước khi bắt đầu đếm chớp.
-      if (openBaseline >= EAR_ABS_MIN) {
-        const closedThreshold = openBaseline * CLOSED_RATIO;
-        const openThreshold = openBaseline * OPEN_RATIO;
-
-        // Đếm chớp theo chu kỳ: mở -> nhắm -> mở (2 ngưỡng tương đối, chống nhiễu)
-        if (!eyeClosed && ear < closedThreshold) {
-          eyeClosed = true;
-        } else if (eyeClosed && ear > openThreshold) {
-          eyeClosed = false;
-          blinkCount += 1;
-        }
+      // Đếm chớp theo chu kỳ: mở -> nhắm -> mở (2 ngưỡng cố định, có đệm chống nhiễu)
+      if (!eyeClosed && ear < EAR_CLOSED) {
+        eyeClosed = true;
+      } else if (eyeClosed && ear > EAR_OPEN) {
+        eyeClosed = false;
+        blinkCount += 1;
       }
 
       if (blinkCount >= BLINKS_REQUIRED) {
@@ -119,13 +113,8 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         return true;
       }
 
-      // === DÒNG CHẨN ĐOÁN: đọc các số này báo lại để chỉnh cho đúng ===
       setStatusText(
-        `Chớp ${blinkCount}/${BLINKS_REQUIRED} | EAR hiện tại: ${ear.toFixed(
-          3
-        )} | thấp nhất: ${minEar.toFixed(3)} | mốc mở: ${openBaseline.toFixed(
-          3
-        )} | khung: ${frameCount}`
+        `Vui lòng chớp mắt để xác thực (${blinkCount}/${BLINKS_REQUIRED})`
       );
     }
 
