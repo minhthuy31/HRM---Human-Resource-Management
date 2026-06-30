@@ -4,8 +4,11 @@ import * as faceapi from "face-api.js";
 import { useToast } from "../context/ToastContext";
 
 // ===== Cấu hình kiểm tra "người sống" (liveness / chống giả mạo bằng ảnh) =====
-const EAR_CLOSED = 0.21; // Ngưỡng mắt được coi là ĐANG NHẮM
-const EAR_OPEN = 0.27; // Ngưỡng mắt được coi là ĐANG MỞ (dùng hysteresis để chống nhiễu)
+// Ngưỡng nhắm/mở mắt được TỰ HIỆU CHỈNH theo từng khuôn mặt (xem CLOSED_RATIO),
+// nên không phụ thuộc cứng vào camera / khoảng cách / mắt to-nhỏ.
+const CLOSED_RATIO = 0.78; // Coi là NHẮM khi EAR tụt xuống dưới 78% mốc mắt mở
+const OPEN_RATIO = 0.9; // Coi là MỞ lại khi EAR hồi trên 90% mốc mắt mở (hysteresis)
+const EAR_ABS_MIN = 0.15; // Sàn tuyệt đối để chống nhiễu khi mất landmark
 const BLINKS_REQUIRED = 2; // Số lần chớp mắt cần để xác thực là người thật
 const LIVENESS_TIMEOUT_MS = 15000; // Thời gian tối đa cho bước xác thực
 
@@ -63,11 +66,13 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       return false;
     }
 
-    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224 });
+    // inputSize nhỏ hơn => quét nhanh hơn nhiều => đủ khung hình để BẮT được cái chớp mắt
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 160 });
     const startTime = Date.now();
     let blinkCount = 0;
     let eyeClosed = false; // Đang trong trạng thái nhắm mắt (để đếm 1 chu kỳ chớp)
     let sawFace = false;
+    let openBaseline = 0; // Mốc EAR khi mắt MỞ, tự cập nhật theo từng người
 
     livenessRunningRef.current = true;
 
@@ -87,7 +92,6 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
 
       if (!detection) {
         setStatusText("Không thấy khuôn mặt — hãy nhìn thẳng vào camera");
-        await new Promise((r) => setTimeout(r, 80));
         continue;
       }
 
@@ -98,12 +102,21 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
           eyeAspectRatio(landmarks.getRightEye())) /
         2;
 
-      // Đếm chớp mắt theo chu kỳ: mở -> nhắm -> mở (dùng 2 ngưỡng để chống nhiễu)
-      if (!eyeClosed && ear < EAR_CLOSED) {
-        eyeClosed = true;
-      } else if (eyeClosed && ear > EAR_OPEN) {
-        eyeClosed = false;
-        blinkCount += 1;
+      // Tự hiệu chỉnh mốc "mắt mở": bám theo giá trị EAR cao nhất quan sát được.
+      if (ear > openBaseline) openBaseline = ear;
+
+      // Cần vài khung đầu để lấy mốc mắt mở trước khi bắt đầu đếm chớp.
+      if (openBaseline >= EAR_ABS_MIN) {
+        const closedThreshold = openBaseline * CLOSED_RATIO;
+        const openThreshold = openBaseline * OPEN_RATIO;
+
+        // Đếm chớp theo chu kỳ: mở -> nhắm -> mở (2 ngưỡng tương đối, chống nhiễu)
+        if (!eyeClosed && ear < closedThreshold) {
+          eyeClosed = true;
+        } else if (eyeClosed && ear > openThreshold) {
+          eyeClosed = false;
+          blinkCount += 1;
+        }
       }
 
       if (blinkCount >= BLINKS_REQUIRED) {
@@ -114,7 +127,6 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       setStatusText(
         `Vui lòng chớp mắt để xác thực (${blinkCount}/${BLINKS_REQUIRED})`
       );
-      await new Promise((r) => setTimeout(r, 60));
     }
 
     if (!sawFace) {
