@@ -11,9 +11,8 @@ import { useToast } from "../context/ToastContext";
 // QUAN TRỌNG: ngưỡng KHÔNG cố định mà TỰ ĐO theo mắt mở của từng người (baseline),
 // rồi lấy theo TỈ LỆ của baseline đó => hợp với mọi khuôn mặt/camera, hết cảnh
 // "ngưỡng không khớp mắt người này".
-const CALIB_FRAMES = 8; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
-const CLOSED_RATIO = 0.82; // Coi là NHẮM khi EAR tụt dưới 82% baseline
-const OPEN_RATIO = 0.9; // Coi là MỞ lại khi EAR hồi trên 90% baseline (hysteresis)
+const CALIB_FRAMES = 5; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
+const CLOSED_RATIO = 0.85; // Coi là NHẮM khi EAR tụt dưới 85% baseline (cao = dễ ăn, nhanh hơn)
 const LIVENESS_TIMEOUT_MS = 20000; // Thời gian tối đa cho bước xác thực
 
 // Lấy trung vị (median) — bền với nhiễu hơn trung bình
@@ -79,12 +78,11 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
     // inputSize nhỏ => quét nhanh, mượt hơn trên máy yếu
     const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 128 });
     const startTime = Date.now();
-    let phase = 0; // 0: ĐO mắt mở, 1: chờ NHẮM, 2: chờ MỞ LẠI -> đạt
+    let phase = 0; // 0: ĐO mắt mở, 1: chờ NHẮM -> đạt
     let sawFace = false;
     const calib = []; // các mẫu EAR lúc đo baseline
     let baseline = 0; // mốc EAR mắt mở của riêng người này
     let closedThr = 0;
-    let openThr = 0;
 
     livenessRunningRef.current = true;
 
@@ -114,7 +112,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
           eyeAspectRatio(landmarks.getRightEye())) /
         2;
 
-      // Máy trạng thái: ĐO mắt mở -> chờ NHẮM -> chờ MỞ lại (ảnh tĩnh không qua được)
+      // Máy trạng thái: ĐO mắt mở -> chờ NHẮM (có chuyển động => ảnh tĩnh không qua được)
       if (phase === 0) {
         // Đo baseline mắt mở của riêng người này
         calib.push(ear);
@@ -122,18 +120,14 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         if (calib.length >= CALIB_FRAMES) {
           baseline = median(calib);
           closedThr = baseline * CLOSED_RATIO;
-          openThr = baseline * OPEN_RATIO;
           phase = 1;
         }
       } else if (phase === 1) {
         // Hiện EAR hiện tại và ngưỡng cần đạt để bạn thấy ngay nó có ăn không
         setStatusText(
-          `Hãy NHẮM MẮT lại — EAR ${ear.toFixed(2)} cần xuống dưới ${closedThr.toFixed(2)}`
+          `Hãy NHẮM MẮT — EAR ${ear.toFixed(2)} cần xuống dưới ${closedThr.toFixed(2)}`
         );
-        if (ear < closedThr) phase = 2;
-      } else if (phase === 2) {
-        setStatusText("Tốt! MỞ MẮT ra để hoàn tất");
-        if (ear > openThr) {
+        if (ear < closedThr) {
           setStatusText("Xác thực người thật thành công ✓");
           return true;
         }
@@ -280,8 +274,8 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
               textAlign: "center",
             }}
           >
-            Để chống gian lận, khi xác nhận hãy nhìn thẳng rồi NHẮM MẮT một cái và
-            MỞ ra để xác thực bạn là người thật (không dùng được ảnh).
+            Để chống gian lận, khi xác nhận hãy giữ mắt mở 1 giây rồi NHẮM MẮT một
+            cái để xác thực bạn là người thật (không dùng được ảnh).
           </p>
         )}
 
