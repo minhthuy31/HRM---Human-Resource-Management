@@ -18,6 +18,7 @@ namespace HRApi.Controllers
         public BangLuongController(AppDbContext context) { _context = context; }
 
         public class SalaryCalcDto { public int Year { get; set; } public int Month { get; set; } }
+        public class PayrollAdjustDto { public int Id { get; set; } public decimal KhoanTruKhac { get; set; } public string? LyDoKhac { get; set; } }
 
         // ==============================================================
         // HELPER: TÍNH CÔNG CHUẨN THỰC TẾ (T2-T6 trừ ngày lễ)
@@ -553,7 +554,7 @@ namespace HRApi.Controllers
         // 3. LƯU CÁC KHOẢN TRỪ KHÁC
         // ==============================================================
         [HttpPost("save")]
-        public async Task<IActionResult> SavePayroll([FromBody] List<BangLuong> payrollData)
+        public async Task<IActionResult> SavePayroll([FromBody] List<PayrollAdjustDto> payrollData)
         {
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
             if (role != "Kế toán trưởng" && role != "Giám đốc")

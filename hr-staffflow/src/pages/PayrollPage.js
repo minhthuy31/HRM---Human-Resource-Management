@@ -267,7 +267,76 @@ const PayrollPage = () => {
   });
 
   const handleExportExcel = () => {
-    /* ... Giữ nguyên ... */
+    try {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth() + 1;
+
+      const headers = [
+        "STT", "Mã NV", "Nhân viên", "Phòng ban", "Chức vụ",
+        "Lương CB", "Phụ cấp", "Công chuẩn", "Công", "OT (h)",
+        "Phép", "Nghỉ KL", "KP", "1/2",
+        "Lương chính", "Tiền OT", "Tiền ăn", "Tiền xe", "Chuyên cần", "Tổng TN",
+        "BHXH", "BHYT", "BHTN", "Thuế TNCN", "Điều chỉnh", "Lý do", "Thực lĩnh",
+      ];
+
+      const rows = filteredPayrolls.map((p, idx) => [
+        idx + 1,
+        p.maNhanVien,
+        p.nhanVien?.hoTen || "",
+        p.nhanVien?.tenPhongBan || "",
+        p.nhanVien?.tenChucVu || "",
+        p.luongCoBan || 0,
+        p.tongPhuCap || 0,
+        p.soCongChuanTrongThang || 0,
+        p.tongNgayCong || 0,
+        p.tongGioOT || 0,
+        p.nghiCoPhep || 0,
+        p.nghiKhongLuong || 0,
+        p.nghiKhongPhep || 0,
+        p.lamNuaNgay || 0,
+        p.luongChinh || 0,
+        p.luongOT || 0,
+        p.tienAn || 0,
+        p.tienGuiXe || 0,
+        p.tienChuyenCan || 0,
+        p.tongThuNhap || 0,
+        p.khauTruBHXH || 0,
+        p.khauTruBHYT || 0,
+        p.khauTruBHTN || 0,
+        p.thueTNCN || 0,
+        p.khoanTruKhac || 0,
+        p.lyDoKhac || "",
+        p.thucLanh || 0,
+      ]);
+
+      const wsData = [
+        [`BẢNG LƯƠNG THÁNG ${month}/${year}`],
+        [],
+        headers,
+        ...rows,
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
+      ws["!cols"] = headers.map((h, i) => ({ wch: i === 2 ? 22 : i === 25 ? 20 : 12 }));
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, `Luong_T${month}_${year}`);
+
+      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([wbout], { type: "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `BangLuong_T${String(month).padStart(2, "0")}_${year}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Lỗi xuất Excel:", e);
+      showToast("Lỗi xuất Excel: " + (e?.message || e), "error");
+    }
   };
 
   return (
