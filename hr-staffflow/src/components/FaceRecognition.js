@@ -11,9 +11,9 @@ import { useToast } from "../context/ToastContext";
 // QUAN TRỌNG: ngưỡng KHÔNG cố định mà TỰ ĐO theo mắt mở của từng người (baseline),
 // rồi lấy theo TỈ LỆ của baseline đó => hợp với mọi khuôn mặt/camera, hết cảnh
 // "ngưỡng không khớp mắt người này".
-const CALIB_FRAMES = 4; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
+const CALIB_FRAMES = 3; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
 const CLOSED_RATIO = 0.85; // Coi là NHẮM khi EAR tụt dưới 85% baseline (cao = dễ ăn, nhanh hơn)
-const CLOSED_HOLD_MS = 500; // Giữ nhắm liên tục đủ lâu này => qua (giúp máy yếu chắc chắn bắt trúng)
+const CLOSED_HOLD_MS = 300; // Giữ nhắm liên tục đủ lâu này => qua (giúp máy yếu chắc chắn bắt trúng)
 const LIVENESS_TIMEOUT_MS = 20000; // Thời gian tối đa cho bước xác thực
 
 // Lấy trung vị (median) — bền với nhiễu hơn trung bình
@@ -44,11 +44,34 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
     const loadModels = async () => {
       const MODEL_URL = "/models"; // Đảm bảo bạn đã copy folder models vào public/models
       try {
+        // Ép dùng WebGL (GPU) để quét nhanh hơn nhiều (mặc định có thể rơi về CPU rất chậm)
+        try {
+          if (faceapi.tf?.setBackend) {
+            await faceapi.tf.setBackend("webgl");
+            await faceapi.tf.ready();
+          }
+        } catch (e) {
+          console.warn("Không bật được WebGL, dùng backend mặc định:", e);
+        }
+
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
         ]);
+
+        // "Làm nóng" model: chạy 1 lần trên ảnh trắng để lần quét thật không bị khựng
+        try {
+          const warm = document.createElement("canvas");
+          warm.width = 320;
+          warm.height = 240;
+          await faceapi
+            .detectSingleFace(warm, new faceapi.TinyFaceDetectorOptions({ inputSize: 128 }))
+            .withFaceLandmarks();
+        } catch (e) {
+          /* bỏ qua, chỉ là warm-up */
+        }
+
         setModelsLoaded(true);
       } catch (error) {
         console.error("Lỗi tải model AI:", error);
