@@ -13,8 +13,7 @@ import { ensureFaceModels, getBackend } from "../utils/faceModels";
 // rồi lấy theo TỈ LỆ của baseline đó => hợp với mọi khuôn mặt/camera, hết cảnh
 // "ngưỡng không khớp mắt người này".
 const CALIB_FRAMES = 3; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
-const CLOSED_RATIO = 0.85; // Coi là NHẮM khi EAR tụt dưới 85% baseline (cao = dễ ăn, nhanh hơn)
-const CLOSED_HOLD_MS = 300; // Giữ nhắm liên tục đủ lâu này => qua (giúp máy yếu chắc chắn bắt trúng)
+const CLOSED_RATIO = 0.88; // Coi là NHẮM khi EAR tụt dưới 88% baseline (cao = chỉ cần chớp nhẹ cũng nhận)
 const LIVENESS_TIMEOUT_MS = 20000; // Thời gian tối đa cho bước xác thực
 
 // Lấy trung vị (median) — bền với nhiễu hơn trung bình
@@ -83,7 +82,6 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
     const calib = []; // các mẫu EAR lúc đo baseline
     let baseline = 0; // mốc EAR mắt mở của riêng người này
     let closedThr = 0;
-    let closedStart = 0; // mốc thời gian bắt đầu nhắm liên tục (0 = đang mở)
 
     livenessRunningRef.current = true;
 
@@ -124,19 +122,13 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
           phase = 1;
         }
       } else if (phase === 1) {
-        // Nhắm mắt và GIỮ một chút: máy yếu vẫn chắc chắn bắt trúng
+        // Chỉ cần MỘT cú chớp/nhắm: thấy mắt khép là qua ngay (không phải giữ)
+        setStatusText(
+          `Hãy CHỚP MẮT một cái — EAR ${ear.toFixed(2)} / ngưỡng ${closedThr.toFixed(2)}`
+        );
         if (ear < closedThr) {
-          if (closedStart === 0) closedStart = Date.now();
-          if (Date.now() - closedStart >= CLOSED_HOLD_MS) {
-            setStatusText("Xác thực người thật thành công ✓");
-            return true;
-          }
-          setStatusText("Giữ nhắm mắt... sắp xong");
-        } else {
-          closedStart = 0; // mở mắt thì đặt lại
-          setStatusText(
-            `Hãy NHẮM MẮT và giữ — EAR ${ear.toFixed(2)} cần dưới ${closedThr.toFixed(2)}`
-          );
+          setStatusText("Xác thực người thật thành công ✓");
+          return true;
         }
       }
     }
@@ -303,8 +295,8 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
               textAlign: "center",
             }}
           >
-            Để chống gian lận, khi xác nhận hãy giữ mắt mở 1 giây rồi NHẮM MẮT và
-            giữ nửa giây để xác thực bạn là người thật (không dùng được ảnh).
+            Để chống gian lận, khi xác nhận hãy giữ mắt mở 1 giây rồi CHỚP MẮT một
+            cái để xác thực bạn là người thật (không dùng được ảnh).
           </p>
         )}
 
