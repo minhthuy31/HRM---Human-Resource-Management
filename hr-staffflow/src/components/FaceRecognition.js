@@ -176,27 +176,36 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
     return false;
   };
 
-  // Trích descriptor từ 1 ảnh chụp (giữ nguyên logic cũ để không ảnh hưởng so khớp)
+  // Trích descriptor: lấy TRỰC TIẾP từ luồng video (ổn định hơn chụp ảnh tĩnh),
+  // và thử lại vài lần để không bị trượt do 1 khung hình xấu.
   const captureDescriptor = async () => {
-    const imageSrc = webcamRef.current.getScreenshot();
-    if (!imageSrc) {
-      showToast("Không thể chụp ảnh từ webcam.", "error");
+    const video = webcamRef.current?.video;
+    if (!video || video.readyState !== 4) {
+      showToast("Camera chưa sẵn sàng. Vui lòng thử lại.", "error");
       return null;
     }
 
-    const img = await faceapi.fetchImage(imageSrc);
-    const detection = await faceapi
-      .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-      .withFaceLandmarks()
-      .withFaceDescriptor();
+    // inputSize lớn hơn cho bước này => dò khuôn mặt chính xác hơn (chỉ chạy 1 lần nên vẫn nhanh)
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320 });
+    for (let attempt = 0; attempt < 6; attempt++) {
+      setStatusText("Đang nhận diện khuôn mặt...");
+      const detection = await faceapi
+        .detectSingleFace(video, options)
+        .withFaceLandmarks()
+        .withFaceDescriptor();
 
-    if (!detection) {
-      showToast("Không phát hiện khuôn mặt nào. Vui lòng thử lại ở nơi đủ sáng.", "error");
-      return null;
+      if (detection) {
+        // Chuyển descriptor sang mảng số thông thường để gửi đi
+        return Array.from(detection.descriptor);
+      }
+      await new Promise((r) => setTimeout(r, 120));
     }
 
-    // Chuyển descriptor sang mảng số thông thường để gửi đi
-    return Array.from(detection.descriptor);
+    showToast(
+      "Không nhận diện được khuôn mặt. Hãy đưa mặt vào GIỮA khung hình, đủ sáng rồi thử lại.",
+      "error"
+    );
+    return null;
   };
 
   const handleCapture = async () => {
