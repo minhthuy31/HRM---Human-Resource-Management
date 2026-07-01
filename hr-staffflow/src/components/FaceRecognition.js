@@ -37,6 +37,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState("");
+  const [backendName, setBackendName] = useState(""); // CHẨN ĐOÁN: webgl (nhanh) hay cpu (chậm)
 
   const isRegister = mode === "register";
 
@@ -53,6 +54,10 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         } catch (e) {
           console.warn("Không bật được WebGL, dùng backend mặc định:", e);
         }
+        // Ghi lại backend thực tế để hiển thị (webgl = nhanh, cpu = chậm)
+        const be = faceapi.tf?.getBackend?.() || "?";
+        console.log("[FaceRecognition] TF backend =", be);
+        setBackendName(be);
 
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
@@ -242,6 +247,19 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         <h2>
           {isRegister ? "Đăng Ký Khuôn Mặt" : "Chấm Công Khuôn Mặt"}
         </h2>
+        {backendName && (
+          <p
+            style={{
+              textAlign: "center",
+              margin: "0 0 8px",
+              fontSize: "12px",
+              color: backendName === "webgl" ? "#28a745" : "#dc3545",
+            }}
+          >
+            Chế độ xử lý: {backendName}
+            {backendName === "webgl" ? " (GPU - nhanh)" : " (CHẬM - không có GPU)"}
+          </p>
+        )}
 
         <div
           style={{
