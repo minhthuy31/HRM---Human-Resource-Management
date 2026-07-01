@@ -163,6 +163,12 @@ namespace HRApi.Controllers
 
             DateTime vnTime = GetVnTime();
             DateTime today = vnTime.Date;
+
+            // Không cho chấm công nếu bảng công tháng đó đã bị khóa
+            var isLockedMonth = await _context.KhoaCongs.AnyAsync(k => k.Nam == today.Year && k.Thang == today.Month && k.IsLocked);
+            if (isLockedMonth)
+                return BadRequest(new { success = false, message = $"Bảng công tháng {today.Month}/{today.Year} đã bị khóa, không thể chấm công." });
+
             var shift = await ShiftConfig.LoadAsync(_context);
 
             var existing = await _context.ChamCongs.FirstOrDefaultAsync(c => c.MaNhanVien == currentUserId && c.NgayChamCong.Date == today);
@@ -350,6 +356,12 @@ namespace HRApi.Controllers
                         .ToDictionaryAsync(g => g.Key, g => g.Sum(c => c.NgayCong));
                 }
 
+                // Tổng giờ OT đã duyệt theo từng NV (để hiển thị/xuất Excel)
+                var otHoursByEmp = listOT
+                    .Where(o => o.TrangThai == "Đã duyệt" && !string.IsNullOrEmpty(o.MaNhanVien))
+                    .GroupBy(o => o.MaNhanVien)
+                    .ToDictionary(g => g.Key, g => g.Sum(o => o.SoGio));
+
                 var summaries = validData.GroupBy(c => c.MaNhanVien).ToDictionary(g => g.Key, g =>
                 {
                     string loaiNV = employeesInfo.ContainsKey(g.Key) ? (employeesInfo[g.Key] ?? "") : "";
@@ -362,6 +374,9 @@ namespace HRApi.Controllers
                         TongCong = g.Sum(c => c.NgayCong),
                         DiLamDu = g.Count(c => c.NgayCong == 1.0 && string.IsNullOrEmpty(c.GhiChu)),
                         NghiCoPhep = g.Where(c => c.LoaiNgayCong == LoaiCong.NghiPhep).Sum(c => c.NgayCong),
+                        NghiKhongLuong = g.Count(c => c.LoaiNgayCong == LoaiCong.NghiKhongLuong),
+                        NghiKhongPhep = g.Count(c => c.LoaiNgayCong == LoaiCong.NghiKhongPhep),
+                        TongGioOT = otHoursByEmp.TryGetValue(g.Key, out var otH) ? otH : 0,
                         RemainingLeaveDays = maxLeaves - usedLeaves
                     };
                 });

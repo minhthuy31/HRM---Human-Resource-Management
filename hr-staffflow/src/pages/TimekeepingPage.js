@@ -640,7 +640,23 @@ const TimekeepingPage = () => {
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, `CC_T${month}_${year}`);
-    XLSX.writeFile(wb, `BangChamCong_T${String(month).padStart(2, "0")}_${year}.xlsx`);
+
+    try {
+      // Tải file bằng Blob (ổn định hơn XLSX.writeFile trên trình duyệt)
+      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([wbout], { type: "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `BangChamCong_T${String(month).padStart(2, "0")}_${year}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Lỗi xuất Excel:", e);
+      alert("Lỗi xuất Excel: " + (e?.message || e));
+    }
   };
 
   if (permissionDenied) {
