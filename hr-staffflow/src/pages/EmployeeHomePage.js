@@ -20,6 +20,7 @@ import {
 } from "react-icons/fi";
 import { FaSearch, FaUserAstronaut } from "react-icons/fa";
 import FaceRecognition from "../components/FaceRecognition";
+import { ensureFaceModels } from "../utils/faceModels";
 
 // Import các Modal
 import LeaveRequestModal from "../components/modals/LeaveRequestModal";
@@ -65,6 +66,14 @@ const EmployeeHomePage = () => {
     if (document.body.classList.contains("dark-mode")) {
       setIsDarkMode(true);
     }
+  }, []);
+
+  // Tải sẵn model nhận diện khuôn mặt ngay khi vào trang (chạy ngầm),
+  // để lúc bấm "Chấm công khuôn mặt" thì mở ra quét được ngay, không phải chờ tải.
+  useEffect(() => {
+    ensureFaceModels().catch(() => {
+      /* im lặng: nếu lỗi, khi mở modal sẽ thử tải lại */
+    });
   }, []);
 
   // Hàm Toggle Dark Mode đã được sửa để tương tác với thẻ Body

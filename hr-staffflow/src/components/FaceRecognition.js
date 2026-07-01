@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import Webcam from "react-webcam";
 import * as faceapi from "face-api.js";
 import { useToast } from "../context/ToastContext";
+import { ensureFaceModels, getBackend } from "../utils/faceModels";
 
 // ===== Cấu hình kiểm tra "người sống" (liveness / chống giả mạo bằng ảnh) =====
 // Cơ chế: bắt CHUYỂN ĐỘNG nhắm mắt theo chuỗi MỞ -> NHẮM -> MỞ lại.
@@ -43,40 +44,10 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
 
   useEffect(() => {
     const loadModels = async () => {
-      const MODEL_URL = "/models"; // Đảm bảo bạn đã copy folder models vào public/models
       try {
-        // Ép dùng WebGL (GPU) để quét nhanh hơn nhiều (mặc định có thể rơi về CPU rất chậm)
-        try {
-          if (faceapi.tf?.setBackend) {
-            await faceapi.tf.setBackend("webgl");
-            await faceapi.tf.ready();
-          }
-        } catch (e) {
-          console.warn("Không bật được WebGL, dùng backend mặc định:", e);
-        }
-        // Ghi lại backend thực tế để hiển thị (webgl = nhanh, cpu = chậm)
-        const be = faceapi.tf?.getBackend?.() || "?";
-        console.log("[FaceRecognition] TF backend =", be);
-        setBackendName(be);
-
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-        ]);
-
-        // "Làm nóng" model: chạy 1 lần trên ảnh trắng để lần quét thật không bị khựng
-        try {
-          const warm = document.createElement("canvas");
-          warm.width = 320;
-          warm.height = 240;
-          await faceapi
-            .detectSingleFace(warm, new faceapi.TinyFaceDetectorOptions({ inputSize: 128 }))
-            .withFaceLandmarks();
-        } catch (e) {
-          /* bỏ qua, chỉ là warm-up */
-        }
-
+        // Dùng module chung: nếu trang chủ đã preload thì đây trả về ngay (không chờ)
+        await ensureFaceModels();
+        setBackendName(getBackend());
         setModelsLoaded(true);
       } catch (error) {
         console.error("Lỗi tải model AI:", error);
