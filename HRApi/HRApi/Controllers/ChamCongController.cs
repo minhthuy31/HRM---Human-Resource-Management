@@ -38,7 +38,7 @@ namespace HRApi.Controllers
         // ==============================================================
         private bool IsCompanyNetwork(out string detectedIp)
         {
-            string[] companyIPs = { "58.187.57.2", "172.19.0.1", "127.0.0.1", "::1", "103.139.103.90" ,"222.252.107.200"};
+            string[] companyIPs = { "58.187.57.2", "172.19.0.1", "127.0.0.1", "::1", "103.139.103.90", "222.252.107.200", "183.81.7.196" };
 
             var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString();
 
@@ -242,41 +242,41 @@ namespace HRApi.Controllers
         // 3. THUẬT TOÁN TÍNH CÔNG THEO GIỜ (CORE BUSINESS LOGIC)
         // ==============================================================
         private double CalculateWorkDay(DateTime checkIn, DateTime checkOut, ShiftConfig shift)
+        {
+            // T7/CN KHÔNG tính công thường — làm cuối tuần chỉ được trả qua đơn OT (hệ số 2.0).
+            if (checkIn.DayOfWeek == DayOfWeek.Saturday || checkIn.DayOfWeek == DayOfWeek.Sunday)
+                return 0.0;
+
+            TimeSpan inTime = checkIn.TimeOfDay;
+            TimeSpan outTime = checkOut.TimeOfDay;
+
+            // 1. Cắt gọt thời gian theo ca chuẩn (đọc từ cài đặt)
+            if (inTime < shift.Start) inTime = shift.Start;
+            if (outTime > shift.End) outTime = shift.End;
+            if (outTime <= inTime) return 0.0;
+
+            // 2. Tính tổng số giờ ở công ty
+            double totalHours = (outTime - inTime).TotalHours;
+
+            // 3. Trừ đi thời gian nghỉ trưa nếu có giao thoa
+            if (inTime < shift.LunchEnd && outTime > shift.LunchStart)
             {
-                // T7/CN KHÔNG tính công thường — làm cuối tuần chỉ được trả qua đơn OT (hệ số 2.0).
-                if (checkIn.DayOfWeek == DayOfWeek.Saturday || checkIn.DayOfWeek == DayOfWeek.Sunday)
-                    return 0.0;
+                TimeSpan overlapStart = (inTime > shift.LunchStart) ? inTime : shift.LunchStart;
+                TimeSpan overlapEnd = (outTime < shift.LunchEnd) ? outTime : shift.LunchEnd;
+                double lunchOverlapHours = (overlapEnd - overlapStart).TotalHours;
 
-                TimeSpan inTime = checkIn.TimeOfDay;
-                TimeSpan outTime = checkOut.TimeOfDay;
-
-                // 1. Cắt gọt thời gian theo ca chuẩn (đọc từ cài đặt)
-                if (inTime < shift.Start) inTime = shift.Start;
-                if (outTime > shift.End) outTime = shift.End;
-                if (outTime <= inTime) return 0.0;
-
-                // 2. Tính tổng số giờ ở công ty
-                double totalHours = (outTime - inTime).TotalHours;
-
-                // 3. Trừ đi thời gian nghỉ trưa nếu có giao thoa
-                if (inTime < shift.LunchEnd && outTime > shift.LunchStart)
-                {
-                    TimeSpan overlapStart = (inTime > shift.LunchStart) ? inTime : shift.LunchStart;
-                    TimeSpan overlapEnd = (outTime < shift.LunchEnd) ? outTime : shift.LunchEnd;
-                    double lunchOverlapHours = (overlapEnd - overlapStart).TotalHours;
-                    
-                    if (lunchOverlapHours > 0) totalHours -= lunchOverlapHours;
-                }
-
-                // 4. Số giờ làm việc chuẩn để đạt 1 công là 8.0 giờ (9.5 tiếng - 1.5 tiếng nghỉ)
-                double STANDARD_SHIFT_HOURS = 8.0; 
-                
-                // 5. Tính tỷ lệ công thực tế
-                double exactCong = totalHours / STANDARD_SHIFT_HOURS;
-
-                // Làm tròn đến 3 chữ số thập phân 
-                return Math.Round(exactCong, 3); 
+                if (lunchOverlapHours > 0) totalHours -= lunchOverlapHours;
             }
+
+            // 4. Số giờ làm việc chuẩn để đạt 1 công là 8.0 giờ (9.5 tiếng - 1.5 tiếng nghỉ)
+            double STANDARD_SHIFT_HOURS = 8.0;
+
+            // 5. Tính tỷ lệ công thực tế
+            double exactCong = totalHours / STANDARD_SHIFT_HOURS;
+
+            // Làm tròn đến 3 chữ số thập phân 
+            return Math.Round(exactCong, 3);
+        }
 
         // ==============================================================
         // 4. LẤY DỮ LIỆU BẢNG CÔNG TỔNG HỢP THÁNG
