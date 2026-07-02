@@ -13,7 +13,7 @@ import { ensureFaceModels, getBackend } from "../utils/faceModels";
 // rồi lấy theo TỈ LỆ của baseline đó => hợp với mọi khuôn mặt/camera, hết cảnh
 // "ngưỡng không khớp mắt người này".
 const CALIB_FRAMES = 3; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
-const CLOSED_RATIO = 0.88; // Coi là NHẮM khi EAR tụt dưới 88% baseline (cao = chỉ cần chớp nhẹ cũng nhận)
+const CLOSED_RATIO = 0.9; // Coi là NHẮM khi EAR tụt dưới 90% baseline (cao = chỉ cần chớp nhẹ cũng nhận)
 const LIVENESS_TIMEOUT_MS = 20000; // Thời gian tối đa cho bước xác thực
 
 // Lấy trung vị (median) — bền với nhiễu hơn trung bình
@@ -77,11 +77,14 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
     // inputSize nhỏ => quét nhanh, mượt hơn trên máy yếu
     const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 128 });
     const startTime = Date.now();
-    let phase = 0; // 0: ĐO mắt mở, 1: chờ NHẮM (giữ) -> đạt
+    let phase = 0; // 0: ĐO mắt mở, 1: chờ NHẮM -> đạt
     let sawFace = false;
     const calib = []; // các mẫu EAR lúc đo baseline
     let baseline = 0; // mốc EAR mắt mở của riêng người này
     let closedThr = 0;
+    let minEar = 1; // EAR thấp nhất khi chớp (để chẩn đoán)
+    let belowCount = 0; // số khung liên tiếp thấy mắt khép
+    let frameCount = 0; // đếm khung để tính fps
 
     livenessRunningRef.current = true;
 
@@ -105,6 +108,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       }
 
       sawFace = true;
+      frameCount += 1;
       const landmarks = detection.landmarks;
       const ear =
         (eyeAspectRatio(landmarks.getLeftEye()) +
@@ -122,14 +126,20 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
           phase = 1;
         }
       } else if (phase === 1) {
-        // Chỉ cần MỘT cú chớp/nhắm: thấy mắt khép là qua ngay (không phải giữ)
-        setStatusText(
-          `Hãy CHỚP MẮT một cái — EAR ${ear.toFixed(2)} / ngưỡng ${closedThr.toFixed(2)}`
-        );
-        if (ear < closedThr) {
+        if (ear < minEar) minEar = ear;
+        // Cần 2 khung liên tiếp thấy mắt khép (chống 1 khung nhiễu, vẫn rất nhạy)
+        belowCount = ear < closedThr ? belowCount + 1 : 0;
+        if (belowCount >= 2) {
           setStatusText("Xác thực người thật thành công ✓");
           return true;
         }
+        const secs = (Date.now() - startTime) / 1000;
+        const fps = secs > 0 ? Math.round(frameCount / secs) : 0;
+        setStatusText(
+          `CHỚP MẮT đi — EAR ${ear.toFixed(2)} (thấp nhất ${minEar.toFixed(
+            2
+          )}) cần < ${closedThr.toFixed(2)} · ${fps} fps`
+        );
       }
     }
 
