@@ -13,7 +13,8 @@ import { ensureFaceModels, getBackend } from "../utils/faceModels";
 // rồi lấy theo TỈ LỆ của baseline đó => hợp với mọi khuôn mặt/camera, hết cảnh
 // "ngưỡng không khớp mắt người này".
 const CALIB_FRAMES = 3; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
-const CLOSED_RATIO = 0.9; // Coi là NHẮM khi EAR tụt dưới 90% baseline (cao = chỉ cần chớp nhẹ cũng nhận)
+const CLOSED_RATIO = 0.78; // Coi là NHẮM khi EAR tụt dưới 78% baseline (chặt để ảnh nghiêng KHÔNG lọt;
+// mắt thật nhắm sâu tụt tới ~35-40% nên vẫn qua thoải mái)
 const LIVENESS_TIMEOUT_MS = 20000; // Thời gian tối đa cho bước xác thực
 
 // Lấy trung vị (median) — bền với nhiễu hơn trung bình
