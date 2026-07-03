@@ -31,6 +31,17 @@ const eyeAspectRatio = (eye) => {
   return horizontal === 0 ? 0 : vertical / horizontal;
 };
 
+// Tính Mouth Aspect Ratio (MAR): độ mở miệng dọc / rộng miệng.
+// getMouth() trả 20 điểm (48..67). Môi trong: 62=idx14, 66=idx18; khóe: 48=idx0, 54=idx6.
+// Dùng để phát hiện trò NGHIÊNG ẢNH: nghiêng làm cả mặt bị nén => MAR cũng tụt,
+// trong khi nhắm mắt thật thì miệng đứng yên => MAR không đổi.
+const mouthAspectRatio = (mouth) => {
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const vertical = dist(mouth[14], mouth[18]);
+  const horizontal = dist(mouth[0], mouth[6]);
+  return horizontal === 0 ? 0 : vertical / horizontal;
+};
+
 const FaceRecognition = ({ mode, onCapture, onClose }) => {
   const { showToast } = useToast();
   const webcamRef = useRef(null);
@@ -81,10 +92,12 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
     let phase = 0; // 0: ĐO mắt mở, 1: chờ NHẮM -> đạt
     let sawFace = false;
     const calib = []; // các mẫu EAR lúc đo baseline
+    const marCalib = []; // các mẫu MAR (miệng) lúc đo baseline
     let baseline = 0; // mốc EAR mắt mở của riêng người này
+    let marBaseline = 0; // mốc MAR miệng của riêng người này
     let closedThr = 0;
     let minEar = 1; // EAR thấp nhất khi chớp (để chẩn đoán)
-    let belowCount = 0; // số khung liên tiếp thấy mắt khép
+    let belowCount = 0; // số khung liên tiếp thấy mắt khép (mà miệng vẫn ổn)
     let frameCount = 0; // đếm khung để tính fps
 
     livenessRunningRef.current = true;
@@ -115,32 +128,47 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         (eyeAspectRatio(landmarks.getLeftEye()) +
           eyeAspectRatio(landmarks.getRightEye())) /
         2;
+      const mar = mouthAspectRatio(landmarks.getMouth());
 
-      // Máy trạng thái: ĐO mắt mở -> chờ NHẮM (có chuyển động => ảnh tĩnh không qua được)
+      // Máy trạng thái: ĐO mắt+miệng mở -> chờ NHẮM (mắt khép nhưng miệng KHÔNG nén)
       if (phase === 0) {
-        // Đo baseline mắt mở của riêng người này
+        // Đo baseline mắt mở + miệng của riêng người này
         calib.push(ear);
+        marCalib.push(mar);
         setStatusText(`Giữ MẮT MỞ, đang chuẩn bị... (${calib.length}/${CALIB_FRAMES})`);
         if (calib.length >= CALIB_FRAMES) {
           baseline = median(calib);
+          marBaseline = median(marCalib);
           closedThr = baseline * CLOSED_RATIO;
           phase = 1;
         }
       } else if (phase === 1) {
         if (ear < minEar) minEar = ear;
-        // Cần 2 khung liên tiếp thấy mắt khép (chống 1 khung nhiễu, vẫn rất nhạy)
-        belowCount = ear < closedThr ? belowCount + 1 : 0;
-        if (belowCount >= 2) {
-          setStatusText("Xác thực người thật thành công ✓");
-          return true;
+        const eyeClosed = ear < closedThr; // mắt khép
+        // Chốt chặn tilt: nhắm thật thì miệng đứng yên; nghiêng ảnh thì miệng cũng bị nén
+        const mouthStable = mar > marBaseline * 0.7;
+
+        if (eyeClosed && mouthStable) {
+          belowCount += 1; // khung hợp lệ liên tiếp
+          if (belowCount >= 2) {
+            setStatusText("Xác thực người thật thành công ✓");
+            return true;
+          }
+        } else {
+          belowCount = 0;
         }
-        const secs = (Date.now() - startTime) / 1000;
-        const fps = secs > 0 ? Math.round(frameCount / secs) : 0;
-        setStatusText(
-          `CHỚP MẮT đi — EAR ${ear.toFixed(2)} (thấp nhất ${minEar.toFixed(
-            2
-          )}) cần < ${closedThr.toFixed(2)} · ${fps} fps`
-        );
+
+        if (eyeClosed && !mouthStable) {
+          setStatusText("Phát hiện NGHIÊNG ẢNH (cả mặt biến dạng) — hãy dùng mặt thật");
+        } else {
+          const secs = (Date.now() - startTime) / 1000;
+          const fps = secs > 0 ? Math.round(frameCount / secs) : 0;
+          setStatusText(
+            `CHỚP MẮT đi — EAR ${ear.toFixed(2)} cần <${closedThr.toFixed(
+              2
+            )} | miệng ${mar.toFixed(2)} (mốc ${marBaseline.toFixed(2)}) · ${fps}fps`
+          );
+        }
       }
     }
 
