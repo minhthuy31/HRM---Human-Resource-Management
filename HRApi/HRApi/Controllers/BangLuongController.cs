@@ -129,7 +129,21 @@ namespace HRApi.Controllers
             {
                 var activeContracts = emp.HopDongs?
                     .Where(h => h.NgayBatDau < monthEnd && (h.NgayKetThuc == null || h.NgayKetThuc >= monthStart))
-                    .OrderBy(h => h.NgayBatDau).ToList();
+                    .OrderBy(h => h.NgayBatDau).ToList() ?? new List<HopDong>();
+
+                // LƯỚI AN TOÀN: NV không có HĐ phủ tháng → dùng 1 "HĐ ảo" cả tháng theo LuongCoBan của NV,
+                // để chạy CÙNG logic (ngày lễ, OT, BH 14 ngày, loại T7/CN) như NV có hợp đồng.
+                if (activeContracts.Count == 0)
+                {
+                    activeContracts.Add(new HopDong
+                    {
+                        SoHopDong   = "(Không HĐ)",
+                        LoaiHopDong = emp.LoaiNhanVien ?? "Chính thức",
+                        NgayBatDau  = monthStart,
+                        NgayKetThuc = monthEnd.AddDays(-1),
+                        LuongCoBan  = emp.LuongCoBan
+                    });
+                }
 
                 decimal totalLuongChinh = 0, totalLuongOT = 0, totalLuongDongBH = 0;
                 decimal totalLuongLamThemLe = 0;
@@ -146,7 +160,6 @@ namespace HRApi.Controllers
                 var empAtt = attendanceData.Where(c => c.MaNhanVien == emp.MaNhanVien).ToList();
                 var empOT  = otEntries.Where(x => x.MaNhanVien == emp.MaNhanVien).ToList();
 
-                if (activeContracts != null && activeContracts.Any())
                 {
                     for (int ci = 0; ci < activeContracts.Count; ci++)
                     {
@@ -253,16 +266,6 @@ namespace HRApi.Controllers
                     // < 14 ngày (vd nửa tháng đầu thử việc) → KHÔNG đóng BH cả tháng đó.
                     // Mức đóng tính trên NGUYÊN lương HĐ chính thức (không prorate, không tính lương thử việc).
                     totalLuongDongBH = soNgayCongChinhThuc >= 14 ? luongCoBanChinhThuc : 0;
-                }
-                else
-                {
-                    // Không có hợp đồng: tính đơn giản
-                    totalWorkDays    = empAtt.Sum(c => c.NgayCong);
-                    bool isThuViec   = emp.LoaiNhanVien?.Contains("thử việc", StringComparison.OrdinalIgnoreCase) == true;
-                    decimal salaryMultiplier = isThuViec ? 0.85m : 1.0m;
-                    totalLuongChinh  = (emp.LuongCoBan * salaryMultiplier / standardWorkDays) * (decimal)totalWorkDays;
-                    // Căn cứ đóng BH (A1): nguyên lương cơ bản cố định, không prorate
-                    totalLuongDongBH = isThuViec ? 0 : emp.LuongCoBan;
                 }
 
                 // ── PHỤ CẤP (tính theo SỐ NGÀY CÔNG THƯỜNG đi làm thực tế) ──
