@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import Webcam from "react-webcam";
 import * as faceapi from "face-api.js";
 import { useToast } from "../context/ToastContext";
-import { ensureFaceModels } from "../utils/faceModels";
+import { ensureFaceModels, getBackend } from "../utils/faceModels";
 
 // ===== Cấu hình kiểm tra "người sống" (liveness / chống giả mạo bằng ảnh) =====
 // Cơ chế: bắt CHUYỂN ĐỘNG nhắm mắt theo chuỗi MỞ -> NHẮM -> MỞ lại.
@@ -49,6 +49,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState("");
+  const [backendName, setBackendName] = useState(""); // CHẨN ĐOÁN: webgl (nhanh) hay cpu (chậm)
 
   const isRegister = mode === "register";
 
@@ -57,6 +58,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       try {
         // Dùng module chung: nếu trang chủ đã preload thì đây trả về ngay (không chờ)
         await ensureFaceModels();
+        setBackendName(getBackend());
         setModelsLoaded(true);
       } catch (error) {
         console.error("Lỗi tải model AI:", error);
@@ -94,7 +96,9 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
     let baseline = 0; // mốc EAR mắt mở của riêng người này
     let marBaseline = 0; // mốc MAR miệng của riêng người này
     let closedThr = 0;
+    let minEar = 1; // EAR thấp nhất khi chớp (để chẩn đoán)
     let belowCount = 0; // số khung liên tiếp thấy mắt khép (mà miệng vẫn ổn)
+    let frameCount = 0; // đếm khung để tính fps
 
     livenessRunningRef.current = true;
 
@@ -118,6 +122,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       }
 
       sawFace = true;
+      frameCount += 1;
       const landmarks = detection.landmarks;
       const ear =
         (eyeAspectRatio(landmarks.getLeftEye()) +
@@ -138,6 +143,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
           phase = 1;
         }
       } else if (phase === 1) {
+        if (ear < minEar) minEar = ear;
         const eyeClosed = ear < closedThr; // mắt khép
         // Chốt chặn tilt: nhắm thật thì miệng đứng yên; nghiêng ảnh thì miệng cũng bị nén
         const mouthStable = mar > marBaseline * 0.7;
@@ -153,9 +159,15 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         }
 
         if (eyeClosed && !mouthStable) {
-          setStatusText("Phát hiện nghiêng ảnh — vui lòng dùng khuôn mặt thật");
+          setStatusText("Phát hiện NGHIÊNG ẢNH (cả mặt biến dạng) — hãy dùng mặt thật");
         } else {
-          setStatusText("Hãy CHỚP MẮT để xác thực");
+          const secs = (Date.now() - startTime) / 1000;
+          const fps = secs > 0 ? Math.round(frameCount / secs) : 0;
+          setStatusText(
+            `CHỚP MẮT đi — EAR ${ear.toFixed(2)} cần <${closedThr.toFixed(
+              2
+            )} | miệng ${mar.toFixed(2)} (mốc ${marBaseline.toFixed(2)}) · ${fps}fps`
+          );
         }
       }
     }
@@ -246,6 +258,19 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         <h2>
           {isRegister ? "Đăng Ký Khuôn Mặt" : "Chấm Công Khuôn Mặt"}
         </h2>
+        {backendName && (
+          <p
+            style={{
+              textAlign: "center",
+              margin: "0 0 8px",
+              fontSize: "12px",
+              color: backendName === "webgl" ? "#28a745" : "#dc3545",
+            }}
+          >
+            Chế độ xử lý: {backendName}
+            {backendName === "webgl" ? " (GPU - nhanh)" : " (CHẬM - không có GPU)"}
+          </p>
+        )}
 
         <div
           style={{
