@@ -196,12 +196,16 @@ namespace HRApi.Controllers
                     // Mở comment và đổi thành biến kiểm tra về sớm thực tế
                     bool isEarly = vnTime.TimeOfDay < shift.End;
 
-                    // TÍNH PHÚT LÀM VIỆC
-                    existing.NgayCong = CalculateWorkDay(existing.GioCheckIn.Value, existing.GioCheckOut.Value, shift);
-
                     bool isWeekend = today.DayOfWeek == DayOfWeek.Saturday || today.DayOfWeek == DayOfWeek.Sunday;
+                    bool isHolidayToday = await _context.NgayLes.AnyAsync(nl => nl.Date.Date == today);
+
+                    // TÍNH PHÚT LÀM VIỆC — T7/CN/ngày lễ KHÔNG tính công (chỉ trả qua đơn OT)
+                    existing.NgayCong = isHolidayToday ? 0.0
+                                      : CalculateWorkDay(existing.GioCheckIn.Value, existing.GioCheckOut.Value, shift);
+
                     string note = $"Check-in: {existing.GioCheckIn:HH:mm} | Check-out: {existing.GioCheckOut:HH:mm}";
-                    if (isWeekend) note += " (Cuối tuần - không tính công, cần đơn OT)";
+                    if (isHolidayToday)   note += " (Ngày lễ - không tính công, cần đơn OT)";
+                    else if (isWeekend)   note += " (Cuối tuần - không tính công, cần đơn OT)";
                     else
                     {
                         if (existing.DiMuon) note += " (Đi muộn)";
