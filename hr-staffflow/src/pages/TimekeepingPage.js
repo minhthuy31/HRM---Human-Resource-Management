@@ -591,7 +591,7 @@ const TimekeepingPage = () => {
         const dow = new Date(year, month - 1, day).getDay();
         return `${day}(${dowLabels[dow]})`;
       }),
-      "Tổng công", "Nghỉ CP", "Nghỉ KP", "OT (h)", "Đi muộn",
+      "Tổng công", "Nghỉ CP", "Nghỉ KP", "OT (h)", "Đi muộn", "Về sớm",
     ];
 
     const pbMap = {};
@@ -600,12 +600,13 @@ const TimekeepingPage = () => {
     const rows = filteredEmployees.map((emp, idx) => {
       const empId = emp.maNhanVien;
       const summary = summaries[empId] || {};
-      let muon = 0;
+      let muon = 0, veSom = 0;
 
       const dayCells = daysArray.map((day) => {
         const rec = attendance[empId]?.[day];
         if (!rec) return "";
         if (rec.ghiChu?.includes("Đi muộn")) muon++;
+        if (rec.ghiChu?.includes("Về sớm")) veSom++;
         return rec.ngayCong !== undefined ? rec.ngayCong : "";
       });
 
@@ -620,6 +621,7 @@ const TimekeepingPage = () => {
         summary.nghiKhongPhep ?? 0,
         Number(summary.tongGioOT ?? 0).toFixed(1),
         muon,
+        veSom,
       ];
     });
 
@@ -635,7 +637,7 @@ const TimekeepingPage = () => {
     ws["!cols"] = [
       { wch: 5 }, { wch: 22 }, { wch: 10 }, { wch: 18 },
       ...daysArray.map(() => ({ wch: 7 })),
-      { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
+      { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
     ];
 
     const wb = XLSX.utils.book_new();
@@ -834,6 +836,7 @@ const TimekeepingPage = () => {
                   <th className="summary-col" style={{ minWidth: "50px" }}>Nghỉ<br/><span style={{fontSize:"10px",fontWeight:"normal",color:"#dc2626"}}>KP</span></th>
                   <th className="summary-col" style={{ minWidth: "50px" }}>OT<br/><span style={{fontSize:"10px",fontWeight:"normal",color:"#7c3aed"}}>(h)</span></th>
                   <th className="summary-col" style={{ minWidth: "50px" }}>Đi<br/><span style={{fontSize:"10px",fontWeight:"normal",color:"#f59e0b"}}>muộn</span></th>
+                  <th className="summary-col" style={{ minWidth: "50px" }}>Về<br/><span style={{fontSize:"10px",fontWeight:"normal",color:"#ef4444"}}>sớm</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -843,6 +846,9 @@ const TimekeepingPage = () => {
                     const summary = summaries[empId] || {};
                     const muonCount = Object.values(attendance[empId] || {}).filter(
                       (r) => r?.ghiChu?.includes("Đi muộn")
+                    ).length;
+                    const veSomCount = Object.values(attendance[empId] || {}).filter(
+                      (r) => r?.ghiChu?.includes("Về sớm")
                     ).length;
                     return (
                       <tr key={empId}>
@@ -1016,13 +1022,16 @@ const TimekeepingPage = () => {
                         <td className="summary-col" style={{ textAlign: "center", color: muonCount > 0 ? "#f59e0b" : "#9ca3af", fontWeight: "600" }}>
                           {muonCount > 0 ? muonCount : "—"}
                         </td>
+                        <td className="summary-col" style={{ textAlign: "center", color: veSomCount > 0 ? "#ef4444" : "#9ca3af", fontWeight: "600" }}>
+                          {veSomCount > 0 ? veSomCount : "—"}
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
                     <td
-                      colSpan={daysInMonth + 6}
+                      colSpan={daysInMonth + 7}
                       style={{ textAlign: "center", padding: "20px" }}
                     >
                       Không có dữ liệu nhân viên.
