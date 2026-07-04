@@ -184,32 +184,22 @@ namespace HRApi.Controllers
                         bool isThuViec = contract.LoaiHopDong?.Contains("thử việc", StringComparison.OrdinalIgnoreCase) == true;
                         decimal salaryMultiplier = isThuViec ? 0.85m : 1.0m;
 
-                        // CÔNG THƯỜNG chỉ tính T2-T6 không phải lễ. Chấm công T7/CN KHÔNG vào công thường
-                        // (làm cuối tuần phải qua đơn OT hệ số 2.0).
-                        var normalAtt  = periodAtt.Where(c => !holidayDaySet.Contains(c.NgayChamCong.Day)
-                                                           && c.NgayChamCong.DayOfWeek != DayOfWeek.Saturday
-                                                           && c.NgayChamCong.DayOfWeek != DayOfWeek.Sunday).ToList();
-                        var holidayAtt = periodAtt.Where(c =>  holidayDaySet.Contains(c.NgayChamCong.Day)).ToList();
+                        // CÔNG THƯỜNG chỉ tính T2-T6 không phải lễ.
+                        // Ngày lễ đã được "hưởng nguyên lương" nhờ MẪU SỐ công chuẩn đã trừ lễ
+                        // → đi làm đủ công chuẩn là nhận đủ lương tháng, KHÔNG cộng thêm tiền lễ (tránh phồng lương).
+                        // Làm ngày lễ / T7 / CN chỉ được trả thêm qua ĐƠN OT.
+                        var normalAtt = periodAtt.Where(c => !holidayDaySet.Contains(c.NgayChamCong.Day)
+                                                          && c.NgayChamCong.DayOfWeek != DayOfWeek.Saturday
+                                                          && c.NgayChamCong.DayOfWeek != DayOfWeek.Sunday).ToList();
 
-                        double normalNgayCong  = normalAtt.Sum(c => c.NgayCong);
-                        double holidayWorkCong = holidayAtt.Sum(c => c.NgayCong);
-
-                        // Ngày lễ HƯỞNG LƯƠNG chỉ tính ngày lễ rơi vào T2-T6.
-                        // Ngày lễ trùng T7/CN vốn đã là ngày nghỉ cuối tuần → KHÔNG cộng lương lễ.
-                        int holidaysInPeriod = holidaysInMonth
-                            .Count(h => h >= periodStart.Date && h <= periodEnd.Date
-                                     && h.DayOfWeek != DayOfWeek.Saturday && h.DayOfWeek != DayOfWeek.Sunday);
-                        double leNghiONha = Math.Max(0, holidaysInPeriod - holidayWorkCong);
-
-                        double congChinh = normalNgayCong + holidayWorkCong + leNghiONha;
+                        double normalNgayCong = normalAtt.Sum(c => c.NgayCong);
+                        double congChinh = normalNgayCong;
                         totalWorkDays += congChinh;
 
-                        // Lương chính (thử việc = 85% lương cơ bản)
-                        decimal dailyRate    = contract.LuongCoBan * salaryMultiplier / standardWorkDays;
-                        decimal luongThuong  = dailyRate * (decimal)normalNgayCong;
-                        // 100% nguyên lương cho ngày lễ (nghỉ ở nhà lẫn đi làm) → thuộc lương chính
-                        decimal luongNghiLe  = dailyRate * (decimal)(leNghiONha + holidayWorkCong);
-                        totalLuongChinh += luongThuong + luongNghiLe;
+                        // Lương chính (thử việc = 85% lương cơ bản). KHÔNG cộng lương ngày lễ.
+                        decimal dailyRate   = contract.LuongCoBan * salaryMultiplier / standardWorkDays;
+                        decimal luongThuong = dailyRate * (decimal)normalNgayCong;
+                        totalLuongChinh += luongThuong;
 
                         // Ghi lại chi tiết kỳ hợp đồng này (để hiển thị "2 lương" khi chuyển HĐ)
                         chiTietSegments.Add(new ChiTietLuongHopDong
@@ -222,7 +212,7 @@ namespace HRApi.Controllers
                             LuongCoBan  = contract.LuongCoBan,
                             HeSo        = salaryMultiplier,
                             DonGiaNgay  = Math.Round(dailyRate, 0),
-                            ThanhTien   = Math.Round(luongThuong + luongNghiLe, 0)
+                            ThanhTien   = Math.Round(luongThuong, 0)
                         });
                         // GĐ2: phần +300% làm thêm ngày lễ KHÔNG còn auto từ chấm công.
                         // Mọi phần trả thêm (thường/cuối tuần/lễ) chỉ tính qua ĐƠN OT đã duyệt bên dưới.
