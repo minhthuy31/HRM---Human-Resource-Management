@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import Webcam from "react-webcam";
 import * as faceapi from "face-api.js";
 import { useToast } from "../context/ToastContext";
-import { ensureFaceModels, getBackend } from "../utils/faceModels";
+import { ensureFaceModels } from "../utils/faceModels";
 
 // ===== Cấu hình kiểm tra "người sống" (liveness / chống giả mạo bằng ảnh) =====
 // Cơ chế: bắt CHUYỂN ĐỘNG nhắm mắt theo chuỗi MỞ -> NHẮM -> MỞ lại.
@@ -13,8 +13,7 @@ import { ensureFaceModels, getBackend } from "../utils/faceModels";
 // rồi lấy theo TỈ LỆ của baseline đó => hợp với mọi khuôn mặt/camera, hết cảnh
 // "ngưỡng không khớp mắt người này".
 const CALIB_FRAMES = 3; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
-const CLOSED_RATIO = 0.78; // Coi là NHẮM khi EAR tụt dưới 78% baseline (chặt để ảnh nghiêng KHÔNG lọt;
-// mắt thật nhắm sâu tụt tới ~35-40% nên vẫn qua thoải mái)
+const CLOSED_RATIO = 0.88; // Coi là NHẮM khi EAR tụt dưới 88% baseline (nới rộng => chớp nhẹ là ăn)
 const LIVENESS_TIMEOUT_MS = 20000; // Thời gian tối đa cho bước xác thực
 
 // Lấy trung vị (median) — bền với nhiễu hơn trung bình
@@ -38,7 +37,6 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState("");
-  const [backendName, setBackendName] = useState(""); // CHẨN ĐOÁN: webgl (nhanh) hay cpu (chậm)
 
   const isRegister = mode === "register";
 
@@ -47,7 +45,6 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       try {
         // Dùng module chung: nếu trang chủ đã preload thì đây trả về ngay (không chờ)
         await ensureFaceModels();
-        setBackendName(getBackend());
         setModelsLoaded(true);
       } catch (error) {
         console.error("Lỗi tải model AI:", error);
@@ -83,9 +80,6 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
     const calib = []; // các mẫu EAR lúc đo baseline
     let baseline = 0; // mốc EAR mắt mở của riêng người này
     let closedThr = 0;
-    let minEar = 1; // EAR thấp nhất khi chớp (để chẩn đoán)
-    let belowCount = 0; // số khung liên tiếp thấy mắt khép
-    let frameCount = 0; // đếm khung để tính fps
 
     livenessRunningRef.current = true;
 
@@ -109,7 +103,6 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       }
 
       sawFace = true;
-      frameCount += 1;
       const landmarks = detection.landmarks;
       const ear =
         (eyeAspectRatio(landmarks.getLeftEye()) +
@@ -127,20 +120,12 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
           phase = 1;
         }
       } else if (phase === 1) {
-        if (ear < minEar) minEar = ear;
-        // Cần 2 khung liên tiếp thấy mắt khép (chống 1 khung nhiễu, vẫn rất nhạy)
-        belowCount = ear < closedThr ? belowCount + 1 : 0;
-        if (belowCount >= 2) {
+        // Chỉ cần 1 khung thấy mắt khép là qua ngay => chớp phát nào ăn phát đó
+        if (ear < closedThr) {
           setStatusText("Xác thực người thật thành công ✓");
           return true;
         }
-        const secs = (Date.now() - startTime) / 1000;
-        const fps = secs > 0 ? Math.round(frameCount / secs) : 0;
-        setStatusText(
-          `CHỚP MẮT đi — EAR ${ear.toFixed(2)} (thấp nhất ${minEar.toFixed(
-            2
-          )}) cần < ${closedThr.toFixed(2)} · ${fps} fps`
-        );
+        setStatusText("Hãy CHỚP MẮT để xác thực");
       }
     }
 
@@ -230,19 +215,6 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         <h2>
           {isRegister ? "Đăng Ký Khuôn Mặt" : "Chấm Công Khuôn Mặt"}
         </h2>
-        {backendName && (
-          <p
-            style={{
-              textAlign: "center",
-              margin: "0 0 8px",
-              fontSize: "12px",
-              color: backendName === "webgl" ? "#28a745" : "#dc3545",
-            }}
-          >
-            Chế độ xử lý: {backendName}
-            {backendName === "webgl" ? " (GPU - nhanh)" : " (CHẬM - không có GPU)"}
-          </p>
-        )}
 
         <div
           style={{
