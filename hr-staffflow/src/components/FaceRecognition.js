@@ -301,6 +301,10 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
               overflow: "hidden",
               background: "#0b1220",
               border: "1px solid rgba(0, 0, 0, 0.06)",
+              boxShadow: isProcessing
+                ? "0 0 0 3px #22d3ee, 0 0 22px rgba(34, 211, 238, 0.55)"
+                : "none",
+              transition: "box-shadow .25s",
             }}
           >
             {modelsLoaded ? (
@@ -370,66 +374,65 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
               </>
             )}
 
-            {/* Overlay khi đang xử lý */}
-            {isProcessing && (
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 14,
-                  textAlign: "center",
-                  padding: "0 24px",
-                  background: "rgba(8, 15, 30, 0.72)",
-                  color: "#fff",
-                  zIndex: 10,
-                }}
-              >
-                <div
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: "50%",
-                    border: "3px solid rgba(255, 255, 255, 0.25)",
-                    borderTopColor: "#22d3ee",
-                    animation: "frid-spin 0.9s linear infinite",
-                  }}
-                />
-                <span style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.5 }}>
-                  {statusText || "Đang xử lý..."}
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Hướng dẫn chống gian lận (chỉ khi chấm công) */}
-        {!isRegister && (
-          <div
-            style={{
-              margin: "14px 24px 0",
-              padding: "10px 14px",
-              borderRadius: 12,
-              background: "#eff6ff",
-              border: "1px solid #dbeafe",
-              display: "flex",
-              gap: 10,
-              alignItems: "flex-start",
-              fontSize: 12.5,
-              color: "#1e40af",
-              lineHeight: 1.5,
-            }}
-          >
-            <span style={{ fontSize: 15 }}>🔒</span>
-            <span>
-              Giữ mắt mở 1 giây rồi <b>chớp mắt</b> một cái để xác thực người thật —
-              hệ thống không chấp nhận ảnh.
-            </span>
-          </div>
-        )}
+        {/* Vùng trạng thái / hướng dẫn — nằm DƯỚI camera, không che mặt */}
+        <div style={{ margin: "14px 24px 0", minHeight: 46 }}>
+          {isProcessing ? (
+            <div
+              style={{
+                padding: "12px 14px",
+                borderRadius: 12,
+                background: "#ecfeff",
+                border: "1px solid #a5f3fc",
+                display: "flex",
+                gap: 10,
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 14,
+                fontWeight: 600,
+                color: "#0e7490",
+              }}
+            >
+              <span
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: "50%",
+                  border: "2px solid rgba(14, 116, 144, 0.25)",
+                  borderTopColor: "#0891b2",
+                  animation: "frid-spin 0.8s linear infinite",
+                  flex: "0 0 auto",
+                }}
+              />
+              <span>{statusText || "Đang xử lý..."}</span>
+            </div>
+          ) : (
+            !isRegister && (
+              <div
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 12,
+                  background: "#eff6ff",
+                  border: "1px solid #dbeafe",
+                  display: "flex",
+                  gap: 10,
+                  alignItems: "flex-start",
+                  fontSize: 12.5,
+                  color: "#1e40af",
+                  lineHeight: 1.5,
+                }}
+              >
+                <span style={{ fontSize: 15 }}>🔒</span>
+                <span>
+                  Giữ mắt mở 1 giây rồi <b>chớp mắt</b> một cái để xác thực người
+                  thật — hệ thống không chấp nhận ảnh.
+                </span>
+              </div>
+            )
+          )}
+        </div>
 
         {/* Nút hành động */}
         <div style={{ display: "flex", gap: 12, padding: "18px 24px 24px" }}>
