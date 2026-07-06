@@ -218,9 +218,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "rgba(15, 23, 42, 0.6)",
-        backdropFilter: "blur(4px)",
-        WebkitBackdropFilter: "blur(4px)",
+        background: "rgba(15, 23, 42, 0.72)",
         zIndex: 1000,
         padding: 16,
       }}
@@ -385,8 +383,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
                   gap: 14,
                   textAlign: "center",
                   padding: "0 24px",
-                  background: "rgba(8, 15, 30, 0.62)",
-                  backdropFilter: "blur(2px)",
+                  background: "rgba(8, 15, 30, 0.72)",
                   color: "#fff",
                   zIndex: 10,
                 }}
