@@ -149,8 +149,8 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       return null;
     }
 
-    // inputSize lớn hơn cho bước này => dò khuôn mặt chính xác hơn (chỉ chạy 1 lần nên vẫn nhanh)
-    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320 });
+    // inputSize vừa phải => nhanh mà vẫn đủ chính xác cho bước lấy vector
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224 });
     for (let attempt = 0; attempt < 6; attempt++) {
       setStatusText("Đang nhận diện khuôn mặt...");
       const detection = await faceapi
@@ -181,7 +181,9 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       // Chỉ bắt buộc kiểm tra "người sống" khi CHẤM CÔNG (chống chấm công bằng ảnh).
       // Khi đăng ký khuôn mặt thì giữ nguyên như cũ.
       if (!isRegister) {
+        const tL = Date.now();
         const isLive = await runLivenessCheck();
+        console.log("[time] liveness (chớp mắt):", Date.now() - tL, "ms");
         livenessRunningRef.current = false;
         if (!isLive) {
           setStatusText("");
@@ -190,7 +192,9 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         }
       }
 
+      const tC = Date.now();
       const faceDescriptor = await captureDescriptor();
+      console.log("[time] captureDescriptor (lấy vector):", Date.now() - tC, "ms");
       if (!faceDescriptor) {
         setStatusText("");
         setIsProcessing(false);
@@ -198,7 +202,9 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       }
 
       // Gọi callback để xử lý tiếp (gửi API) — không thay đổi so với trước
+      const tA = Date.now();
       await onCapture(faceDescriptor);
+      console.log("[time] onCapture (gọi API chấm công):", Date.now() - tA, "ms");
     } catch (error) {
       console.error("Lỗi xử lý khuôn mặt:", error);
       showToast("Đã có lỗi xảy ra trong quá trình xử lý.", "error");
