@@ -13,8 +13,9 @@ import { ensureFaceModels } from "../utils/faceModels";
 // rồi lấy theo TỈ LỆ của baseline đó => hợp với mọi khuôn mặt/camera, hết cảnh
 // "ngưỡng không khớp mắt người này".
 const CALIB_FRAMES = 2; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
-const CLOSED_RATIO = 0.88; // Coi là NHẮM khi EAR tụt dưới 88% baseline (nới rộng => chớp nhẹ là ăn)
-const LIVENESS_TIMEOUT_MS = 20000; // Thời gian tối đa cho bước xác thực
+const CLOSED_RATIO = 0.88; // Coi là NHẮM khi EAR tụt dưới 88% baseline
+const CLOSED_HOLD_MS = 250; // NHẮM MẮT giữ liên tục đủ lâu này => qua (bắt CHẮC CHẮN, không trượt như chớp nhoáng)
+const LIVENESS_TIMEOUT_MS = 15000; // Thời gian tối đa cho bước xác thực
 
 // Lấy trung vị (median) — bền với nhiễu hơn trung bình
 const median = (arr) => {
@@ -83,6 +84,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
     const calib = []; // các mẫu EAR lúc đo baseline
     let baseline = 0; // mốc EAR mắt mở của riêng người này
     let closedThr = 0;
+    let closedStart = 0; // mốc thời gian bắt đầu nhắm mắt liên tục (0 = đang mở)
 
     livenessRunningRef.current = true;
 
@@ -125,12 +127,19 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
           phase = 1;
         }
       } else if (phase === 1) {
-        // Chỉ cần 1 khung thấy mắt khép là qua ngay => chớp phát nào ăn phát đó
+        // NHẮM MẮT giữ đủ lâu => qua. Mắt nhắm kéo dài nên camera CHẮC CHẮN bắt
+        // trúng, không bị trượt khung như cú chớp chớp nhoáng => nhanh & ổn định.
         if (ear < closedThr) {
-          setStatusText("Xác thực người thật thành công ✓");
-          return true;
+          if (closedStart === 0) closedStart = Date.now();
+          if (Date.now() - closedStart >= CLOSED_HOLD_MS) {
+            setStatusText("Xác thực người thật thành công ✓");
+            return true;
+          }
+          setStatusText("Giữ nhắm mắt... sắp xong");
+        } else {
+          closedStart = 0; // mở mắt thì đặt lại bộ đếm
+          setStatusText("Hãy NHẮM MẮT và giữ 1 giây");
         }
-        setStatusText("Hãy CHỚP MẮT để xác thực");
       }
     }
 
@@ -292,7 +301,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
           <p style={{ margin: "6px 0 0", fontSize: 13.5, color: "#64748b" }}>
             {isRegister
               ? "Đưa khuôn mặt vào giữa khung rồi bấm lưu"
-              : "Nhìn thẳng camera và chớp mắt để xác thực"}
+              : "Nhìn thẳng camera và nhắm mắt để xác thực"}
           </p>
         </div>
 
@@ -432,8 +441,8 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
               >
                 <span style={{ fontSize: 15 }}>🔒</span>
                 <span>
-                  Giữ mắt mở 1 giây rồi <b>chớp mắt</b> một cái để xác thực người
-                  thật — hệ thống không chấp nhận ảnh.
+                  Giữ mắt mở 1 giây rồi <b>nhắm mắt và giữ ~1 giây</b> để xác thực
+                  người thật — hệ thống không chấp nhận ảnh.
                 </span>
               </div>
             )
