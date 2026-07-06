@@ -12,7 +12,7 @@ import { ensureFaceModels } from "../utils/faceModels";
 // QUAN TRỌNG: ngưỡng KHÔNG cố định mà TỰ ĐO theo mắt mở của từng người (baseline),
 // rồi lấy theo TỈ LỆ của baseline đó => hợp với mọi khuôn mặt/camera, hết cảnh
 // "ngưỡng không khớp mắt người này".
-const CALIB_FRAMES = 3; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
+const CALIB_FRAMES = 2; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
 const CLOSED_RATIO = 0.88; // Coi là NHẮM khi EAR tụt dưới 88% baseline (nới rộng => chớp nhẹ là ăn)
 const LIVENESS_TIMEOUT_MS = 20000; // Thời gian tối đa cho bước xác thực
 
@@ -149,9 +149,9 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       return null;
     }
 
-    // inputSize vừa phải => nhanh mà vẫn đủ chính xác cho bước lấy vector
-    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224 });
-    for (let attempt = 0; attempt < 6; attempt++) {
+    // inputSize nhỏ hơn => nhanh; vừa xác thực xong nên mặt chắc chắn còn trong khung
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 160 });
+    for (let attempt = 0; attempt < 3; attempt++) {
       setStatusText("Đang nhận diện khuôn mặt...");
       const detection = await faceapi
         .detectSingleFace(video, options)
@@ -163,7 +163,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         // Chuyển descriptor sang mảng số thông thường để gửi đi
         return Array.from(detection.descriptor);
       }
-      await new Promise((r) => setTimeout(r, 120));
+      await new Promise((r) => setTimeout(r, 80));
     }
 
     showToast(
