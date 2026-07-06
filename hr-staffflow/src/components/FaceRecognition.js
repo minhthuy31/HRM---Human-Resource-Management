@@ -35,6 +35,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
   const { showToast } = useToast();
   const webcamRef = useRef(null);
   const livenessRunningRef = useRef(false);
+  const warmedRef = useRef(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState("");
@@ -147,6 +148,33 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       showToast("Không phát hiện khuôn mặt trong quá trình xác thực.", "error");
     }
     return false;
+  };
+
+  // Làm nóng model NGAY khi camera vừa bật (lúc người dùng còn chỉnh mặt):
+  // chạy 1 lần đủ cả 3 mạng (detector + landmark + nhận diện) để trình duyệt biên
+  // dịch xong shader GPU trước => lúc bấm chấm công không còn bị "giật" ~4 giây đầu.
+  const warmUp = async () => {
+    if (warmedRef.current) return;
+    warmedRef.current = true;
+    try {
+      // Chờ camera thật sự sẵn sàng (tối đa ~2s) rồi mới làm nóng
+      for (let i = 0; i < 20; i++) {
+        const v = webcamRef.current?.video;
+        if (v && v.readyState === 4) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      const video = webcamRef.current?.video;
+      if (!video || video.readyState !== 4) return;
+      await faceapi
+        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 160 }))
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+      await faceapi
+        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 128 }))
+        .withFaceLandmarks();
+    } catch (e) {
+      /* bỏ qua, chỉ là làm nóng */
+    }
   };
 
   // Trích descriptor: lấy TRỰC TIẾP từ luồng video (ổn định hơn chụp ảnh tĩnh),
@@ -328,6 +356,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
                 screenshotFormat="image/jpeg"
                 videoConstraints={{ facingMode: "user", width: 320, height: 240 }}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                onUserMedia={warmUp}
               />
             ) : (
               <div
