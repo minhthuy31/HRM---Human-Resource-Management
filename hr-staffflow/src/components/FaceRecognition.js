@@ -12,10 +12,9 @@ import { ensureFaceModels } from "../utils/faceModels";
 // QUAN TRỌNG: ngưỡng KHÔNG cố định mà TỰ ĐO theo mắt mở của từng người (baseline),
 // rồi lấy theo TỈ LỆ của baseline đó => hợp với mọi khuôn mặt/camera, hết cảnh
 // "ngưỡng không khớp mắt người này".
-const CALIB_FRAMES = 2; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
-const CLOSED_RATIO = 0.88; // Coi là NHẮM khi EAR tụt dưới 88% baseline
-const CLOSED_HOLD_MS = 250; // NHẮM MẮT giữ liên tục đủ lâu này => qua (bắt CHẮC CHẮN, không trượt như chớp nhoáng)
-const LIVENESS_TIMEOUT_MS = 15000; // Thời gian tối đa cho bước xác thực
+const CALIB_FRAMES = 3; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
+const CLOSED_RATIO = 0.88; // Coi là NHẮM khi EAR tụt dưới 88% baseline (nới rộng => chớp nhẹ là ăn)
+const LIVENESS_TIMEOUT_MS = 20000; // Thời gian tối đa cho bước xác thực
 
 // Lấy trung vị (median) — bền với nhiễu hơn trung bình
 const median = (arr) => {
@@ -35,7 +34,6 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
   const { showToast } = useToast();
   const webcamRef = useRef(null);
   const livenessRunningRef = useRef(false);
-  const warmedRef = useRef(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState("");
@@ -50,10 +48,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         setModelsLoaded(true);
       } catch (error) {
         console.error("Lỗi tải model AI:", error);
-        showToast(
-          "Không thể tải model nhận diện khuôn mặt. Vui lòng kiểm tra lại cấu hình.",
-          "error",
-        );
+        showToast("Không thể tải model nhận diện khuôn mặt. Vui lòng kiểm tra lại cấu hình.", "error");
       }
     };
     loadModels();
@@ -85,7 +80,6 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
     const calib = []; // các mẫu EAR lúc đo baseline
     let baseline = 0; // mốc EAR mắt mở của riêng người này
     let closedThr = 0;
-    let closedStart = 0; // mốc thời gian bắt đầu nhắm mắt liên tục (0 = đang mở)
 
     livenessRunningRef.current = true;
 
@@ -94,11 +88,11 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         setStatusText("");
         showToast(
           "Xác thực thất bại. Hãy nhìn thẳng camera rồi NHẮM MẮT một cái và MỞ ra (không dùng ảnh).",
-          "error",
+          "error"
         );
         return false;
       }
-      //lấy vector
+
       const detection = await faceapi
         .detectSingleFace(video, options)
         .withFaceLandmarks();
@@ -119,28 +113,19 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       if (phase === 0) {
         // Đo baseline mắt mở của riêng người này
         calib.push(ear);
-        setStatusText(
-          `Giữ MẮT MỞ, đang chuẩn bị... (${calib.length}/${CALIB_FRAMES})`,
-        );
+        setStatusText(`Giữ MẮT MỞ, đang chuẩn bị... (${calib.length}/${CALIB_FRAMES})`);
         if (calib.length >= CALIB_FRAMES) {
           baseline = median(calib);
           closedThr = baseline * CLOSED_RATIO;
           phase = 1;
         }
       } else if (phase === 1) {
-        // NHẮM MẮT giữ đủ lâu => qua. Mắt nhắm kéo dài nên camera CHẮC CHẮN bắt
-        // trúng, không bị trượt khung như cú chớp chớp nhoáng => nhanh & ổn định.
+        // Chỉ cần 1 khung thấy mắt khép là qua ngay => chớp phát nào ăn phát đó
         if (ear < closedThr) {
-          if (closedStart === 0) closedStart = Date.now();
-          if (Date.now() - closedStart >= CLOSED_HOLD_MS) {
-            setStatusText("Xác thực người thật thành công ✓");
-            return true;
-          }
-          setStatusText("Giữ nhắm mắt... sắp xong");
-        } else {
-          closedStart = 0; // mở mắt thì đặt lại bộ đếm
-          setStatusText("Hãy NHẮM MẮT và giữ 1 giây");
+          setStatusText("Xác thực người thật thành công ✓");
+          return true;
         }
+        setStatusText("Hãy CHỚP MẮT để xác thực");
       }
     }
 
@@ -148,33 +133,6 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       showToast("Không phát hiện khuôn mặt trong quá trình xác thực.", "error");
     }
     return false;
-  };
-
-  // Làm nóng model NGAY khi camera vừa bật (lúc người dùng còn chỉnh mặt):
-  // chạy 1 lần đủ cả 3 mạng (detector + landmark + nhận diện) để trình duyệt biên
-  // dịch xong shader GPU trước => lúc bấm chấm công không còn bị "giật" ~4 giây đầu.
-  const warmUp = async () => {
-    if (warmedRef.current) return;
-    warmedRef.current = true;
-    try {
-      // Chờ camera thật sự sẵn sàng (tối đa ~2s) rồi mới làm nóng
-      for (let i = 0; i < 20; i++) {
-        const v = webcamRef.current?.video;
-        if (v && v.readyState === 4) break;
-        await new Promise((r) => setTimeout(r, 100));
-      }
-      const video = webcamRef.current?.video;
-      if (!video || video.readyState !== 4) return;
-      await faceapi
-        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 160 }))
-        .withFaceLandmarks()
-        .withFaceDescriptor();
-      await faceapi
-        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 128 }))
-        .withFaceLandmarks();
-    } catch (e) {
-      /* bỏ qua, chỉ là làm nóng */
-    }
   };
 
   // Trích descriptor: lấy TRỰC TIẾP từ luồng video (ổn định hơn chụp ảnh tĩnh),
@@ -186,26 +144,25 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       return null;
     }
 
-    // inputSize nhỏ hơn => nhanh; vừa xác thực xong nên mặt chắc chắn còn trong khung
-    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 160 });
-    for (let attempt = 0; attempt < 3; attempt++) {
+    // inputSize lớn hơn cho bước này => dò khuôn mặt chính xác hơn (chỉ chạy 1 lần nên vẫn nhanh)
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320 });
+    for (let attempt = 0; attempt < 6; attempt++) {
       setStatusText("Đang nhận diện khuôn mặt...");
       const detection = await faceapi
         .detectSingleFace(video, options)
         .withFaceLandmarks()
         .withFaceDescriptor();
 
-      //Lấy ra vector descriptor (128 chiều) để gửi đi
       if (detection) {
         // Chuyển descriptor sang mảng số thông thường để gửi đi
         return Array.from(detection.descriptor);
       }
-      await new Promise((r) => setTimeout(r, 80));
+      await new Promise((r) => setTimeout(r, 120));
     }
 
     showToast(
       "Không nhận diện được khuôn mặt. Hãy đưa mặt vào GIỮA khung hình, đủ sáng rồi thử lại.",
-      "error",
+      "error"
     );
     return null;
   };
@@ -218,9 +175,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       // Chỉ bắt buộc kiểm tra "người sống" khi CHẤM CÔNG (chống chấm công bằng ảnh).
       // Khi đăng ký khuôn mặt thì giữ nguyên như cũ.
       if (!isRegister) {
-        const tL = Date.now();
         const isLive = await runLivenessCheck();
-        console.log("[time] liveness (chớp mắt):", Date.now() - tL, "ms");
         livenessRunningRef.current = false;
         if (!isLive) {
           setStatusText("");
@@ -229,9 +184,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         }
       }
 
-      const tC = Date.now();
       const faceDescriptor = await captureDescriptor();
-      console.log("[time] captureDescriptor (lấy vector):", Date.now() - tC, "ms");
       if (!faceDescriptor) {
         setStatusText("");
         setIsProcessing(false);
@@ -239,9 +192,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       }
 
       // Gọi callback để xử lý tiếp (gửi API) — không thay đổi so với trước
-      const tA = Date.now();
       await onCapture(faceDescriptor);
-      console.log("[time] onCapture (gọi API chấm công):", Date.now() - tA, "ms");
     } catch (error) {
       console.error("Lỗi xử lý khuôn mặt:", error);
       showToast("Đã có lỗi xảy ra trong quá trình xử lý.", "error");
@@ -253,276 +204,107 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
   };
 
   return (
-    <div
-      className="modal-overlay"
-      style={{
-        position: "fixed",
-        inset: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "rgba(15, 23, 42, 0.72)",
-        zIndex: 1000,
-        padding: 16,
-      }}
-    >
-      <style>{`
-        @keyframes frid-spin { to { transform: rotate(360deg); } }
-        @keyframes frid-scan { 0% { top: 8%; } 50% { top: 86%; } 100% { top: 8%; } }
-        @keyframes frid-pulse { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
-      `}</style>
-
+    <div className="modal-overlay">
       <div
-        style={{
-          width: "100%",
-          maxWidth: 430,
-          background: "#ffffff",
-          borderRadius: 20,
-          boxShadow: "0 24px 70px rgba(0, 0, 0, 0.4)",
-          overflow: "hidden",
-          position: "relative",
-        }}
+        className="modal-content scanner-modal"
+        style={{ maxWidth: "600px" }}
       >
-        <button
-          onClick={onClose}
-          aria-label="Đóng"
-          style={{
-            position: "absolute",
-            top: 14,
-            right: 14,
-            width: 34,
-            height: 34,
-            borderRadius: "50%",
-            border: "none",
-            background: "rgba(0, 0, 0, 0.06)",
-            color: "#334155",
-            fontSize: 20,
-            lineHeight: 1,
-            cursor: "pointer",
-            zIndex: 5,
-          }}
-        >
+        <button className="modal-close-btn" onClick={onClose}>
           &times;
         </button>
+        <h2>
+          {isRegister ? "Đăng Ký Khuôn Mặt" : "Chấm Công Khuôn Mặt"}
+        </h2>
 
-        {/* Header */}
-        <div style={{ textAlign: "center", padding: "26px 24px 14px" }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              margin: "0 auto 12px",
-              borderRadius: 16,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 28,
-              background: "linear-gradient(135deg, #6366f1, #06b6d4)",
-              boxShadow: "0 8px 20px rgba(79, 70, 229, 0.35)",
-            }}
-          >
-            {isRegister ? "🧑‍💼" : "🕒"}
-          </div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#0f172a" }}>
-            {isRegister ? "Đăng Ký Khuôn Mặt" : "Chấm Công Khuôn Mặt"}
-          </h2>
-          <p style={{ margin: "6px 0 0", fontSize: 13.5, color: "#64748b" }}>
-            {isRegister
-              ? "Đưa khuôn mặt vào giữa khung rồi bấm lưu"
-              : "Nhìn thẳng camera và nhắm mắt để xác thực"}
-          </p>
-        </div>
-
-        {/* Camera */}
-        <div style={{ padding: "0 24px" }}>
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              aspectRatio: "4 / 3",
-              borderRadius: 16,
-              overflow: "hidden",
-              background: "#0b1220",
-              border: "1px solid rgba(0, 0, 0, 0.06)",
-              boxShadow: isProcessing
-                ? "0 0 0 3px #22d3ee, 0 0 22px rgba(34, 211, 238, 0.55)"
-                : "none",
-              transition: "box-shadow .25s",
-            }}
-          >
-            {modelsLoaded ? (
-              <Webcam
-                ref={webcamRef}
-                screenshotFormat="image/jpeg"
-                videoConstraints={{ facingMode: "user", width: 320, height: 240 }}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                onUserMedia={warmUp}
-              />
-            ) : (
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 12,
-                  color: "#cbd5e1",
-                }}
-              >
-                <div
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: "50%",
-                    border: "3px solid rgba(255, 255, 255, 0.2)",
-                    borderTopColor: "#22d3ee",
-                    animation: "frid-spin 0.9s linear infinite",
-                  }}
-                />
-                <span style={{ fontSize: 13 }}>Đang tải model AI...</span>
-              </div>
-            )}
-
-            {/* Khung dẫn hướng + vạch quét (chỉ trang trí, không ảnh hưởng logic) */}
-            {modelsLoaded && !isProcessing && (
-              <>
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "50%",
-                    left: "50%",
-                    width: "58%",
-                    height: "78%",
-                    transform: "translate(-50%, -50%)",
-                    border: "2px dashed rgba(255, 255, 255, 0.55)",
-                    borderRadius: "50%",
-                    animation: "frid-pulse 2s ease-in-out infinite",
-                    pointerEvents: "none",
-                  }}
-                />
-                <div
-                  style={{
-                    position: "absolute",
-                    left: "8%",
-                    right: "8%",
-                    height: 2,
-                    background:
-                      "linear-gradient(90deg, transparent, #22d3ee, transparent)",
-                    boxShadow: "0 0 10px #22d3ee",
-                    animation: "frid-scan 2.6s ease-in-out infinite",
-                    pointerEvents: "none",
-                  }}
-                />
-              </>
-            )}
-
-          </div>
-        </div>
-
-        {/* Vùng trạng thái / hướng dẫn — nằm DƯỚI camera, không che mặt */}
-        <div style={{ margin: "14px 24px 0", minHeight: 46 }}>
-          {isProcessing ? (
+        <div
+          style={{
+            position: "relative",
+            minHeight: "300px",
+            backgroundColor: "#000",
+            borderRadius: "8px",
+            overflow: "hidden",
+          }}
+        >
+          {modelsLoaded ? (
+            <Webcam
+              ref={webcamRef}
+              screenshotFormat="image/jpeg"
+              style={{ width: "100%", height: "auto" }}
+              videoConstraints={{ facingMode: "user", width: 320, height: 240 }}
+            />
+          ) : (
             <div
               style={{
-                padding: "12px 14px",
-                borderRadius: 12,
-                background: "#ecfeff",
-                border: "1px solid #a5f3fc",
+                color: "white",
                 display: "flex",
-                gap: 10,
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 14,
-                fontWeight: 600,
-                color: "#0e7490",
+                height: "300px",
               }}
             >
-              <span
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: "50%",
-                  border: "2px solid rgba(14, 116, 144, 0.25)",
-                  borderTopColor: "#0891b2",
-                  animation: "frid-spin 0.8s linear infinite",
-                  flex: "0 0 auto",
-                }}
-              />
-              <span>{statusText || "Đang xử lý..."}</span>
+              Đang tải model AI...
             </div>
-          ) : (
-            !isRegister && (
-              <div
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: 12,
-                  background: "#eff6ff",
-                  border: "1px solid #dbeafe",
-                  display: "flex",
-                  gap: 10,
-                  alignItems: "flex-start",
-                  fontSize: 12.5,
-                  color: "#1e40af",
-                  lineHeight: 1.5,
-                }}
-              >
-                <span style={{ fontSize: 15 }}>🔒</span>
-                <span>
-                  Giữ mắt mở 1 giây rồi <b>nhắm mắt và giữ ~1 giây</b> để xác thực
-                  người thật — hệ thống không chấp nhận ảnh.
-                </span>
-              </div>
-            )
+          )}
+
+          {isProcessing && (
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: "rgba(0,0,0,0.5)",
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                padding: "0 20px",
+                zIndex: 10,
+              }}
+            >
+              {statusText || "Đang xử lý..."}
+            </div>
           )}
         </div>
 
-        {/* Nút hành động */}
-        <div style={{ display: "flex", gap: 12, padding: "18px 24px 24px" }}>
-          <button
-            onClick={onClose}
+        {!isRegister && (
+          <p
             style={{
-              flex: "0 0 auto",
-              padding: "12px 20px",
-              borderRadius: 12,
-              border: "1px solid #e2e8f0",
-              background: "#f8fafc",
-              color: "#475569",
-              fontSize: 14.5,
-              fontWeight: 600,
-              cursor: "pointer",
+              marginTop: "10px",
+              fontSize: "13px",
+              color: "#6c757d",
+              textAlign: "center",
             }}
           >
-            Hủy
-          </button>
+            Để chống gian lận, khi xác nhận hãy giữ mắt mở 1 giây rồi CHỚP MẮT một
+            cái để xác thực bạn là người thật (không dùng được ảnh).
+          </p>
+        )}
+
+        <div
+          style={{
+            marginTop: "20px",
+            display: "flex",
+            gap: "10px",
+            justifyContent: "center",
+          }}
+        >
           <button
+            className="sidebar-action-btn"
             onClick={handleCapture}
             disabled={!modelsLoaded || isProcessing}
-            style={{
-              flex: 1,
-              padding: "12px 20px",
-              borderRadius: 12,
-              border: "none",
-              color: "#fff",
-              fontSize: 14.5,
-              fontWeight: 700,
-              cursor: !modelsLoaded || isProcessing ? "not-allowed" : "pointer",
-              background:
-                !modelsLoaded || isProcessing
-                  ? "#94a3b8"
-                  : "linear-gradient(135deg, #6366f1, #06b6d4)",
-              boxShadow:
-                !modelsLoaded || isProcessing
-                  ? "none"
-                  : "0 8px 20px rgba(79, 70, 229, 0.35)",
-            }}
+            style={{ width: "auto", minWidth: "150px" }}
           >
-            {isProcessing
-              ? "Đang xử lý..."
-              : isRegister
-              ? "Lưu Khuôn Mặt"
-              : "Xác Nhận Chấm Công"}
+            {isRegister ? "Lưu Khuôn Mặt" : "Xác Nhận Chấm Công"}
+          </button>
+          <button
+            className="sidebar-action-btn"
+            onClick={onClose}
+            style={{ width: "auto", backgroundColor: "#6c757d" }}
+          >
+            Hủy
           </button>
         </div>
       </div>
