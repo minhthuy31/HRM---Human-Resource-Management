@@ -151,7 +151,7 @@ namespace HRApi.Controllers
                 decimal totalCongChuanOT = 0;
                 decimal finalLuongCoBan = emp.LuongCoBan;
                 var chiTietSegments = new List<ChiTietLuongHopDong>();
-                double  soNgayCongChinhThuc = 0;   // tổng công thuộc HĐ chính thức (xét luật 14 ngày)
+                int     soNgayLamChinhThuc = 0;    // SỐ NGÀY đi làm/hưởng lương thuộc HĐ chính thức (xét luật 14 ngày)
                 decimal luongCoBanChinhThuc = 0;   // mức lương HĐ chính thức làm căn cứ đóng BH
                 // OT tách 3 loại (giờ + tiền) để hiển thị thanh sổ
                 double  otGioThuong = 0, otGioCuoiTuan = 0, otGioLe = 0;
@@ -242,20 +242,22 @@ namespace HRApi.Controllers
                             else                { otGioThuong   += ot.SoGio; otTienThuong   += tienOT; }
                         }
 
-                        // Cộng dồn số ngày công CHÍNH THỨC + giữ mức lương chính thức (để xét đóng BH theo luật 14 ngày)
+                        // Đếm SỐ NGÀY đi làm/hưởng lương thuộc HĐ chính thức: mỗi ngày có công>0 = 1 ngày
+                        // (nửa ngày 0.5 hay 1/3 ngày vẫn tính 1); ngày nghỉ phép hưởng lương công=1 cũng tính;
+                        // nghỉ không lương/không phép công=0 KHÔNG tính — xét luật 14 ngày.
                         if (!isThuViec)
                         {
-                            soNgayCongChinhThuc += congChinh;
+                            soNgayLamChinhThuc += normalAtt.Count(c => c.NgayCong > 0);
                             luongCoBanChinhThuc = contract.LuongCoBan;
                         }
 
                         finalLuongCoBan = contract.LuongCoBan;
                     }
 
-                    // Luật BHXH (14 ngày): chỉ đóng BH nếu số ngày làm việc CHÍNH THỨC trong tháng ≥ 14.
-                    // < 14 ngày (vd nửa tháng đầu thử việc) → KHÔNG đóng BH cả tháng đó.
-                    // Mức đóng tính trên NGUYÊN lương HĐ chính thức (không prorate, không tính lương thử việc).
-                    totalLuongDongBH = soNgayCongChinhThuc >= 14 ? luongCoBanChinhThuc : 0;
+                    // Luật BHXH (14 ngày): chỉ đóng BH nếu SỐ NGÀY làm việc/hưởng lương CHÍNH THỨC trong tháng ≥ 14.
+                    // Đếm theo NGÀY (mỗi ngày đi làm = 1, kể cả nửa/lẻ ngày) — CHỈ ngày thuộc HĐ chính thức, không tính thử việc.
+                    // < 14 ngày → KHÔNG đóng BH cả tháng đó. Mức đóng tính trên NGUYÊN lương HĐ chính thức (không prorate).
+                    totalLuongDongBH = soNgayLamChinhThuc >= 14 ? luongCoBanChinhThuc : 0;
                 }
 
                 // ── PHỤ CẤP (tính theo SỐ NGÀY CÔNG THƯỜNG đi làm thực tế) ──
