@@ -2,7 +2,8 @@
 {
     public class HopDongInputDto
     {
-        public string SoHopDong { get; set; }
+        // Nullable: phụ lục không gửi mã (server tự sinh); Update lấy id từ query.
+        public string? SoHopDong { get; set; }
         public string MaNhanVien { get; set; }
         public string LoaiHopDong { get; set; }
         public DateTime NgayBatDau { get; set; }
