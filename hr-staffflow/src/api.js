@@ -103,10 +103,21 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Các endpoint xác thực (login/refresh/quên-đặt mật khẩu): KHÔNG chạy logic refresh
+    // token khi gặp 401 — để lỗi (sai mật khẩu / tài khoản bị vô hiệu hóa) trả thẳng
+    // về trang đăng nhập hiển thị, tránh bị redirect làm mất thông báo.
+    const reqUrl = originalRequest?.url || "";
+    const isAuthEndpoint =
+      reqUrl.includes("/Auth/login") ||
+      reqUrl.includes("/Auth/refresh-token") ||
+      reqUrl.includes("/Auth/forgot-password") ||
+      reqUrl.includes("/Auth/reset-password");
+
     if (
       error.response &&
       error.response.status === 401 &&
-      !originalRequest._retry
+      !originalRequest._retry &&
+      !isAuthEndpoint
     ) {
       originalRequest._retry = true;
 
