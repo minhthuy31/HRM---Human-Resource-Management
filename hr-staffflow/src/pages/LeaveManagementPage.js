@@ -5,6 +5,7 @@ import { api } from "../api";
 import { getUserFromToken } from "../utils/auth";
 import {
   FaCheck,
+  FaCheckDouble,
   FaTimes,
   FaSearch,
   FaFileDownload,
@@ -115,6 +116,9 @@ const RequestManagementPage = () => {
   const [data, setData] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // --- CHỌN NHIỀU ĐƠN ĐỂ DUYỆT THEO LÔ ---
+  const [selectedIds, setSelectedIds] = useState([]);
 
   // --- TOAST STATE ---
   const [toast, setToast] = useState({
@@ -275,19 +279,77 @@ const RequestManagementPage = () => {
     }
   };
 
+  // --- CHỌN NHIỀU / DUYỆT THEO LÔ ---
+  const pendingIds = data
+    .filter((d) => d.trangThai === "Chờ duyệt")
+    .map((d) => d.id);
+  const validSelected = selectedIds.filter((id) => pendingIds.includes(id));
+
+  // Reset lựa chọn khi đổi tab / trạng thái / phòng ban
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [activeTab, statusFilter, deptFilter]);
+
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+
+  const toggleSelectAll = () =>
+    setSelectedIds((prev) =>
+      prev.length >= pendingIds.length && pendingIds.length > 0
+        ? []
+        : [...pendingIds],
+    );
+
+  const handleBulkApprove = () => {
+    const ids = data
+      .filter((d) => d.trangThai === "Chờ duyệt" && selectedIds.includes(d.id))
+      .map((d) => d.id);
+    if (ids.length === 0) return;
+
+    setConfirmDialog({
+      isOpen: true,
+      message: `Bạn có chắc chắn muốn DUYỆT ${ids.length} đơn đã chọn?`,
+      onConfirm: async () => {
+        closeConfirm();
+        const endpointPrefix = getEndpointPrefix();
+        if (!endpointPrefix) return;
+        let ok = 0;
+        let fail = 0;
+        for (const id of ids) {
+          try {
+            await api.post(`${endpointPrefix}/approve/${id}`);
+            ok++;
+          } catch {
+            fail++;
+          }
+        }
+        setSelectedIds([]);
+        showToast(
+          fail === 0
+            ? `Đã duyệt ${ok} đơn thành công!`
+            : `Duyệt ${ok} đơn thành công, ${fail} đơn thất bại.`,
+          fail === 0 ? "success" : "error",
+        );
+        fetchData();
+      },
+    });
+  };
+
   // --- RENDER TABLE BODY ---
   const renderTableBody = () => {
     if (data.length === 0) {
       return (
         <tr>
-          <td colSpan="10" className="no-data">
+          <td colSpan="12" className="no-data">
             Không có dữ liệu.
           </td>
         </tr>
       );
     }
 
-    return data.map((item) => (
+    return data.map((item, index) => (
       <tr
         key={item.id}
         ref={item.id === highlightId ? highlightRef : null}
@@ -297,6 +359,19 @@ const RequestManagementPage = () => {
           transition: "background-color 0.5s",
         } : undefined}
       >
+        {canApprove && (
+          <td style={{ textAlign: "center" }}>
+            {item.trangThai === "Chờ duyệt" && (
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(item.id)}
+                onChange={() => toggleSelect(item.id)}
+              />
+            )}
+          </td>
+        )}
+        <td style={{ textAlign: "center", fontWeight: 600 }}>{index + 1}</td>
+
         <td>
           <strong>{item.hoTenNhanVien}</strong>
           <br />
@@ -520,6 +595,17 @@ const RequestManagementPage = () => {
           ))}
         </div>
 
+        {canApprove && validSelected.length > 0 && (
+          <div className="bulk-action-bar">
+            <span className="bulk-count">
+              Đã chọn <strong>{validSelected.length}</strong> đơn chờ duyệt
+            </span>
+            <button className="bulk-approve-btn" onClick={handleBulkApprove}>
+              <FaCheckDouble /> Duyệt theo lô
+            </button>
+          </div>
+        )}
+
         <div className="requests-table-container">
           {loading ? (
             <div
@@ -531,6 +617,20 @@ const RequestManagementPage = () => {
             <table className="requests-table">
               <thead>
                 <tr>
+                  {canApprove && (
+                    <th style={{ width: "40px", textAlign: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={
+                          pendingIds.length > 0 &&
+                          validSelected.length === pendingIds.length
+                        }
+                        onChange={toggleSelectAll}
+                        title="Chọn tất cả đơn chờ duyệt"
+                      />
+                    </th>
+                  )}
+                  <th style={{ width: "50px", textAlign: "center" }}>STT</th>
                   <th style={{ width: "180px" }}>Nhân viên</th>
                   <th style={{ width: "150px" }}>Phòng ban</th>
 
