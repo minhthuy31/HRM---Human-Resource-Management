@@ -147,6 +147,27 @@ const ContractManagementPage = () => {
     setConfirmDelete(soHopDong);
   };
 
+  // Mở modal tạo phụ lục cho 1 HĐ GỐC. Prefill theo giá trị HIỆN HÀNH
+  // (phụ lục mới nhất nếu có) để phụ lục kế tiếp kế thừa lương/chức vụ đang áp dụng,
+  // nhưng vẫn gắn vào HĐ gốc (không phải phụ lục của phụ lục).
+  const openPhuLuc = (goc) => {
+    const family = contracts.filter((c) => c.soHopDongGoc === goc.soHopDong);
+    const latest = family.length
+      ? family.reduce((a, b) =>
+          new Date(a.ngayBatDau) >= new Date(b.ngayBatDau) ? a : b,
+        )
+      : goc;
+    setEditingContract(null);
+    setPhuLucParent({
+      ...goc, // giữ soHopDong (gốc), maNhanVien, hoTenNhanVien, loaiHopDong
+      luongCoBan: latest.luongCoBan,
+      maChucVu: latest.maChucVu,
+      noiLamViec: latest.noiLamViec,
+      ngayKetThuc: latest.ngayKetThuc,
+    });
+    setIsModalOpen(true);
+  };
+
   const handleConfirmDelete = async () => {
     const soHopDong = confirmDelete;
     setConfirmDelete(null);
@@ -480,14 +501,10 @@ const ContractManagementPage = () => {
                               >
                                 <FaEdit />
                               </button>
-                              {c.trangThai === "HieuLuc" && (
+                              {c.trangThai === "HieuLuc" && !c.soHopDongGoc && (
                                 <button
                                   className="icon-btn appendix"
-                                  onClick={() => {
-                                    setEditingContract(null);
-                                    setPhuLucParent(c);
-                                    setIsModalOpen(true);
-                                  }}
+                                  onClick={() => openPhuLuc(c)}
                                   title="Tạo phụ lục hợp đồng"
                                 >
                                   <FaFileSignature />

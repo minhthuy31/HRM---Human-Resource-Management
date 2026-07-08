@@ -45,6 +45,28 @@ namespace HRApi.Controllers
                 await _context.SaveChangesAsync();
             }
 
+            // Cascade: phụ lục "sống theo" HĐ gốc — HĐ gốc đã HetHan/DaChamDut thì mọi phụ lục
+            // còn HieuLuc cũng chuyển theo đúng trạng thái đó (không xử lý hết hạn từng phụ lục).
+            var gocKetThuc = await _context.HopDongs
+                .Where(h => h.SoHopDongGoc == null
+                         && (h.TrangThai == TrangThaiHopDong.HetHan || h.TrangThai == TrangThaiHopDong.DaChamDut))
+                .Select(h => new { h.SoHopDong, h.TrangThai })
+                .ToListAsync();
+            if (gocKetThuc.Count > 0)
+            {
+                var mapTrangThai = gocKetThuc.ToDictionary(x => x.SoHopDong, x => x.TrangThai);
+                var codes = mapTrangThai.Keys.ToList();
+                var phuLucTheoGoc = await _context.HopDongs
+                    .Where(p => p.SoHopDongGoc != null && codes.Contains(p.SoHopDongGoc)
+                             && p.TrangThai == TrangThaiHopDong.HieuLuc)
+                    .ToListAsync();
+                if (phuLucTheoGoc.Count > 0)
+                {
+                    foreach (var p in phuLucTheoGoc) p.TrangThai = mapTrangThai[p.SoHopDongGoc!];
+                    await _context.SaveChangesAsync();
+                }
+            }
+
             var query = _context.HopDongs
                 .Include(h => h.NhanVien).ThenInclude(nv => nv.PhongBan)
                 .Include(h => h.NhanVien).ThenInclude(nv => nv.ChucVuNhanVien)
@@ -191,10 +213,11 @@ namespace HRApi.Controllers
         }
 
         // ==============================================================
-        // POST: api/HopDong/phu-luc — TẠO PHỤ LỤC DỰA TRÊN HĐ GỐC
-        // Phụ lục = 1 dòng HĐ mới nối tiếp, cho đổi Lương / Chức vụ / Nơi làm việc / gia hạn.
-        // HĐ đang hiệu lực tại ngày hiệu lực phụ lục sẽ bị cắt ngày kết thúc → payroll tự
-        // tách "2 (hoặc 3) hợp đồng trong 1 tháng" nhờ logic activeContracts sẵn có.
+        // POST: api/HopDong/phu-luc — TẠO PHỤ LỤC CHO HĐ GỐC
+        // Phụ lục = văn bản sửa đổi (lương / chức vụ / nơi làm việc / gia hạn) gắn vào HĐ GỐC.
+        // KHÔNG làm HĐ gốc hết hiệu lực — HĐ gốc giữ nguyên trạng thái & ngày kết thúc.
+        // Payroll tự tách kỳ theo ngày hiệu lực (logic activeContracts + boundary) nên
+        // KHÔNG cần cắt ngày HĐ gốc; nhiều phụ lục đều trỏ về CÙNG 1 HĐ gốc (không có phụ lục-của-phụ lục).
         // ==============================================================
         [HttpPost("phu-luc")]
         [Authorize(Roles = "Giám đốc,Nhân sự trưởng")]
@@ -206,51 +229,28 @@ namespace HRApi.Controllers
             var goc = await _context.HopDongs.FindAsync(dto.SoHopDongGoc);
             if (goc == null) return BadRequest(new { message = $"Không tìm thấy hợp đồng gốc '{dto.SoHopDongGoc}'." });
 
+            // KHÔNG cho tạo "phụ lục của phụ lục": mọi phụ lục phải gắn vào HĐ gốc thật.
+            if (!string.IsNullOrEmpty(goc.SoHopDongGoc))
+                return BadRequest(new { message = $"'{goc.SoHopDong}' là một phụ lục. Vui lòng tạo phụ lục trên HỢP ĐỒNG GỐC ({goc.SoHopDongGoc})." });
+
+            // Chỉ tạo phụ lục khi HĐ gốc CÒN HIỆU LỰC. Hết hạn/chấm dứt → phải ký hợp đồng mới.
+            if (goc.TrangThai != TrangThaiHopDong.HieuLuc)
+                return BadRequest(new { message = "Hợp đồng gốc đã hết hạn hoặc đã chấm dứt — không thể tạo phụ lục. Vui lòng ký hợp đồng mới." });
+
             string maNhanVien = goc.MaNhanVien;
             DateTime hieuLuc  = dto.NgayBatDau.Date;
 
-            // Ngày hiệu lực phụ lục phải sau ngày bắt đầu HĐ gốc
+            // Ngày hiệu lực phụ lục phải nằm TRONG thời hạn HĐ gốc.
             if (hieuLuc <= goc.NgayBatDau.Date)
                 return BadRequest(new { message = $"Ngày hiệu lực phụ lục phải sau ngày bắt đầu HĐ gốc ({goc.NgayBatDau:dd/MM/yyyy})." });
+            if (goc.NgayKetThuc.HasValue && hieuLuc > goc.NgayKetThuc.Value.Date)
+                return BadRequest(new { message = $"Ngày hiệu lực phụ lục vượt quá thời hạn HĐ gốc ({goc.NgayKetThuc:dd/MM/yyyy})." });
 
-            // 1. Tìm HĐ đang hiệu lực tại ngày hiệu lực (có thể là HĐ gốc hoặc một phụ lục trước đó) để CẮT ngày.
-            var toTruncate = await _context.HopDongs
-                .Where(h => h.MaNhanVien == maNhanVien
-                         && h.TrangThai == TrangThaiHopDong.HieuLuc
-                         && h.NgayBatDau.Date < hieuLuc
-                         && (h.NgayKetThuc == null || h.NgayKetThuc.Value.Date >= hieuLuc))
-                .OrderByDescending(h => h.NgayBatDau)
-                .FirstOrDefaultAsync();
-
-            // 2. Kiểm tra chồng lấn với các HĐ hiệu lực KHÁC (trừ HĐ sắp bị cắt) — chặn nếu có HĐ tương lai đè lên.
-            DateTime plEnd = dto.NgayKetThuc?.Date ?? DateTime.MaxValue;
-            var others = await _context.HopDongs
-                .Where(h => h.MaNhanVien == maNhanVien
-                         && h.TrangThai == TrangThaiHopDong.HieuLuc
-                         && (toTruncate == null || h.SoHopDong != toTruncate.SoHopDong))
-                .ToListAsync();
-            foreach (var h in others)
-            {
-                DateTime hEnd = h.NgayKetThuc?.Date ?? DateTime.MaxValue;
-                bool overlap = hieuLuc <= hEnd && h.NgayBatDau.Date <= plEnd;
-                if (overlap)
-                    return BadRequest(new { message = $"Ngày hiệu lực phụ lục trùng với hợp đồng '{h.SoHopDong}' ({h.NgayBatDau:dd/MM/yyyy} - {(h.NgayKetThuc?.ToString("dd/MM/yyyy") ?? "không thời hạn")})." });
-            }
-
-            // 3. Cắt HĐ đang hiệu lực: kết thúc ngay trước ngày hiệu lực phụ lục.
-            if (toTruncate != null)
-            {
-                toTruncate.NgayKetThuc = hieuLuc.AddDays(-1);
-                // Nếu kỳ đã kết thúc trong quá khứ → chuyển HetHan (tránh Dashboard đếm nhầm "sắp hết hạn").
-                if (toTruncate.NgayKetThuc.Value.Date < DateTime.Now.Date)
-                    toTruncate.TrangThai = TrangThaiHopDong.HetHan;
-            }
-
-            // 4. Sinh mã phụ lục theo HĐ gốc: {maGoc}/PL{n}
+            // Sinh mã phụ lục theo HĐ gốc: {maGoc}/PL{n}
             int soPL = await _context.HopDongs.CountAsync(h => h.SoHopDongGoc == goc.SoHopDong);
             string maPhuLuc = $"{goc.SoHopDong}/PL{(soPL + 1):D2}";
 
-            // 5. File đính kèm (nếu có)
+            // File đính kèm (nếu có)
             string? filePath = null;
             if (dto.FileDinhKem != null && dto.FileDinhKem.Length > 0)
             {
@@ -267,11 +267,12 @@ namespace HRApi.Controllers
             var phuLuc = new HopDong
             {
                 SoHopDong        = maPhuLuc,
-                SoHopDongGoc     = goc.SoHopDong,
+                SoHopDongGoc     = goc.SoHopDong,             // luôn trỏ về HĐ gốc thật
                 MaNhanVien       = maNhanVien,
                 LoaiHopDong      = goc.LoaiHopDong,           // phụ lục giữ nguyên loại HĐ gốc
                 NgayBatDau       = hieuLuc,
-                NgayKetThuc      = dto.NgayKetThuc,           // gia hạn thêm (null = vô thời hạn)
+                // Mặc định áp dụng đến hết thời hạn HĐ gốc; chỉ khi GIA HẠN mới đặt ngày kết thúc mới.
+                NgayKetThuc      = dto.NgayKetThuc ?? goc.NgayKetThuc,
                 LuongCoBan       = dto.LuongCoBan,
                 LuongDongBaoHiem = dto.LuongDongBaoHiem > 0 ? dto.LuongDongBaoHiem : dto.LuongCoBan,
                 MaChucVu         = dto.MaChucVu,
@@ -358,13 +359,23 @@ namespace HRApi.Controllers
                 return BadRequest(new { message = "Hợp đồng đã ở trạng thái Đã chấm dứt." });
 
             hd.TrangThai = "DaChamDut";
+
+            // Cascade: chấm dứt HĐ GỐC → toàn bộ phụ lục của nó cũng chấm dứt theo.
+            if (string.IsNullOrEmpty(hd.SoHopDongGoc))
+            {
+                var phuLucs = await _context.HopDongs
+                    .Where(p => p.SoHopDongGoc == hd.SoHopDong && p.TrangThai == TrangThaiHopDong.HieuLuc)
+                    .ToListAsync();
+                foreach (var p in phuLucs) p.TrangThai = TrangThaiHopDong.DaChamDut;
+            }
+
             await _context.SaveChangesAsync();
 
             // Chấm dứt xong → đồng bộ lại NhanVien theo HĐ hiệu lực còn lại (nếu có)
             await DongBoHopDongHienHanh(hd.MaNhanVien);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Đã vô hiệu hóa (chấm dứt) hợp đồng." });
+            return Ok(new { message = "Đã vô hiệu hóa (chấm dứt) hợp đồng và các phụ lục liên quan." });
         }
 
         // GET: api/NhanVien/GiamDoc
