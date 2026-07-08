@@ -310,7 +310,7 @@ namespace HRApi.Controllers
             string? canhBaoKheHo = null;
             if (dto.TrangThai == "HieuLuc")
             {
-                var (ok, error, warning) = await KiemTraNgayHopDong(hopDong.MaNhanVien, dto.NgayBatDau, dto.NgayKetThuc, id);
+                var (ok, error, warning) = await KiemTraNgayHopDong(hopDong.MaNhanVien, dto.NgayBatDau, dto.NgayKetThuc, id, hopDong.SoHopDongGoc);
                 if (!ok) return BadRequest(new { message = error });
                 canhBaoKheHo = warning;
             }
@@ -465,12 +465,17 @@ namespace HRApi.Controllers
         // HELPER: Kiểm tra chồng lấn (chặn) / khe hở ngày (cảnh báo) với các HĐ HieuLuc khác
         // ==============================================================
         private async Task<(bool ok, string? error, string? warning)> KiemTraNgayHopDong(
-            string maNhanVien, DateTime ngayBatDau, DateTime? ngayKetThuc, string? soHopDongHienTai)
+            string maNhanVien, DateTime ngayBatDau, DateTime? ngayKetThuc, string? soHopDongHienTai, string? soHopDongGoc = null)
         {
+            // "Gia đình" HĐ = HĐ gốc + mọi phụ lục của nó. Phụ lục CỐ TÌNH trùng ngày với HĐ gốc/anh em
+            // (chỉ sửa đổi điều khoản) nên KHÔNG tính là chồng lấn — loại cả gia đình khỏi phép kiểm tra.
+            string? familyRoot = !string.IsNullOrEmpty(soHopDongGoc) ? soHopDongGoc : soHopDongHienTai;
+
             var others = await _context.HopDongs
                 .Where(h => h.MaNhanVien == maNhanVien
                          && h.TrangThai == "HieuLuc"
-                         && h.SoHopDong != soHopDongHienTai)
+                         && h.SoHopDong != soHopDongHienTai
+                         && (familyRoot == null || (h.SoHopDong != familyRoot && h.SoHopDongGoc != familyRoot)))
                 .ToListAsync();
 
             DateTime end = ngayKetThuc ?? DateTime.MaxValue;
