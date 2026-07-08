@@ -21,7 +21,9 @@ const ContractTemplate = ({ data, director, onClose }) => {
     tenChucVu: data.tenChucVu || data.TenChucVu,
     maNhanVien: data.maNhanVien || data.MaNhanVien,
     chuKy: data.chuKy || data.ChuKy,
+    noiLamViec: data.noiLamViec || data.NoiLamViec,
   };
+  const diaDiemLamViec = d.noiLamViec || "Tại văn phòng Công ty";
 
   const isThuViec = d.loaiHopDong === "Thử việc";
 
@@ -228,7 +230,7 @@ const ContractTemplate = ({ data, director, onClose }) => {
                   </strong>
                 </li>
                 <li style={styles.listItem}>
-                  - Địa điểm làm việc: Tại văn phòng Công ty.
+                  - Địa điểm làm việc: {diaDiemLamViec}.
                 </li>
                 <li style={styles.listItem}>
                   - Chức danh chuyên môn:{" "}
@@ -386,7 +388,7 @@ const ContractTemplate = ({ data, director, onClose }) => {
                   </strong>
                 </li>
                 <li style={styles.listItem}>
-                  - Địa điểm làm việc: Tại văn phòng Công ty.
+                  - Địa điểm làm việc: {diaDiemLamViec}.
                 </li>
                 <li style={styles.listItem}>
                   - Chức danh chuyên môn:{" "}

@@ -110,6 +110,11 @@ namespace HRApi.Controllers
                     h.TepDinhKem,
                     h.GhiChu,
 
+                    // Phụ lục & chức vụ / nơi làm việc theo HĐ
+                    h.SoHopDongGoc,
+                    h.MaChucVu,
+                    h.NoiLamViec,
+
                     // --- THÊM MỚI 3: CỜ (FLAG) ĐỂ FRONTEND HIỂN THỊ CẢNH BÁO MÀU ĐỎ ---
                     IsExpiringSoon = h.NgayKetThuc.HasValue
                                      && h.NgayKetThuc.Value.Date >= now.Date
@@ -170,6 +175,8 @@ namespace HRApi.Controllers
                 TepDinhKem = filePath,
                 TrangThai = dto.TrangThai,
                 GhiChu = dto.GhiChu,
+                MaChucVu = dto.MaChucVu,
+                NoiLamViec = dto.NoiLamViec,
                 NgayKy = DateTime.Now
             };
 
@@ -181,6 +188,108 @@ namespace HRApi.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Tạo hợp đồng thành công", soHopDong, warning = canhBaoKheHo });
+        }
+
+        // ==============================================================
+        // POST: api/HopDong/phu-luc — TẠO PHỤ LỤC DỰA TRÊN HĐ GỐC
+        // Phụ lục = 1 dòng HĐ mới nối tiếp, cho đổi Lương / Chức vụ / Nơi làm việc / gia hạn.
+        // HĐ đang hiệu lực tại ngày hiệu lực phụ lục sẽ bị cắt ngày kết thúc → payroll tự
+        // tách "2 (hoặc 3) hợp đồng trong 1 tháng" nhờ logic activeContracts sẵn có.
+        // ==============================================================
+        [HttpPost("phu-luc")]
+        [Authorize(Roles = "Giám đốc,Nhân sự trưởng")]
+        public async Task<ActionResult> CreatePhuLuc([FromForm] HopDongInputDto dto)
+        {
+            if (string.IsNullOrEmpty(dto.SoHopDongGoc))
+                return BadRequest(new { message = "Thiếu mã hợp đồng gốc." });
+
+            var goc = await _context.HopDongs.FindAsync(dto.SoHopDongGoc);
+            if (goc == null) return BadRequest(new { message = $"Không tìm thấy hợp đồng gốc '{dto.SoHopDongGoc}'." });
+
+            string maNhanVien = goc.MaNhanVien;
+            DateTime hieuLuc  = dto.NgayBatDau.Date;
+
+            // Ngày hiệu lực phụ lục phải sau ngày bắt đầu HĐ gốc
+            if (hieuLuc <= goc.NgayBatDau.Date)
+                return BadRequest(new { message = $"Ngày hiệu lực phụ lục phải sau ngày bắt đầu HĐ gốc ({goc.NgayBatDau:dd/MM/yyyy})." });
+
+            // 1. Tìm HĐ đang hiệu lực tại ngày hiệu lực (có thể là HĐ gốc hoặc một phụ lục trước đó) để CẮT ngày.
+            var toTruncate = await _context.HopDongs
+                .Where(h => h.MaNhanVien == maNhanVien
+                         && h.TrangThai == TrangThaiHopDong.HieuLuc
+                         && h.NgayBatDau.Date < hieuLuc
+                         && (h.NgayKetThuc == null || h.NgayKetThuc.Value.Date >= hieuLuc))
+                .OrderByDescending(h => h.NgayBatDau)
+                .FirstOrDefaultAsync();
+
+            // 2. Kiểm tra chồng lấn với các HĐ hiệu lực KHÁC (trừ HĐ sắp bị cắt) — chặn nếu có HĐ tương lai đè lên.
+            DateTime plEnd = dto.NgayKetThuc?.Date ?? DateTime.MaxValue;
+            var others = await _context.HopDongs
+                .Where(h => h.MaNhanVien == maNhanVien
+                         && h.TrangThai == TrangThaiHopDong.HieuLuc
+                         && (toTruncate == null || h.SoHopDong != toTruncate.SoHopDong))
+                .ToListAsync();
+            foreach (var h in others)
+            {
+                DateTime hEnd = h.NgayKetThuc?.Date ?? DateTime.MaxValue;
+                bool overlap = hieuLuc <= hEnd && h.NgayBatDau.Date <= plEnd;
+                if (overlap)
+                    return BadRequest(new { message = $"Ngày hiệu lực phụ lục trùng với hợp đồng '{h.SoHopDong}' ({h.NgayBatDau:dd/MM/yyyy} - {(h.NgayKetThuc?.ToString("dd/MM/yyyy") ?? "không thời hạn")})." });
+            }
+
+            // 3. Cắt HĐ đang hiệu lực: kết thúc ngay trước ngày hiệu lực phụ lục.
+            if (toTruncate != null)
+            {
+                toTruncate.NgayKetThuc = hieuLuc.AddDays(-1);
+                // Nếu kỳ đã kết thúc trong quá khứ → chuyển HetHan (tránh Dashboard đếm nhầm "sắp hết hạn").
+                if (toTruncate.NgayKetThuc.Value.Date < DateTime.Now.Date)
+                    toTruncate.TrangThai = TrangThaiHopDong.HetHan;
+            }
+
+            // 4. Sinh mã phụ lục theo HĐ gốc: {maGoc}/PL{n}
+            int soPL = await _context.HopDongs.CountAsync(h => h.SoHopDongGoc == goc.SoHopDong);
+            string maPhuLuc = $"{goc.SoHopDong}/PL{(soPL + 1):D2}";
+
+            // 5. File đính kèm (nếu có)
+            string? filePath = null;
+            if (dto.FileDinhKem != null && dto.FileDinhKem.Length > 0)
+            {
+                string uploadsFolder = Path.Combine(_environment.WebRootPath, "contracts");
+                if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+                string uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(dto.FileDinhKem.FileName)}";
+                using (var stream = new FileStream(Path.Combine(uploadsFolder, uniqueFileName), FileMode.Create))
+                {
+                    await dto.FileDinhKem.CopyToAsync(stream);
+                }
+                filePath = "/contracts/" + uniqueFileName;
+            }
+
+            var phuLuc = new HopDong
+            {
+                SoHopDong        = maPhuLuc,
+                SoHopDongGoc     = goc.SoHopDong,
+                MaNhanVien       = maNhanVien,
+                LoaiHopDong      = goc.LoaiHopDong,           // phụ lục giữ nguyên loại HĐ gốc
+                NgayBatDau       = hieuLuc,
+                NgayKetThuc      = dto.NgayKetThuc,           // gia hạn thêm (null = vô thời hạn)
+                LuongCoBan       = dto.LuongCoBan,
+                LuongDongBaoHiem = dto.LuongDongBaoHiem > 0 ? dto.LuongDongBaoHiem : dto.LuongCoBan,
+                MaChucVu         = dto.MaChucVu,
+                NoiLamViec       = dto.NoiLamViec,
+                TepDinhKem       = filePath,
+                TrangThai        = TrangThaiHopDong.HieuLuc,
+                GhiChu           = dto.GhiChu,
+                NgayKy           = DateTime.Now
+            };
+
+            _context.HopDongs.Add(phuLuc);
+            await _context.SaveChangesAsync();
+
+            // 6. Đồng bộ lương/chức vụ/nơi làm việc hiện hành xuống hồ sơ NV.
+            await DongBoHopDongHienHanh(maNhanVien);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Tạo phụ lục thành công", soHopDong = maPhuLuc, soHopDongGoc = goc.SoHopDong });
         }
 
         // PUT: api/HopDong
@@ -224,6 +333,8 @@ namespace HRApi.Controllers
             hopDong.LuongDongBaoHiem = dto.LuongDongBaoHiem;
             hopDong.TrangThai = dto.TrangThai;
             hopDong.GhiChu = dto.GhiChu;
+            hopDong.MaChucVu = dto.MaChucVu;
+            hopDong.NoiLamViec = dto.NoiLamViec;
 
             await _context.SaveChangesAsync();
 
@@ -332,6 +443,9 @@ namespace HRApi.Controllers
                 nv.LuongCoBan   = hd.LuongCoBan;
                 nv.SoHopDong    = hd.SoHopDong;
                 nv.LoaiNhanVien = hd.LoaiHopDong;
+                // Phụ lục có thể đổi chức vụ → đồng bộ xuống hồ sơ NV (chỉ khi HĐ có set chức vụ)
+                if (!string.IsNullOrEmpty(hd.MaChucVu))
+                    nv.MaChucVuNV = hd.MaChucVu;
             }
             // else: NV không còn HĐ hiệu lực hôm nay → giữ nguyên lương cũ (quyết định ①a)
         }

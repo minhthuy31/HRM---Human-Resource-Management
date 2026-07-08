@@ -173,6 +173,7 @@
 
 .icon-btn.print { background-color: #3b82f6; color: white; }
 .icon-btn.edit { background-color: #f59e0b; color: white; }
+.icon-btn.appendix { background-color: #14b8a6; color: white; }
 .icon-btn.delete { background-color: #ef4444; color: white; }
 
 .icon-btn:hover { opacity: 0.9; transform: translateY(-1px); }

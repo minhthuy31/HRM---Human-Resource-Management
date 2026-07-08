@@ -4,14 +4,14 @@ import { api } from "../api";
 import { useToast } from "../context/ToastContext";
 import { getUserFromToken } from "../utils/auth";
 import {
-  FaTrash,
+  FaBan,
   FaPlus,
   FaSearch,
   FaEdit,
   FaPrint,
   FaFilter,
-  FaFileContract,
   FaFileExcel,
+  FaFileSignature,
 } from "react-icons/fa";
 import * as XLSX from "xlsx";
 import ContractModal from "../components/modals/ContractModal";
@@ -30,6 +30,7 @@ const ContractManagementPage = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingContract, setEditingContract] = useState(null);
+  const [phuLucParent, setPhuLucParent] = useState(null); // HĐ gốc khi tạo phụ lục
   const [printingContract, setPrintingContract] = useState(null);
   const [directorInfo, setDirectorInfo] = useState(null);
 
@@ -111,25 +112,30 @@ const ContractManagementPage = () => {
     }
   };
 
-  const handleSave = async (payload, isUpdate) => {
+  const handleSave = async (payload, mode) => {
     try {
       const config = { headers: { "Content-Type": "multipart/form-data" } };
       let res;
-      if (isUpdate) {
+      if (mode === "phuluc") {
+        res = await api.post("/HopDong/phu-luc", payload, config);
+      } else if (mode === "update") {
         const id = encodeURIComponent(payload.get("soHopDong"));
         res = await api.put(`/HopDong?id=${id}`, payload, config);
       } else {
         res = await api.post("/HopDong", payload, config);
       }
       showToast(
-        isUpdate
+        mode === "update"
           ? "Cập nhật hợp đồng thành công!"
-          : `Tạo hợp đồng ${res.data?.soHopDong || "mới"} thành công!`,
+          : mode === "phuluc"
+            ? `Tạo phụ lục ${res.data?.soHopDong || ""} thành công!`
+            : `Tạo hợp đồng ${res.data?.soHopDong || "mới"} thành công!`,
       );
       // Cảnh báo khe hở ngày giữa 2 hợp đồng (nếu có)
       if (res.data?.warning) showToast(res.data.warning, "error");
       setIsModalOpen(false);
       setEditingContract(null);
+      setPhuLucParent(null);
       fetchContracts();
     } catch (err) {
       const msg = err.response?.data?.message || "Có lỗi xảy ra.";
@@ -356,6 +362,7 @@ const ContractManagementPage = () => {
                 className="btn-add"
                 onClick={() => {
                   setEditingContract(null);
+                  setPhuLucParent(null);
                   setIsModalOpen(true);
                 }}
               >
@@ -416,6 +423,19 @@ const ContractManagementPage = () => {
                     >
                       <td style={{ fontWeight: "bold", color: "#333" }}>
                         {c.soHopDong}
+                        {c.soHopDongGoc && (
+                          <div
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              color: "#0d9488",
+                              marginTop: "2px",
+                            }}
+                            title={`Phụ lục của ${c.soHopDongGoc}`}
+                          >
+                            📄 Phụ lục · {c.soHopDongGoc}
+                          </div>
+                        )}
                       </td>
                       <td>
                         <div style={{ fontWeight: 600 }}>{c.hoTenNhanVien}</div>
@@ -453,18 +473,32 @@ const ContractManagementPage = () => {
                                 className="icon-btn edit"
                                 onClick={() => {
                                   setEditingContract(c);
+                                  setPhuLucParent(null);
                                   setIsModalOpen(true);
                                 }}
                                 title="Chỉnh sửa"
                               >
                                 <FaEdit />
                               </button>
+                              {c.trangThai === "HieuLuc" && (
+                                <button
+                                  className="icon-btn appendix"
+                                  onClick={() => {
+                                    setEditingContract(null);
+                                    setPhuLucParent(c);
+                                    setIsModalOpen(true);
+                                  }}
+                                  title="Tạo phụ lục hợp đồng"
+                                >
+                                  <FaFileSignature />
+                                </button>
+                              )}
                               <button
                                 className="icon-btn delete"
                                 onClick={() => handleDelete(c.soHopDong)}
                                 title="Vô hiệu hóa (chấm dứt)"
                               >
-                                <FaTrash />
+                                <FaBan />
                               </button>
                             </>
                           )}
@@ -487,9 +521,13 @@ const ContractManagementPage = () => {
         {isModalOpen && (
           <ContractModal
             contract={editingContract}
+            parentContract={phuLucParent}
             employees={employees}
             onSave={handleSave}
-            onCancel={() => setIsModalOpen(false)}
+            onCancel={() => {
+              setIsModalOpen(false);
+              setPhuLucParent(null);
+            }}
           />
         )}
       </div>

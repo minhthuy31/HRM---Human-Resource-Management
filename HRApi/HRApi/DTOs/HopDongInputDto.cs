@@ -12,5 +12,10 @@
         public IFormFile? FileDinhKem { get; set; }
         public string? GhiChu { get; set; }
         public string TrangThai { get; set; } = "HieuLuc";
+
+        // Dùng cho phụ lục / HĐ có đổi chức vụ - nơi làm việc
+        public string? SoHopDongGoc { get; set; }
+        public string? MaChucVu { get; set; }
+        public string? NoiLamViec { get; set; }
     }
 }

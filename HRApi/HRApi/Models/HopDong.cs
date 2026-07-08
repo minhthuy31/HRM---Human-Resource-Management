@@ -33,6 +33,14 @@ namespace HRApi.Models
 
         public DateTime NgayKy { get; set; } = DateTime.Now;
         public string? GhiChu { get; set; }
+
+        // ── PHỤ LỤC HỢP ĐỒNG ──
+        // Null  = hợp đồng gốc. Có giá trị = đây là phụ lục, trỏ về mã HĐ gốc.
+        public string? SoHopDongGoc { get; set; }
+
+        // Chức vụ & nơi làm việc theo HĐ/phụ lục (cho phép phụ lục đổi vị trí/nơi làm việc)
+        public string? MaChucVu { get; set; }
+        public string? NoiLamViec { get; set; }
     }
 
     // Danh mục cố định cho loại & trạng thái hợp đồng (tránh nhập sai chuỗi tự do)

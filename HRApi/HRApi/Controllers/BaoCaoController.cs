@@ -114,8 +114,10 @@ namespace HRApi.Controllers
                 var hdQuery = _context.HopDongs
                     .Include(h => h.NhanVien).ThenInclude(nv => nv.PhongBan)
                     .Include(h => h.NhanVien).ThenInclude(nv => nv.ChucVuNhanVien)
-                    .Where(h => (h.NgayBatDau.Month == month && h.NgayBatDau.Year == year) ||
-                                (h.NgayKetThuc.HasValue && h.NgayKetThuc.Value.Month == month && h.NgayKetThuc.Value.Year == year));
+                    // Loại phụ lục (SoHopDongGoc != null) — không phải tuyển mới/nghỉ việc thực sự
+                    .Where(h => h.SoHopDongGoc == null &&
+                                ((h.NgayBatDau.Month == month && h.NgayBatDau.Year == year) ||
+                                (h.NgayKetThuc.HasValue && h.NgayKetThuc.Value.Month == month && h.NgayKetThuc.Value.Year == year)));
                 if (isTruongPhong) hdQuery = hdQuery.Where(x => x.NhanVien != null && x.NhanVien.MaPhongBan == tpMaPhongBan);
 
                 var bienDong = await hdQuery.Select(h => new
