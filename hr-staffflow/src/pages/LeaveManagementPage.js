@@ -264,11 +264,40 @@ const RequestManagementPage = () => {
   };
 
   const handleRejectConfirm = async (lyDoTuChoi) => {
-    setRejectDialog({ isOpen: false, id: null });
+    const { id, bulk } = rejectDialog;
+    setRejectDialog({ isOpen: false, id: null, bulk: false });
     const endpointPrefix = getEndpointPrefix();
     if (!endpointPrefix) return;
+
+    // Từ chối THEO LÔ: áp dụng cùng 1 lý do cho mọi đơn chờ duyệt đã chọn
+    if (bulk) {
+      const ids = data
+        .filter((d) => d.trangThai === "Chờ duyệt" && selectedIds.includes(d.id))
+        .map((d) => d.id);
+      if (ids.length === 0) return;
+      let ok = 0;
+      let fail = 0;
+      for (const rid of ids) {
+        try {
+          await api.post(`${endpointPrefix}/reject/${rid}`, { lyDoTuChoi });
+          ok++;
+        } catch {
+          fail++;
+        }
+      }
+      setSelectedIds([]);
+      showToast(
+        fail === 0
+          ? `Đã từ chối ${ok} đơn.`
+          : `Từ chối ${ok} đơn thành công, ${fail} đơn thất bại.`,
+        fail === 0 ? "success" : "error",
+      );
+      fetchData();
+      return;
+    }
+
     try {
-      await api.post(`${endpointPrefix}/reject/${rejectDialog.id}`, { lyDoTuChoi });
+      await api.post(`${endpointPrefix}/reject/${id}`, { lyDoTuChoi });
       showToast("Đã từ chối đơn thành công!", "success");
       fetchData();
     } catch (error) {
@@ -335,6 +364,11 @@ const RequestManagementPage = () => {
         fetchData();
       },
     });
+  };
+
+  const handleBulkReject = () => {
+    if (validSelected.length === 0) return;
+    setRejectDialog({ isOpen: true, id: null, bulk: true });
   };
 
   // --- RENDER TABLE BODY ---
@@ -600,9 +634,14 @@ const RequestManagementPage = () => {
             <span className="bulk-count">
               Đã chọn <strong>{validSelected.length}</strong> đơn chờ duyệt
             </span>
-            <button className="bulk-approve-btn" onClick={handleBulkApprove}>
-              <FaCheckDouble /> Duyệt theo lô
-            </button>
+            <div className="bulk-action-buttons">
+              <button className="bulk-approve-btn" onClick={handleBulkApprove}>
+                <FaCheckDouble /> Duyệt theo lô
+              </button>
+              <button className="bulk-reject-btn" onClick={handleBulkReject}>
+                <FaTimes /> Từ chối theo lô
+              </button>
+            </div>
           </div>
         )}
 
@@ -684,7 +723,7 @@ const RequestManagementPage = () => {
       <RejectModal
         isOpen={rejectDialog.isOpen}
         onConfirm={handleRejectConfirm}
-        onCancel={() => setRejectDialog({ isOpen: false, id: null })}
+        onCancel={() => setRejectDialog({ isOpen: false, id: null, bulk: false })}
       />
 
       {/* --- TOAST COMPONENT --- */}
