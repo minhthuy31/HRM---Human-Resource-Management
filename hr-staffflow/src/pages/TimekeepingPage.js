@@ -185,20 +185,28 @@ const TimekeepingPage = () => {
         const year = date.getFullYear();
         const month = date.getMonth() + 1;
 
+        const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
         const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 1);
 
         const [empRes, pbRes] = await Promise.all([
-          api.get("/NhanVien?TrangThai=true"),
+          // Lấy TẤT CẢ nhân viên (gồm cả NV đã nghỉ) để lọc theo "cửa sổ làm việc" của tháng
+          api.get("/NhanVien"),
           api.get("/PhongBan"),
         ]);
 
-        // Chỉ hiện NV đã vào làm trong/trước tháng đang xem
-        // null ngayVaoLam: không hiện ở tháng cũ, chỉ hiện tháng hiện tại trở về sau
+        // Hiện NV có làm việc TRONG tháng đang xem:
+        //  • Đã vào làm trước cuối tháng (null ngayVaoLam: chỉ hiện từ tháng hiện tại trở đi)
+        //  • Chưa nghỉ trước đầu tháng — tháng nghỉ vẫn hiện, các tháng SAU mới bị cắt
         const now = new Date();
         const isViewingPastMonth = monthEnd <= new Date(now.getFullYear(), now.getMonth(), 1);
         const filteredByMonth = (empRes.data || []).filter((emp) => {
-          if (!emp.ngayVaoLam) return !isViewingPastMonth;
-          return new Date(emp.ngayVaoLam) < monthEnd;
+          const joined = emp.ngayVaoLam
+            ? new Date(emp.ngayVaoLam) < monthEnd
+            : !isViewingPastMonth;
+          const notLeft = emp.ngayNghiViec
+            ? new Date(emp.ngayNghiViec) >= monthStart
+            : emp.trangThai === true;
+          return joined && notLeft;
         });
         setEmployees(filteredByMonth);
         setPhongBans(pbRes.data?.filter((pb) => pb.trangThai) || []);

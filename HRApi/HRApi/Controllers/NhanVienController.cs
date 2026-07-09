@@ -521,6 +521,8 @@ namespace HRApi.Controllers
             var nhanVien = await _context.NhanViens.FindAsync(id);
             if (nhanVien == null) return NotFound("Không tìm thấy nhân viên.");
             nhanVien.TrangThai = false;
+            // Ghi ngày nghỉ để lọc theo tháng: tháng nghỉ vẫn tính lương/công, các tháng SAU mới bị cắt.
+            if (nhanVien.NgayNghiViec == null) nhanVien.NgayNghiViec = DateTime.Today;
             await _context.SaveChangesAsync();
             return Ok(new { message = $"Nhân viên {nhanVien.HoTen} đã được vô hiệu hóa." });
         }
@@ -537,6 +539,7 @@ namespace HRApi.Controllers
             var nhanVien = await _context.NhanViens.FindAsync(id);
             if (nhanVien == null) return NotFound("Không tìm thấy nhân viên.");
             nhanVien.TrangThai = true;
+            nhanVien.NgayNghiViec = null; // kích hoạt lại → xóa ngày nghỉ, quay lại đi làm bình thường
             await _context.SaveChangesAsync();
             return Ok(new { message = $"Nhân viên {nhanVien.HoTen} đã được kích hoạt lại." });
         }

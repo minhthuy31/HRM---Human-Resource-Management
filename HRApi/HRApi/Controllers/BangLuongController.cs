@@ -101,11 +101,16 @@ namespace HRApi.Controllers
             // Chỉ tính lương cho NV đã vào làm trong/trước tháng này, bỏ qua Giám đốc/Tổng GĐ
             // NgayVaoLam == null → NV cũ chưa set ngày, vẫn tính bình thường
             var excludedRoles = new[] { "Giám đốc", "Tổng giám đốc", "Admin" };
+            // CỬA SỔ LÀM VIỆC: chỉ tính lương NV có làm việc TRONG tháng này —
+            //  • đã vào làm trước cuối tháng (NgayVaoLam < monthEnd; null = NV cũ, vẫn tính)
+            //  • CHƯA nghỉ trước đầu tháng: có ngày nghỉ thì phải >= đầu tháng (tháng nghỉ vẫn tính,
+            //    tháng sau bị cắt); chưa có ngày nghỉ thì phải đang TrangThai = true.
             var employees  = await _context.NhanViens
                                  .Include(n => n.HopDongs)
                                  .Include(n => n.UserRole)
-                                 .Where(e => e.TrangThai == true
-                                          && (e.NgayVaoLam == null || e.NgayVaoLam.Value < monthEnd)
+                                 .Where(e => (e.NgayVaoLam == null || e.NgayVaoLam.Value < monthEnd)
+                                          && ((e.NgayNghiViec == null && e.TrangThai == true)
+                                              || (e.NgayNghiViec != null && e.NgayNghiViec.Value >= monthStart))
                                           && (e.UserRole == null || !excludedRoles.Contains(e.UserRole.NameRole)))
                                  .ToListAsync();
 
@@ -404,15 +409,20 @@ namespace HRApi.Controllers
                 // NV có NgayVaoLam + chưa vượt tháng → hiển thị
                 // NV null NgayVaoLam → chỉ hiển thị nếu đã có bảng lương lưu (NV cũ)
                 var savedIds = savedPayrolls.Select(p => p.MaNhanVien).ToList();
+                // Hiển thị NV theo CỬA SỔ LÀM VIỆC của tháng (vào làm trước cuối tháng + chưa nghỉ trước
+                // đầu tháng), HOẶC đã có bảng lương lưu (giữ dữ liệu lịch sử).
                 var employees = await _context.NhanViens
                                         .Include(nv => nv.PhongBan)
                                         .Include(nv => nv.ChucVuNhanVien)
                                         .Include(nv => nv.UserRole)
-                                        .Where(nv => nv.TrangThai == true
-                                                  && (nv.UserRole == null || !excludedRoles2.Contains(nv.UserRole.NameRole))
+                                        .Where(nv => (nv.UserRole == null || !excludedRoles2.Contains(nv.UserRole.NameRole))
                                                   && (
-                                                      (nv.NgayVaoLam != null && nv.NgayVaoLam.Value < monthEnd2)
-                                                      || savedIds.Contains(nv.MaNhanVien)
+                                                      savedIds.Contains(nv.MaNhanVien)
+                                                      || (
+                                                           (nv.NgayVaoLam != null && nv.NgayVaoLam.Value < monthEnd2)
+                                                           && ((nv.NgayNghiViec == null && nv.TrangThai == true)
+                                                               || (nv.NgayNghiViec != null && nv.NgayNghiViec.Value >= monthStart2))
+                                                         )
                                                   ))
                                         .ToListAsync();
 
