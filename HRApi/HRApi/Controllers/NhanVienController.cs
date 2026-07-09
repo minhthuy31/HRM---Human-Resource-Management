@@ -448,7 +448,9 @@ namespace HRApi.Controllers
             existingNhanVien.DiaChiTamTru = dto.DiaChiTamTru;
             existingNhanVien.HinhAnh = dto.HinhAnh;
             existingNhanVien.NgayVaoLam = dto.NgayVaoLam;
-            existingNhanVien.NgayNghiViec = dto.NgayNghiViec;
+            // NgayNghiViec do luồng Vô hiệu hóa/Kích hoạt tự quản lý — form sửa KHÔNG được vô tình xóa.
+            // Chỉ ghi đè khi DTO có gửi giá trị (tránh set null làm mất ngày nghỉ đã lưu).
+            if (dto.NgayNghiViec.HasValue) existingNhanVien.NgayNghiViec = dto.NgayNghiViec;
             existingNhanVien.LoaiNhanVien = dto.LoaiNhanVien;
             existingNhanVien.MaQuanLyTrucTiep = dto.MaQuanLyTrucTiep;
             existingNhanVien.MaPhongBan = dto.MaPhongBan;

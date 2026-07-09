@@ -168,6 +168,8 @@ const EmployeeDetailPage = () => {
       <div className="form-grid grid-2">
         {renderField("Quản lý trực tiếp", employee.tenQuanLyTrucTiep)}
         {renderField("Ngày vào làm", formatDate(employee.ngayVaoLam))}
+        {employee.ngayNghiViec &&
+          renderField("Ngày nghỉ việc", formatDate(employee.ngayNghiViec))}
       </div>
       <div className="form-section-title">Công việc</div>
       <div className="form-grid grid-3">
