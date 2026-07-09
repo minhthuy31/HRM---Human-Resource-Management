@@ -571,6 +571,19 @@ const EmployeeModal = ({
             placeholderText="dd/mm/yyyy"
           />
         </div>
+        {/* Ngày nghỉ việc: do luồng Vô hiệu hóa tự ghi, chỉ hiển thị (read-only) khi NV đã nghỉ */}
+        {formData.ngayNghiViec && (
+          <div className="form-group">
+            <label>Ngày nghỉ việc</label>
+            <DatePicker
+              selected={new Date(formData.ngayNghiViec)}
+              onChange={() => {}}
+              dateFormat="dd/MM/yyyy"
+              disabled
+              placeholderText="dd/mm/yyyy"
+            />
+          </div>
+        )}
       </div>
 
       <div className="form-section-title">Chi tiết công việc</div>
