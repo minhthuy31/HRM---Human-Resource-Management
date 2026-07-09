@@ -21,7 +21,10 @@ namespace HRApi.Controllers
         public class PayrollAdjustDto { public int Id { get; set; } public decimal KhoanTruKhac { get; set; } public string? LyDoKhac { get; set; } }
 
         // ==============================================================
-        // HELPER: TÍNH CÔNG CHUẨN THỰC TẾ (T2-T6 trừ ngày lễ)
+        // HELPER: TÍNH CÔNG CHUẨN THÁNG (tổng ngày T2-T6, GỒM cả ngày lễ)
+        // Công chuẩn = mẫu số tính lương. Ngày lễ nằm trong công chuẩn và được
+        // hưởng NGUYÊN lương (nghỉ lễ hưởng lương) — không trừ khỏi mẫu số.
+        // (Tham số holidays giữ lại cho tương thích, không dùng để trừ.)
         // ==============================================================
         private decimal TinhCongChuanThang(int year, int month, List<DateTime> holidays)
         {
@@ -31,8 +34,7 @@ namespace HRApi.Controllers
             {
                 var date = new DateTime(year, month, day);
                 if (date.DayOfWeek != DayOfWeek.Saturday &&
-                    date.DayOfWeek != DayOfWeek.Sunday &&
-                    !holidays.Contains(date.Date))
+                    date.DayOfWeek != DayOfWeek.Sunday)
                     count++;
             }
             return count > 0 ? count : 22m; // fallback tránh chia 0
@@ -153,6 +155,7 @@ namespace HRApi.Controllers
                 var chiTietSegments = new List<ChiTietLuongHopDong>();
                 int     soNgayLamChinhThuc = 0;    // SỐ NGÀY đi làm/hưởng lương thuộc HĐ chính thức (xét luật 14 ngày)
                 decimal luongCoBanChinhThuc = 0;   // mức lương HĐ chính thức làm căn cứ đóng BH
+                int     soNgayLeHuongLuong = 0;    // SỐ NGÀY lễ (T2-T6) trong kỳ HĐ → hưởng nguyên lương
                 // OT tách 3 loại (giờ + tiền) để hiển thị thanh sổ
                 double  otGioThuong = 0, otGioCuoiTuan = 0, otGioLe = 0;
                 decimal otTienThuong = 0, otTienCuoiTuan = 0, otTienLe = 0;
@@ -184,21 +187,31 @@ namespace HRApi.Controllers
                         bool isThuViec = contract.LoaiHopDong?.Contains("thử việc", StringComparison.OrdinalIgnoreCase) == true;
                         decimal salaryMultiplier = isThuViec ? 0.85m : 1.0m;
 
-                        // CÔNG THƯỜNG chỉ tính T2-T6 không phải lễ.
-                        // Ngày lễ đã được "hưởng nguyên lương" nhờ MẪU SỐ công chuẩn đã trừ lễ
-                        // → đi làm đủ công chuẩn là nhận đủ lương tháng, KHÔNG cộng thêm tiền lễ (tránh phồng lương).
-                        // Làm ngày lễ / T7 / CN chỉ được trả thêm qua ĐƠN OT.
+                        // CÔNG THƯỜNG = ngày T2-T6 KHÔNG lễ có đi làm.
+                        // NGÀY LỄ (T2-T6) nằm TRONG công chuẩn (mẫu số = 22, gồm cả lễ) và được
+                        // hưởng NGUYÊN lương → cộng thẳng vào công (không cần đi làm), không phồng lương.
+                        // Làm ngày lễ / T7 / CN chỉ được trả THÊM qua ĐƠN OT.
                         var normalAtt = periodAtt.Where(c => !holidayDaySet.Contains(c.NgayChamCong.Day)
                                                           && c.NgayChamCong.DayOfWeek != DayOfWeek.Saturday
                                                           && c.NgayChamCong.DayOfWeek != DayOfWeek.Sunday).ToList();
 
                         double normalNgayCong = normalAtt.Sum(c => c.NgayCong);
-                        double congChinh = normalNgayCong;
+
+                        // Số ngày LỄ (T2-T6) trong kỳ HĐ này → hưởng nguyên lương (1 công/ngày).
+                        int soNgayLePeriod = 0;
+                        for (DateTime d = periodStart.Date; d <= periodEnd.Date; d = d.AddDays(1))
+                            if (d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday
+                                && holidayDaySet.Contains(d.Day))
+                                soNgayLePeriod++;
+                        soNgayLeHuongLuong += soNgayLePeriod;
+
+                        double congChinh = normalNgayCong + soNgayLePeriod; // công tính lương = đi làm + lễ hưởng lương
                         totalWorkDays += congChinh;
 
-                        // Lương chính (thử việc = 85% lương cơ bản). KHÔNG cộng lương ngày lễ.
+                        // Lương chính (thử việc = 85%). Đơn giá = lương / công chuẩn (đã gồm lễ);
+                        // ngày lễ được trả như ngày công hưởng lương (đã cộng vào congChinh).
                         decimal dailyRate   = contract.LuongCoBan * salaryMultiplier / standardWorkDays;
-                        decimal luongThuong = dailyRate * (decimal)normalNgayCong;
+                        decimal luongThuong = dailyRate * (decimal)congChinh;
                         totalLuongChinh += luongThuong;
 
                         // Ghi lại chi tiết kỳ hợp đồng này (để hiển thị "2 lương" khi chuyển HĐ)
@@ -247,7 +260,8 @@ namespace HRApi.Controllers
                         // nghỉ không lương/không phép công=0 KHÔNG tính — xét luật 14 ngày.
                         if (!isThuViec)
                         {
-                            soNgayLamChinhThuc += normalAtt.Count(c => c.NgayCong > 0);
+                            // Ngày làm việc + ngày lễ hưởng lương đều tính vào ngày công chính thức (xét luật 14 ngày)
+                            soNgayLamChinhThuc += normalAtt.Count(c => c.NgayCong > 0) + soNgayLePeriod;
                             luongCoBanChinhThuc = contract.LuongCoBan;
                         }
 
@@ -275,11 +289,14 @@ namespace HRApi.Controllers
 
                 const double DUNG_SAI_CHUYEN_CAN = 2; // thiếu tối đa 2 ngày so với công chuẩn vẫn đủ chuyên cần
 
+                // Ngày lễ (hưởng lương) được coi như "đủ công" cho tiền XE & CHUYÊN CẦN → NV đi đủ ngày
+                // thường vẫn đạt đủ công chuẩn. Tiền ĂN chỉ tính theo ngày THỰC đi làm (không tính lễ).
+                int soNgayPhuCap      = soNgayDiLam + soNgayLeHuongLuong;
                 decimal dailyXe       = standardWorkDays > 0 ? tienGuiXeThang / standardWorkDays : 0;
                 decimal calcTienAn    = Math.Round(tienAnMoiNgay * soNgayDiLam, 0);
                 // Tiền xe = (xe tháng / công chuẩn) × ngày công, NHƯNG không vượt mức xe tháng quy định
-                decimal calcTienXe    = Math.Min(tienGuiXeThang, Math.Round(dailyXe * soNgayDiLam, 0));
-                decimal calcChuyenCan = soNgayDiLam >= (double)standardWorkDays - DUNG_SAI_CHUYEN_CAN
+                decimal calcTienXe    = Math.Min(tienGuiXeThang, Math.Round(dailyXe * soNgayPhuCap, 0));
+                decimal calcChuyenCan = soNgayPhuCap >= (double)standardWorkDays - DUNG_SAI_CHUYEN_CAN
                                         ? tienChuyenCanMax : 0m;
 
                 decimal tongPhuCap = calcTienAn + calcTienXe + calcChuyenCan;
