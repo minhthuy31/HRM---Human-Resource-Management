@@ -168,6 +168,10 @@ namespace HRApi.Controllers
                 var empAtt = attendanceData.Where(c => c.MaNhanVien == emp.MaNhanVien).ToList();
                 var empOT  = otEntries.Where(x => x.MaNhanVien == emp.MaNhanVien).ToList();
 
+                // NV có thực sự đi làm/hưởng lương trong tháng không (để xét có được trả lương ngày lễ).
+                // NV không đi làm ngày nào (vd nghỉ cả tháng) → KHÔNG được hưởng lương ngày lễ.
+                bool empCoDiLam = empAtt.Any(c => c.NgayCong > 0);
+
                 {
                     for (int ci = 0; ci < activeContracts.Count; ci++)
                     {
@@ -183,7 +187,16 @@ namespace HRApi.Controllers
                             DateTime boundary = activeContracts[ci + 1].NgayBatDau.AddDays(-1);
                             if (boundary < periodEnd) periodEnd = boundary;
                         }
-                        if (periodEnd < periodStart) continue; // HĐ bị thay thế hoàn toàn trong tháng
+
+                        // Giới hạn kỳ trong khoảng NV THỰC SỰ làm việc [NgayVaoLam, NgayNghiViec]:
+                        //  • Vào làm giữa tháng → KHÔNG tính công/lương TRƯỚC ngày vào làm.
+                        //  • Nghỉ việc giữa tháng → KHÔNG tính công/lương lễ SAU ngày nghỉ (tháng nghỉ chỉ tính tới ngày nghỉ).
+                        if (emp.NgayVaoLam.HasValue && emp.NgayVaoLam.Value.Date > periodStart)
+                            periodStart = emp.NgayVaoLam.Value.Date;
+                        if (emp.NgayNghiViec.HasValue && emp.NgayNghiViec.Value.Date < periodEnd)
+                            periodEnd = emp.NgayNghiViec.Value.Date;
+
+                        if (periodEnd < periodStart) continue; // HĐ bị thay thế / ngoài khoảng làm việc trong tháng
 
                         var periodAtt = empAtt.Where(c => c.NgayChamCong.Date >= periodStart.Date && c.NgayChamCong.Date <= periodEnd.Date).ToList();
                         var periodOT  = empOT.Where(o => o.NgayLamThem.Date >= periodStart.Date && o.NgayLamThem.Date <= periodEnd.Date).ToList();
@@ -203,11 +216,15 @@ namespace HRApi.Controllers
                         double normalNgayCong = normalAtt.Sum(c => c.NgayCong);
 
                         // Số ngày LỄ (T2-T6) trong kỳ HĐ này → hưởng nguyên lương (1 công/ngày).
+                        // CHỈ hưởng nếu NV thực sự có đi làm/hưởng lương trong tháng (không đi làm ngày nào → không có).
                         int soNgayLePeriod = 0;
-                        for (DateTime d = periodStart.Date; d <= periodEnd.Date; d = d.AddDays(1))
-                            if (d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday
-                                && holidayDaySet.Contains(d.Day))
-                                soNgayLePeriod++;
+                        if (empCoDiLam)
+                        {
+                            for (DateTime d = periodStart.Date; d <= periodEnd.Date; d = d.AddDays(1))
+                                if (d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday
+                                    && holidayDaySet.Contains(d.Day))
+                                    soNgayLePeriod++;
+                        }
                         soNgayLeHuongLuong += soNgayLePeriod;
 
                         double congChinh = normalNgayCong + soNgayLePeriod; // công tính lương = đi làm + lễ hưởng lương
