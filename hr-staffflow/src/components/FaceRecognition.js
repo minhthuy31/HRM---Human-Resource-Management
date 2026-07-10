@@ -12,7 +12,7 @@ import { ensureFaceModels } from "../utils/faceModels";
 // QUAN TRỌNG: ngưỡng KHÔNG cố định mà TỰ ĐO theo mắt mở của từng người (baseline),
 // rồi lấy theo TỈ LỆ của baseline đó => hợp với mọi khuôn mặt/camera, hết cảnh
 // "ngưỡng không khớp mắt người này".
-const CALIB_FRAMES = 3; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
+const CALIB_FRAMES = 2; // Số khung đo lúc đầu để lấy "mốc" mắt mở (baseline)
 const CLOSED_RATIO = 0.88; // Coi là NHẮM khi EAR tụt dưới 88% baseline (nới rộng => chớp nhẹ là ăn)
 const LIVENESS_TIMEOUT_MS = 20000; // Thời gian tối đa cho bước xác thực
 
@@ -34,6 +34,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
   const { showToast } = useToast();
   const webcamRef = useRef(null);
   const livenessRunningRef = useRef(false);
+  const warmedRef = useRef(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState("");
@@ -135,6 +136,32 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
     return false;
   };
 
+  // Làm nóng model NGAY khi camera vừa bật (lúc người dùng còn chỉnh mặt):
+  // chạy 1 lần đủ cả 3 mạng để trình duyệt biên dịch xong shader GPU trước
+  // => lúc bấm chấm công không còn bị "giật" ~4 giây đầu.
+  const warmUp = async () => {
+    if (warmedRef.current) return;
+    warmedRef.current = true;
+    try {
+      for (let i = 0; i < 20; i++) {
+        const v = webcamRef.current?.video;
+        if (v && v.readyState === 4) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      const video = webcamRef.current?.video;
+      if (!video || video.readyState !== 4) return;
+      await faceapi
+        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 160 }))
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+      await faceapi
+        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 128 }))
+        .withFaceLandmarks();
+    } catch (e) {
+      /* bỏ qua, chỉ là làm nóng */
+    }
+  };
+
   // Trích descriptor: lấy TRỰC TIẾP từ luồng video (ổn định hơn chụp ảnh tĩnh),
   // và thử lại vài lần để không bị trượt do 1 khung hình xấu.
   const captureDescriptor = async () => {
@@ -144,9 +171,9 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       return null;
     }
 
-    // inputSize lớn hơn cho bước này => dò khuôn mặt chính xác hơn (chỉ chạy 1 lần nên vẫn nhanh)
-    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320 });
-    for (let attempt = 0; attempt < 6; attempt++) {
+    // inputSize nhỏ hơn => nhanh; vừa xác thực xong nên mặt chắc chắn còn trong khung
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 160 });
+    for (let attempt = 0; attempt < 3; attempt++) {
       setStatusText("Đang nhận diện khuôn mặt...");
       const detection = await faceapi
         .detectSingleFace(video, options)
@@ -157,7 +184,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         // Chuyển descriptor sang mảng số thông thường để gửi đi
         return Array.from(detection.descriptor);
       }
-      await new Promise((r) => setTimeout(r, 120));
+      await new Promise((r) => setTimeout(r, 80));
     }
 
     showToast(
@@ -231,6 +258,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
               screenshotFormat="image/jpeg"
               style={{ width: "100%", height: "auto" }}
               videoConstraints={{ facingMode: "user", width: 320, height: 240 }}
+              onUserMedia={warmUp}
             />
           ) : (
             <div
