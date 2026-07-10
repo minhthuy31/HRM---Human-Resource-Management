@@ -358,12 +358,12 @@ namespace HRApi.Controllers
 
             var currentYear = DateTime.Now.Year;
 
-            // Tổng phép đã dùng (Sum để tính đúng cả nửa ngày = 0.5)
+            // Tổng phép đã dùng trong năm (đếm theo LoaiNgayCong = "Nghỉ phép", Sum để tính đúng cả nửa ngày 0.5).
+            // KHÔNG dựa vào chữ trong GhiChu vì text không cố định.
             var paidLeaveDaysTaken = await _context.ChamCongs
                 .Where(c => c.MaNhanVien == maNhanVien &&
                             c.NgayChamCong.Year == currentYear &&
-                            !string.IsNullOrEmpty(c.GhiChu) &&
-                            (c.GhiChu.Contains("Nghỉ có phép") || c.GhiChu.Contains("Nghỉ nửa ngày")))
+                            c.LoaiNgayCong == LoaiCong.NghiPhep)
                 .SumAsync(c => c.NgayCong);
 
             var remaining = 12 - paidLeaveDaysTaken;
