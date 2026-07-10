@@ -21,6 +21,18 @@ const MyTimekeepingPage = () => {
   const [loading, setLoading] = useState(true);
   const [requestsMap, setRequestsMap] = useState(new Map());
   const [viewingRequest, setViewingRequest] = useState(null);
+  // Ca hành chính đọc từ cấu hình hệ thống (mặc định 08:00–17:30)
+  const [shift, setShift] = useState({ vao: "08:00", ra: "17:30" });
+
+  useEffect(() => {
+    api
+      .get("/SystemSettings")
+      .then((res) => {
+        const s = res.data || {};
+        setShift({ vao: s.gioVaoLam || "08:00", ra: s.gioTanLam || "17:30" });
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchData = useCallback(
     async (date) => {
@@ -161,7 +173,7 @@ const MyTimekeepingPage = () => {
 
         {/* Work schedule */}
         {!isWeekend && (
-          <div className="cal-schedule">HC 08:00 - 17:00</div>
+          <div className="cal-schedule">HC {shift.vao} - {shift.ra}</div>
         )}
 
         {/* Check-in / Check-out (chỉ hiện nếu có giờ thực) */}
