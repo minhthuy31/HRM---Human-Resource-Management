@@ -231,108 +231,235 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
   };
 
   return (
-    <div className="modal-overlay">
-      <div
-        className="modal-content scanner-modal"
-        style={{ maxWidth: "600px" }}
-      >
-        <button className="modal-close-btn" onClick={onClose}>
-          &times;
-        </button>
-        <h2>
-          {isRegister ? "Đăng Ký Khuôn Mặt" : "Chấm Công Khuôn Mặt"}
-        </h2>
+    <div
+      className="modal-overlay"
+      style={{
+        position: "fixed",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(15, 23, 42, 0.72)",
+        zIndex: 1000,
+        padding: 16,
+      }}
+    >
+      {/* Chỉ 1 animation DUY NHẤT: xoay spinner nhỏ (transform => GPU lo, cực nhẹ) */}
+      <style>{`@keyframes frid-spin { to { transform: rotate(360deg); } }`}</style>
 
-        <div
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 430,
+          background: "#fff",
+          borderRadius: 20,
+          boxShadow: "0 24px 70px rgba(0, 0, 0, 0.4)",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        <button
+          onClick={onClose}
+          aria-label="Đóng"
           style={{
-            position: "relative",
-            minHeight: "300px",
-            backgroundColor: "#000",
-            borderRadius: "8px",
-            overflow: "hidden",
+            position: "absolute",
+            top: 14,
+            right: 14,
+            width: 34,
+            height: 34,
+            borderRadius: "50%",
+            border: "none",
+            background: "rgba(0, 0, 0, 0.06)",
+            color: "#334155",
+            fontSize: 20,
+            lineHeight: 1,
+            cursor: "pointer",
+            zIndex: 5,
           }}
         >
-          {modelsLoaded ? (
-            <Webcam
-              ref={webcamRef}
-              screenshotFormat="image/jpeg"
-              style={{ width: "100%", height: "auto" }}
-              videoConstraints={{ facingMode: "user", width: 320, height: 240 }}
-              onUserMedia={warmUp}
-            />
-          ) : (
-            <div
-              style={{
-                color: "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                height: "300px",
-              }}
-            >
-              Đang tải model AI...
-            </div>
-          )}
+          &times;
+        </button>
 
-          {isProcessing && (
+        {/* Header */}
+        <div style={{ textAlign: "center", padding: "26px 24px 14px" }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              margin: "0 auto 12px",
+              borderRadius: 16,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 28,
+              background: "linear-gradient(135deg, #6366f1, #06b6d4)",
+              boxShadow: "0 8px 20px rgba(79, 70, 229, 0.35)",
+            }}
+          >
+            {isRegister ? "🧑‍💼" : "🕒"}
+          </div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#0f172a" }}>
+            {isRegister ? "Đăng Ký Khuôn Mặt" : "Chấm Công Khuôn Mặt"}
+          </h2>
+          <p style={{ margin: "6px 0 0", fontSize: 13.5, color: "#64748b" }}>
+            {isRegister
+              ? "Đưa khuôn mặt vào giữa khung rồi bấm lưu"
+              : "Nhìn thẳng camera và chớp mắt để xác thực"}
+          </p>
+        </div>
+
+        {/* Camera — LUÔN hiện full mặt; chỉ thêm viền sáng TĨNH khi đang quét */}
+        <div style={{ padding: "0 24px" }}>
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              aspectRatio: "4 / 3",
+              borderRadius: 16,
+              overflow: "hidden",
+              background: "#0b1220",
+              boxShadow: isProcessing ? "0 0 0 3px #22d3ee" : "none",
+            }}
+          >
+            {modelsLoaded ? (
+              <Webcam
+                ref={webcamRef}
+                screenshotFormat="image/jpeg"
+                videoConstraints={{ facingMode: "user", width: 320, height: 240 }}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                onUserMedia={warmUp}
+              />
+            ) : (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 12,
+                  color: "#cbd5e1",
+                }}
+              >
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: "50%",
+                    border: "3px solid rgba(255, 255, 255, 0.2)",
+                    borderTopColor: "#22d3ee",
+                    animation: "frid-spin 0.9s linear infinite",
+                  }}
+                />
+                <span style={{ fontSize: 13 }}>Đang tải model AI...</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Trạng thái / hướng dẫn — nằm DƯỚI camera, KHÔNG che mặt */}
+        <div style={{ margin: "14px 24px 0", minHeight: 46 }}>
+          {isProcessing ? (
             <div
               style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: "rgba(0,0,0,0.5)",
-                color: "white",
+                padding: "12px 14px",
+                borderRadius: 12,
+                background: "#ecfeff",
+                border: "1px solid #a5f3fc",
                 display: "flex",
+                gap: 10,
                 alignItems: "center",
                 justifyContent: "center",
-                textAlign: "center",
-                padding: "0 20px",
-                zIndex: 10,
+                fontSize: 14,
+                fontWeight: 600,
+                color: "#0e7490",
               }}
             >
-              {statusText || "Đang xử lý..."}
+              <span
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: "50%",
+                  border: "2px solid rgba(14, 116, 144, 0.25)",
+                  borderTopColor: "#0891b2",
+                  animation: "frid-spin 0.8s linear infinite",
+                  flex: "0 0 auto",
+                }}
+              />
+              <span>{statusText || "Đang xử lý..."}</span>
             </div>
+          ) : (
+            !isRegister && (
+              <div
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 12,
+                  background: "#eff6ff",
+                  border: "1px solid #dbeafe",
+                  display: "flex",
+                  gap: 10,
+                  alignItems: "flex-start",
+                  fontSize: 12.5,
+                  color: "#1e40af",
+                  lineHeight: 1.5,
+                }}
+              >
+                <span style={{ fontSize: 15 }}>🔒</span>
+                <span>
+                  Giữ mắt mở 1 giây rồi <b>chớp mắt</b> một cái để xác thực người
+                  thật — hệ thống không chấp nhận ảnh.
+                </span>
+              </div>
+            )
           )}
         </div>
 
-        {!isRegister && (
-          <p
+        {/* Nút hành động */}
+        <div style={{ display: "flex", gap: 12, padding: "18px 24px 24px" }}>
+          <button
+            onClick={onClose}
             style={{
-              marginTop: "10px",
-              fontSize: "13px",
-              color: "#6c757d",
-              textAlign: "center",
+              flex: "0 0 auto",
+              padding: "12px 20px",
+              borderRadius: 12,
+              border: "1px solid #e2e8f0",
+              background: "#f8fafc",
+              color: "#475569",
+              fontSize: 14.5,
+              fontWeight: 600,
+              cursor: "pointer",
             }}
           >
-            Để chống gian lận, khi xác nhận hãy giữ mắt mở 1 giây rồi CHỚP MẮT một
-            cái để xác thực bạn là người thật (không dùng được ảnh).
-          </p>
-        )}
-
-        <div
-          style={{
-            marginTop: "20px",
-            display: "flex",
-            gap: "10px",
-            justifyContent: "center",
-          }}
-        >
-          <button
-            className="sidebar-action-btn"
-            onClick={handleCapture}
-            disabled={!modelsLoaded || isProcessing}
-            style={{ width: "auto", minWidth: "150px" }}
-          >
-            {isRegister ? "Lưu Khuôn Mặt" : "Xác Nhận Chấm Công"}
+            Hủy
           </button>
           <button
-            className="sidebar-action-btn"
-            onClick={onClose}
-            style={{ width: "auto", backgroundColor: "#6c757d" }}
+            onClick={handleCapture}
+            disabled={!modelsLoaded || isProcessing}
+            style={{
+              flex: 1,
+              padding: "12px 20px",
+              borderRadius: 12,
+              border: "none",
+              color: "#fff",
+              fontSize: 14.5,
+              fontWeight: 700,
+              cursor: !modelsLoaded || isProcessing ? "not-allowed" : "pointer",
+              background:
+                !modelsLoaded || isProcessing
+                  ? "#94a3b8"
+                  : "linear-gradient(135deg, #6366f1, #06b6d4)",
+              boxShadow:
+                !modelsLoaded || isProcessing
+                  ? "none"
+                  : "0 8px 20px rgba(79, 70, 229, 0.35)",
+            }}
           >
-            Hủy
+            {isProcessing
+              ? "Đang xử lý..."
+              : isRegister
+              ? "Lưu Khuôn Mặt"
+              : "Xác Nhận Chấm Công"}
           </button>
         </div>
       </div>
