@@ -183,9 +183,9 @@ const ContractModal = ({
                 color: "#1e40af",
               }}
             >
-              📄 Phụ lục dựa trên hợp đồng gốc{" "}
-              <strong>{parentContract.soHopDong}</strong>. HĐ gốc sẽ được kết
-              thúc trước ngày hiệu lực; lương/chức vụ mới áp dụng từ ngày hiệu
+              📄 Phụ lục sửa đổi hợp đồng gốc{" "}
+              <strong>{parentContract.soHopDong}</strong> — HĐ gốc VẪN còn hiệu
+              lực; thay đổi (lương / chức vụ / nơi làm việc) áp dụng từ ngày hiệu
               lực.
             </div>
           )}
