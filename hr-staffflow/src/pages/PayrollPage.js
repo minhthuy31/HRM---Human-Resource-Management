@@ -595,7 +595,7 @@ const PayrollPage = () => {
                           {p.soCongChuanTrongThang}
                         </td>
                         <td className="text-center font-bold text-blue">
-                          {Math.round(p.tongNgayCong * 100) / 100}
+                          {Number(p.tongNgayCong || 0).toFixed(2)}
                         </td>
                         <td
                           className="text-center font-bold"

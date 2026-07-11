@@ -49,7 +49,10 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         setModelsLoaded(true);
       } catch (error) {
         console.error("Lỗi tải model AI:", error);
-        showToast("Không thể tải model nhận diện khuôn mặt. Vui lòng kiểm tra lại cấu hình.", "error");
+        showToast(
+          "Không thể tải model nhận diện khuôn mặt. Vui lòng kiểm tra lại cấu hình.",
+          "error",
+        );
       }
     };
     loadModels();
@@ -89,7 +92,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
         setStatusText("");
         showToast(
           "Xác thực thất bại. Hãy nhìn thẳng camera rồi NHẮM MẮT một cái và MỞ ra (không dùng ảnh).",
-          "error"
+          "error",
         );
         return false;
       }
@@ -114,7 +117,9 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       if (phase === 0) {
         // Đo baseline mắt mở của riêng người này
         calib.push(ear);
-        setStatusText(`Giữ MẮT MỞ, đang chuẩn bị... (${calib.length}/${CALIB_FRAMES})`);
+        setStatusText(
+          `Giữ MẮT MỞ, đang chuẩn bị... (${calib.length}/${CALIB_FRAMES})`,
+        );
         if (calib.length >= CALIB_FRAMES) {
           baseline = median(calib);
           closedThr = baseline * CLOSED_RATIO;
@@ -151,11 +156,17 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
       const video = webcamRef.current?.video;
       if (!video || video.readyState !== 4) return;
       await faceapi
-        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 160 }))
+        .detectSingleFace(
+          video,
+          new faceapi.TinyFaceDetectorOptions({ inputSize: 160 }),
+        )
         .withFaceLandmarks()
         .withFaceDescriptor();
       await faceapi
-        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 128 }))
+        .detectSingleFace(
+          video,
+          new faceapi.TinyFaceDetectorOptions({ inputSize: 128 }),
+        )
         .withFaceLandmarks();
     } catch (e) {
       /* bỏ qua, chỉ là làm nóng */
@@ -189,7 +200,7 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
 
     showToast(
       "Không nhận diện được khuôn mặt. Hãy đưa mặt vào GIỮA khung hình, đủ sáng rồi thử lại.",
-      "error"
+      "error",
     );
     return null;
   };
@@ -298,7 +309,14 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
           >
             {isRegister ? "🧑‍💼" : "🕒"}
           </div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#0f172a" }}>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 20,
+              fontWeight: 700,
+              color: "#0f172a",
+            }}
+          >
             {isRegister ? "Đăng Ký Khuôn Mặt" : "Chấm Công Khuôn Mặt"}
           </h2>
           <p style={{ margin: "6px 0 0", fontSize: 13.5, color: "#64748b" }}>
@@ -325,7 +343,11 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
               <Webcam
                 ref={webcamRef}
                 screenshotFormat="image/jpeg"
-                videoConstraints={{ facingMode: "user", width: 320, height: 240 }}
+                videoConstraints={{
+                  facingMode: "user",
+                  width: 320,
+                  height: 240,
+                }}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 onUserMedia={warmUp}
               />
@@ -407,8 +429,8 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
               >
                 <span style={{ fontSize: 15 }}>🔒</span>
                 <span>
-                  Giữ mắt mở 1 giây rồi <b>chớp mắt</b> một cái để xác thực người
-                  thật — hệ thống không chấp nhận ảnh.
+                  Giữ mắt mở 1 giây rồi <b>chớp mắt</b> một cái để xác thực
+                  người thật — hệ thống không chấp nhận ảnh.
                 </span>
               </div>
             )
@@ -458,8 +480,8 @@ const FaceRecognition = ({ mode, onCapture, onClose }) => {
             {isProcessing
               ? "Đang xử lý..."
               : isRegister
-              ? "Lưu Khuôn Mặt"
-              : "Xác Nhận Chấm Công"}
+                ? "Lưu Khuôn Mặt"
+                : "Xác Nhận Chấm Công"}
           </button>
         </div>
       </div>

@@ -1015,7 +1015,7 @@ const TimekeepingPage = () => {
                         })}
                         <td className="summary-col" style={{ textAlign: "center" }}>
                           <strong style={{ color: "#0369a1", fontSize: "15px" }}>
-                            {Number(summary?.tongCong ?? 0).toFixed(1)}
+                            {Number(summary?.tongCong ?? 0).toFixed(2)}
                           </strong>
                         </td>
                         <td className="summary-col" style={{ textAlign: "center", color: "#16a34a", fontWeight: "600" }}>
